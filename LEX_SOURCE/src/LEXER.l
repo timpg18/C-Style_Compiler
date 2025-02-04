@@ -1,12 +1,6 @@
 %option noyywrap
 %{
 
-/*
-current bugs: sole ' . " gives no error 
-            : single and multiline comments not recognized
-            : typedef no implemented
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -140,6 +134,7 @@ CLASS    "class"
 PUBLIC   "public"
 PRIVATE  "private"
 PROTECTED "protected"
+TYPEDEF "typedef" 
 
 /*regex for literals*/
 IDENTIFIER [a-zA-Z_][a-zA-Z0-9_]*
@@ -148,8 +143,13 @@ OCTAL_CONST [+-]?0[0-7]+
 HEX_CONST 0[xX][0-9a-fA-F]+
 NULL "NULL"
 FLOAT_CONST ([+-]?[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?)|([+-]?[0-9]+([eE][+-]?[0-9]+)?)
-CHAR_CONST '(\\.|[^\\'])'
-STRING_CONST \"([^\\"\\]|\\.)*\"
+LINE_COMMENT "//".*
+MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
+CHAR_CONST '(\\.|[^\\'])' 
+STRING_CONST \"([^"])*\"  
+UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$) 
+INVALID_STRING \".* 
+INVALID_CHAR_CONST '.*    
 
 
 /* Define punctuation macros */
@@ -185,6 +185,7 @@ AND "&&"
 OR "||"
 TERNARY "?"
 SEMICOLON ";"
+COLON ":"
 ASSIGN "="
 MULT_ASSIGN "*="
 SLASH_ASSIGN "/="
@@ -219,6 +220,7 @@ DOUBLE_HASH "##"
 {EXTERN} { addtosymtab(yytext, "Keyword", line_no); }
 {REGISTER} { addtosymtab(yytext, "Keyword", line_no); }
 {AUTO} { addtosymtab(yytext, "Keyword", line_no); }
+{TYPEDEF} { addtosymtab(yytext, "Keyword", line_no); }
 
 {IF} { addtosymtab(yytext, "Keyword", line_no); }
 {ELSE} { addtosymtab(yytext, "Keyword", line_no); }
@@ -254,8 +256,11 @@ DOUBLE_HASH "##"
 {INT_CONST} { addtosymtab(yytext, "INTEGER", line_no); }
 {FLOAT_CONST} { addtosymtab(yytext, "FLOAT", line_no); } /*also matches 1e3 as float which is intended (without decimal) */
 {HEX_CONST} { addtosymtab(yytext, "HEX_CONST", line_no); }
-{CHAR_CONST} { addtosymtab(yytext, "CHARACTER CONSTANT", line_no); }
-{STRING_CONST} { addtosymtab(yytext, "STRING LITERAL", line_no); }
+{LINE_COMMENT} {} /*do nothing*/
+{MULTILINE_COMMENT} {} /* do nothing */
+{CHAR_CONST} { addtosymtab(yytext, "CHARACTER CONSTANT", line_no); } /*contains any char except \ , if there is \, then there must be another character behind it. */
+{STRING_CONST} { addtosymtab(yytext, "STRING LITERAL", line_no); } /*allows all characters, no escape sequences defined*/
+
 
 
 
@@ -293,6 +298,7 @@ DOUBLE_HASH "##"
 {OR} { addtosymtab(yytext, "PUNC_OR", line_no); }
 {TERNARY} { addtosymtab(yytext, "PUNC_TERNARY", line_no); }
 {SEMICOLON} { addtosymtab(yytext, "PUNC_SEMICOLON", line_no); }
+{COLON} { addtosymtab(yytext, "PUNC_COLON", line_no); }
 {ASSIGN} { addtosymtab(yytext, "PUNC_ASSIGN", line_no); }
 {MULT_ASSIGN} { addtosymtab(yytext, "PUNC_MULT_ASSIGN", line_no); }
 {SLASH_ASSIGN} { addtosymtab(yytext, "PUNC_SLASH_ASSIGN", line_no); }
@@ -310,6 +316,9 @@ DOUBLE_HASH "##"
 
 [ \t\r]+    { /* Ignore whitespaces */ }
 \n {line_no++;}
+{UNTERMINATED_MULTILINE_COMMENT} { add_error("Error: Unterminated Multiline Comment", yytext, line_no); }
+{INVALID_STRING} { add_error("Error: Invalid String Literal", yytext, line_no); } /* complimentary case with is basically an open string */ 
+{INVALID_CHAR_CONST} { add_error("Error: Invalid character Literal", yytext, line_no); }
 . {
     add_error("Error: Unrecognized token",yytext,line_no); 
 }
