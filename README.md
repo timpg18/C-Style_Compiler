@@ -1,4 +1,4 @@
-# C-Style_Compiler
+# C-Style Compiler
 
 This project is a C-style compiler, and it includes a lexer written using Flex. Below are the steps to install Flex, run the Makefile, execute the lexer, and test the implementation.
 
