@@ -1,7 +1,11 @@
 %option noyywrap
 %{
 
-/*current bugs: sole ' . " gives no error */
+/*
+current bugs: sole ' . " gives no error 
+            : single and multiline comments not recognized
+            : typedef no implemented
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +13,8 @@
 #include <stdbool.h>
 
 #define MAX_SYMBOLS 20000
+#define MAX_ERRORS 1000
 int line_no = 1;
-bool error_cnt = false;
 
 typedef struct{
     char* lexeme;
@@ -21,14 +25,49 @@ typedef struct{
 SYMTAB Symboltable[MAX_SYMBOLS];
 int symcount = 0;
 
-void error(const char* msg, const char* symbol, int line_no){
-    error_cnt = true;
-    printf("error at line number %d: %s %s \n", line_no , msg, symbol);
+typedef struct{
+    char* message;
+    char* token;
+    int line_num;
+}Error;
+
+Error error_list[MAX_ERRORS];
+int error_count = 0;
+
+/* Function to add an error to the error list */
+void add_error(const char* msg, const char* token, int line_no) {
+    if (error_count < MAX_ERRORS) {
+        error_list[error_count].message = strdup(msg);
+        error_list[error_count].token = strdup(token);
+        error_list[error_count].line_num = line_no;
+        error_count++;
+    } else {
+        printf("Error list is full. Cannot add more errors.\n");
+    }
+}
+
+/* Function to print all errors in a structured format */
+void print_errors() {
+    printf("\n==================================================================================================================\n");
+    printf("                                              ERROR REPORT\n");
+    printf("==================================================================================================================\n");
+    printf("| %-5s | %-40s | %-40s | %-15s |\n", "ID", "Description", "Token", "Line Number");
+    printf("------------------------------------------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < error_count; i++) {
+        printf("| %-5d | %-40s | %-40s | %-15d |\n", 
+               i + 1, 
+               error_list[i].message, 
+               error_list[i].token, 
+               error_list[i].line_num);
+    }
+
+    printf("==================================================================================================================\n");
 }
 
 void addtosymtab(const char* lex, const char* tok, int line_no){
     if(symcount >= MAX_SYMBOLS){
-        error("full symbol table", lex, line_no);
+        add_error("full symbol table", lex, line_no);
     return;
     }
     Symboltable[symcount].lexeme = strdup(lex);
@@ -36,7 +75,7 @@ void addtosymtab(const char* lex, const char* tok, int line_no){
     Symboltable[symcount].line_num = line_no;
 
     if(strcmp(Symboltable[symcount].lexeme,lex) != 0 || strcmp(Symboltable[symcount].token,tok) != 0){
-        error("allocation failure", lex, line_no);
+        add_error("allocation failure", lex, line_no);
         return;
     }
     symcount++;
@@ -272,13 +311,14 @@ DOUBLE_HASH "##"
 [ \t\r]+    { /* Ignore whitespaces */ }
 \n {line_no++;}
 . {
-    error("Error: Unrecognized token",yytext,line_no);    
+    add_error("Error: Unrecognized token",yytext,line_no); 
 }
 %%
 main(int argc, char **argv)
 {
 yylex();
-if(error_cnt == false)print_symtab();
+if(error_count == 0)print_symtab();
+else print_errors();
 return 0;
 }
  
