@@ -15,6 +15,7 @@ bool error_cnt = false;
 typedef struct{
     char* lexeme;
     char* token;
+    int line_num;
 }SYMTAB;
 
 SYMTAB Symboltable[MAX_SYMBOLS];
@@ -26,27 +27,39 @@ void error(const char* msg, const char* symbol, int line_no){
 }
 
 void addtosymtab(const char* lex, const char* tok, int line_no){
-if(symcount >= MAX_SYMBOLS){
-error("full symbol table", lex, line_no);
-return;
-}
-Symboltable[symcount].lexeme = strdup(lex);
-Symboltable[symcount].token = strdup(tok);
-
-if(strcmp(Symboltable[symcount].lexeme,lex) != 0 || strcmp(Symboltable[symcount].token,tok) != 0){
-    error("allocation failure", lex, line_no);
+    if(symcount >= MAX_SYMBOLS){
+        error("full symbol table", lex, line_no);
     return;
-}
-symcount++;
+    }
+    Symboltable[symcount].lexeme = strdup(lex);
+    Symboltable[symcount].token = strdup(tok);
+    Symboltable[symcount].line_num = line_no;
+
+    if(strcmp(Symboltable[symcount].lexeme,lex) != 0 || strcmp(Symboltable[symcount].token,tok) != 0){
+        error("allocation failure", lex, line_no);
+        return;
+    }
+    symcount++;
 }
 
-void print_symtab(){
-    printf("\n SYMBOL TABLE \n");
-    printf("%s %s", "LEXEME: ", "TOKEN \n");
-    for(int i=0;i<symcount;i++){
-        printf("%s : %s , Line: %d \n",Symboltable[i].lexeme, Symboltable[i].token, line_no);
+void print_symtab() {
+    printf("\n=========================================================================================================\n");
+    printf("|                                            SYMBOL TABLE                                               |\n");
+    printf("=========================================================================================================\n");
+    printf("| %-40s | %-40s | %-15s |\n", "LEXEME", "TOKEN", "LINE");
+    printf("---------------------------------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < symcount; i++) {
+        printf("| %-40s | %-40s | %-15d |\n", 
+               Symboltable[i].lexeme, 
+               Symboltable[i].token, 
+               Symboltable[i].line_num);
     }
+
+    printf("=========================================================================================================\n");
 }
+
+
 
 %}
 

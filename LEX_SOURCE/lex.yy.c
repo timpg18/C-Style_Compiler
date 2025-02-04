@@ -631,6 +631,7 @@ bool error_cnt = false;
 typedef struct{
     char* lexeme;
     char* token;
+    int line_num;
 }SYMTAB;
 
 SYMTAB Symboltable[MAX_SYMBOLS];
@@ -642,33 +643,45 @@ void error(const char* msg, const char* symbol, int line_no){
 }
 
 void addtosymtab(const char* lex, const char* tok, int line_no){
-if(symcount >= MAX_SYMBOLS){
-error("full symbol table", lex, line_no);
-return;
-}
-Symboltable[symcount].lexeme = strdup(lex);
-Symboltable[symcount].token = strdup(tok);
-
-if(strcmp(Symboltable[symcount].lexeme,lex) != 0 || strcmp(Symboltable[symcount].token,tok) != 0){
-    error("allocation failure", lex, line_no);
+    if(symcount >= MAX_SYMBOLS){
+        error("full symbol table", lex, line_no);
     return;
-}
-symcount++;
-}
-
-void print_symtab(){
-    printf("\n SYMBOL TABLE \n");
-    printf("%s %s", "LEXEME: ", "TOKEN \n");
-    for(int i=0;i<symcount;i++){
-        printf("%s : %s , Line: %d \n",Symboltable[i].lexeme, Symboltable[i].token, line_no);
     }
+    Symboltable[symcount].lexeme = strdup(lex);
+    Symboltable[symcount].token = strdup(tok);
+    Symboltable[symcount].line_num = line_no;
+
+    if(strcmp(Symboltable[symcount].lexeme,lex) != 0 || strcmp(Symboltable[symcount].token,tok) != 0){
+        error("allocation failure", lex, line_no);
+        return;
+    }
+    symcount++;
 }
 
-#line 668 "lex.yy.c"
+void print_symtab() {
+    printf("\n=========================================================================================================\n");
+    printf("|                                            SYMBOL TABLE                                               |\n");
+    printf("=========================================================================================================\n");
+    printf("| %-40s | %-40s | %-15s |\n", "LEXEME", "TOKEN", "LINE");
+    printf("---------------------------------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < symcount; i++) {
+        printf("| %-40s | %-40s | %-15d |\n", 
+               Symboltable[i].lexeme, 
+               Symboltable[i].token, 
+               Symboltable[i].line_num);
+    }
+
+    printf("=========================================================================================================\n");
+}
+
+
+
+#line 681 "lex.yy.c"
 /* Define keyword tokens */
 /*regex for literals*/
 /* Define punctuation macros */
-#line 672 "lex.yy.c"
+#line 685 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -885,9 +898,9 @@ YY_DECL
 		}
 
 	{
-#line 153 "LEXER.l"
+#line 166 "LEXER.l"
 
-#line 891 "lex.yy.c"
+#line 904 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -946,480 +959,480 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 154 "LEXER.l"
+#line 167 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 155 "LEXER.l"
+#line 168 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 156 "LEXER.l"
+#line 169 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 157 "LEXER.l"
+#line 170 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 158 "LEXER.l"
+#line 171 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 159 "LEXER.l"
+#line 172 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 160 "LEXER.l"
+#line 173 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 162 "LEXER.l"
+#line 175 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 163 "LEXER.l"
+#line 176 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 164 "LEXER.l"
+#line 177 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 165 "LEXER.l"
+#line 178 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 166 "LEXER.l"
+#line 179 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 167 "LEXER.l"
+#line 180 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 168 "LEXER.l"
+#line 181 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 169 "LEXER.l"
+#line 182 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 171 "LEXER.l"
+#line 184 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 172 "LEXER.l"
+#line 185 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 173 "LEXER.l"
+#line 186 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 175 "LEXER.l"
+#line 188 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 176 "LEXER.l"
+#line 189 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 177 "LEXER.l"
+#line 190 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 179 "LEXER.l"
+#line 192 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 180 "LEXER.l"
+#line 193 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 181 "LEXER.l"
+#line 194 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 183 "LEXER.l"
+#line 196 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 184 "LEXER.l"
+#line 197 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 185 "LEXER.l"
+#line 198 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 187 "LEXER.l"
+#line 200 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 188 "LEXER.l"
+#line 201 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 190 "LEXER.l"
+#line 203 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 192 "LEXER.l"
+#line 205 "LEXER.l"
 { addtosymtab("RETURN", "Keyword", line_no); }  // Explicitly display RETURN instead of yytext
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 194 "LEXER.l"
+#line 207 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 195 "LEXER.l"
+#line 208 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 196 "LEXER.l"
+#line 209 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 197 "LEXER.l"
+#line 210 "LEXER.l"
 { addtosymtab(yytext, "Keyword", line_no); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 199 "LEXER.l"
+#line 212 "LEXER.l"
 { addtosymtab(yytext, "CONST_INT", line_no); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 200 "LEXER.l"
+#line 213 "LEXER.l"
 { addtosymtab(yytext, "CONST_NULL", line_no); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 201 "LEXER.l"
+#line 214 "LEXER.l"
 { addtosymtab(yytext, "OCTAL_CONST", line_no); } /* put octal rule above int to prioritise leading 0's*/
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 202 "LEXER.l"
+#line 215 "LEXER.l"
 { addtosymtab(yytext, "INTEGER", line_no); }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 203 "LEXER.l"
+#line 216 "LEXER.l"
 { addtosymtab(yytext, "FLOAT", line_no); } /*also matches 1e3 as float which is intended (without decimal) */
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 204 "LEXER.l"
+#line 217 "LEXER.l"
 { addtosymtab(yytext, "HEX_CONST", line_no); }
 	YY_BREAK
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 205 "LEXER.l"
+#line 218 "LEXER.l"
 { addtosymtab(yytext, "CHARACTER CONSTANT", line_no); }
 	YY_BREAK
 case 43:
 /* rule 43 can match eol */
 YY_RULE_SETUP
-#line 206 "LEXER.l"
+#line 219 "LEXER.l"
 { addtosymtab(yytext, "STRING LITERAL", line_no); }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 210 "LEXER.l"
+#line 223 "LEXER.l"
 {addtosymtab(yytext, "ID", line_no);}
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 212 "LEXER.l"
+#line 225 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LEFT_SQ_BRACKET", line_no); }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 213 "LEXER.l"
+#line 226 "LEXER.l"
 { addtosymtab(yytext, "PUNC_RIGHT_SQ_BRACKET", line_no); }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 214 "LEXER.l"
+#line 227 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LEFT_BRACKET", line_no); }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 215 "LEXER.l"
+#line 228 "LEXER.l"
 { addtosymtab(yytext, "PUNC_RIGHT_BRACKET", line_no); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 216 "LEXER.l"
+#line 229 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LEFT_CURLY_BRACKET", line_no); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 217 "LEXER.l"
+#line 230 "LEXER.l"
 { addtosymtab(yytext, "PUNC_RIGHT_CURLY_BRACKET", line_no); }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 218 "LEXER.l"
+#line 231 "LEXER.l"
 { addtosymtab(yytext, "PUNC_DOT", line_no); }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 219 "LEXER.l"
+#line 232 "LEXER.l"
 { addtosymtab(yytext, "PUNC_ARROW", line_no); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 220 "LEXER.l"
+#line 233 "LEXER.l"
 { addtosymtab(yytext, "PUNC_INCREMENT", line_no); }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 221 "LEXER.l"
+#line 234 "LEXER.l"
 { addtosymtab(yytext, "PUNC_DECREMENT", line_no); }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 222 "LEXER.l"
+#line 235 "LEXER.l"
 { addtosymtab(yytext, "PUNC_BITWISE_AND", line_no); }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 223 "LEXER.l"
+#line 236 "LEXER.l"
 { addtosymtab(yytext, "PUNC_STAR", line_no); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 224 "LEXER.l"
+#line 237 "LEXER.l"
 { addtosymtab(yytext, "PUNC_PLUS", line_no); }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 225 "LEXER.l"
+#line 238 "LEXER.l"
 { addtosymtab(yytext, "PUNC_MINUS", line_no); }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 226 "LEXER.l"
+#line 239 "LEXER.l"
 { addtosymtab(yytext, "PUNC_BITWISE_NOT", line_no); }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 227 "LEXER.l"
+#line 240 "LEXER.l"
 { addtosymtab(yytext, "PUNC_NOT", line_no); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 228 "LEXER.l"
+#line 241 "LEXER.l"
 { addtosymtab(yytext, "PUNC_SLASH", line_no); }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 229 "LEXER.l"
+#line 242 "LEXER.l"
 { addtosymtab(yytext, "PUNC_MOD", line_no); }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 230 "LEXER.l"
+#line 243 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LSHIFT", line_no); }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 231 "LEXER.l"
+#line 244 "LEXER.l"
 { addtosymtab(yytext, "PUNC_RSHIFT", line_no); }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 232 "LEXER.l"
+#line 245 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LESS_THAN_OR_EQUAL", line_no); }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 233 "LEXER.l"
+#line 246 "LEXER.l"
 { addtosymtab(yytext, "PUNC_GREATER_THAN_OR_EQUAL", line_no); }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 234 "LEXER.l"
+#line 247 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LESS_THAN", line_no); }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 235 "LEXER.l"
+#line 248 "LEXER.l"
 { addtosymtab(yytext, "PUNC_GREATER_THAN", line_no); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 236 "LEXER.l"
+#line 249 "LEXER.l"
 { addtosymtab(yytext, "PUNC_EQUALS", line_no); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 237 "LEXER.l"
+#line 250 "LEXER.l"
 { addtosymtab(yytext, "PUNC_NOT_EQUAL", line_no); }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 238 "LEXER.l"
+#line 251 "LEXER.l"
 { addtosymtab(yytext, "PUNC_BITWISE_XOR", line_no); }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 239 "LEXER.l"
+#line 252 "LEXER.l"
 { addtosymtab(yytext, "PUNC_BITWISE_OR", line_no); }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 240 "LEXER.l"
+#line 253 "LEXER.l"
 { addtosymtab(yytext, "PUNC_AND", line_no); }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 241 "LEXER.l"
+#line 254 "LEXER.l"
 { addtosymtab(yytext, "PUNC_OR", line_no); }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 242 "LEXER.l"
+#line 255 "LEXER.l"
 { addtosymtab(yytext, "PUNC_TERNARY", line_no); }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 243 "LEXER.l"
+#line 256 "LEXER.l"
 { addtosymtab(yytext, "PUNC_SEMICOLON", line_no); }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 244 "LEXER.l"
+#line 257 "LEXER.l"
 { addtosymtab(yytext, "PUNC_ASSIGN", line_no); }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 245 "LEXER.l"
+#line 258 "LEXER.l"
 { addtosymtab(yytext, "PUNC_MULT_ASSIGN", line_no); }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 246 "LEXER.l"
+#line 259 "LEXER.l"
 { addtosymtab(yytext, "PUNC_SLASH_ASSIGN", line_no); }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 247 "LEXER.l"
+#line 260 "LEXER.l"
 { addtosymtab(yytext, "PUNC_MOD_ASSIGN", line_no); }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 248 "LEXER.l"
+#line 261 "LEXER.l"
 { addtosymtab(yytext, "PUNC_PLUS_ASSIGN", line_no); }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 249 "LEXER.l"
+#line 262 "LEXER.l"
 { addtosymtab(yytext, "PUNC_MINUS_ASSIGN", line_no); }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 250 "LEXER.l"
+#line 263 "LEXER.l"
 { addtosymtab(yytext, "PUNC_LSHIFT_ASSIGN", line_no); }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 251 "LEXER.l"
+#line 264 "LEXER.l"
 { addtosymtab(yytext, "PUNC_RSHIFT_ASSIGN", line_no); }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 252 "LEXER.l"
+#line 265 "LEXER.l"
 { addtosymtab(yytext, "PUNC_AND_ASSIGN", line_no); }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 253 "LEXER.l"
+#line 266 "LEXER.l"
 { addtosymtab(yytext, "PUNC_XOR_ASSIGN", line_no); }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 254 "LEXER.l"
+#line 267 "LEXER.l"
 { addtosymtab(yytext, "PUNC_OR_ASSIGN", line_no); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 255 "LEXER.l"
+#line 268 "LEXER.l"
 { addtosymtab(yytext, "PUNC_COMMA", line_no); }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 256 "LEXER.l"
+#line 269 "LEXER.l"
 { addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 257 "LEXER.l"
+#line 270 "LEXER.l"
 { addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 259 "LEXER.l"
+#line 272 "LEXER.l"
 { /* Ignore whitespaces */ }
 	YY_BREAK
 case 92:
 /* rule 92 can match eol */
 YY_RULE_SETUP
-#line 260 "LEXER.l"
+#line 273 "LEXER.l"
 {line_no++;}
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 261 "LEXER.l"
+#line 274 "LEXER.l"
 {
     error("Error: Unrecognized token",yytext,line_no);    
 }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 264 "LEXER.l"
+#line 277 "LEXER.l"
 ECHO;
 	YY_BREAK
-#line 1423 "lex.yy.c"
+#line 1436 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2424,7 +2437,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 264 "LEXER.l"
+#line 277 "LEXER.l"
 
 main(int argc, char **argv)
 {
