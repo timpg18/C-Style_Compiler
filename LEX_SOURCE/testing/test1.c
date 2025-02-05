@@ -24,7 +24,7 @@ int main(){
     unsigned g = 3423;
     const double = 4234;
     register float h;
-    auto i="hello world!\n\t\*/*";
+    auto i="hello world!\n\t\*/*\'\"";
     return ;
 
 }

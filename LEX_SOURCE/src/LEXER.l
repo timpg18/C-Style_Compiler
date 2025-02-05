@@ -146,7 +146,7 @@ FLOAT_CONST ([+-]?[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?)|([+-]?[0-9]+([eE][+-]?[0-9]+
 LINE_COMMENT "//".*
 MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
 CHAR_CONST  '([^\\'\n]|\\[abfnrtv0\'\"\\])' 
-STRING_CONST \"([^"])*\"  
+STRING_CONST \"([^"\\\n]|\\.)*\"
 UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)    
 
 
