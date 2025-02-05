@@ -145,11 +145,9 @@ NULL "NULL"
 FLOAT_CONST ([+-]?[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?)|([+-]?[0-9]+([eE][+-]?[0-9]+)?)
 LINE_COMMENT "//".*
 MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
-CHAR_CONST '(\\.|[^\\'])' 
+CHAR_CONST  '([^\\'\n]|\\[abfnrtv0\'\"\\])' 
 STRING_CONST \"([^"])*\"  
-UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$) 
-INVALID_STRING \".* 
-INVALID_CHAR_CONST '.*    
+UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)    
 
 
 /* Define punctuation macros */
@@ -200,8 +198,6 @@ OR_ASSIGN "|="
 COMMA ","
 PREPROCESSOR_TOKEN "#"
 DOUBLE_HASH "##"
-
-
 
 %%
 {INT} { addtosymtab(yytext, "Keyword", line_no); }
@@ -313,12 +309,15 @@ DOUBLE_HASH "##"
 {COMMA} { addtosymtab(yytext, "PUNC_COMMA", line_no); }
 {PREPROCESSOR_TOKEN} { addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
 {DOUBLE_HASH} { addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
+"\"" { add_error("Error: Unterminated string literal", yytext, line_no); }
+"'" { add_error("Error: Unterminated character literal", yytext, line_no); }
+'([^\\'\n]{2,}|(\\[abfnrtv0'\"\\]){2,}|\\[^abfnrtv0'\"\\])' { 
+    add_error("Error: Invalid char constant", yytext, line_no);
+}
 
 [ \t\r]+    { /* Ignore whitespaces */ }
 \n {line_no++;}
 {UNTERMINATED_MULTILINE_COMMENT} { add_error("Error: Unterminated Multiline Comment", yytext, line_no); }
-{INVALID_STRING} { add_error("Error: Invalid String Literal", yytext, line_no); } /* complimentary case with is basically an open string */ 
-{INVALID_CHAR_CONST} { add_error("Error: Invalid character Literal", yytext, line_no); }
 . {
     add_error("Error: Unrecognized token",yytext,line_no); 
 }
