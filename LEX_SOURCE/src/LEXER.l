@@ -309,8 +309,9 @@ DOUBLE_HASH "##"
 {COMMA} { addtosymtab(yytext, "PUNC_COMMA", line_no); }
 {PREPROCESSOR_TOKEN} { addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
 {DOUBLE_HASH} { addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
-"\"" { add_error("Error: Unterminated string literal", yytext, line_no); }
-"'" { add_error("Error: Unterminated character literal", yytext, line_no); }
+
+"\"" { add_error("Error: Missing Terminal \" ", yytext, line_no); }
+"'" { add_error("Error: Missing Terminal \' ", yytext, line_no); }
 '([^\\'\n]{2,}|(\\[abfnrtv0'\"\\]){2,}|\\[^abfnrtv0'\"\\])' { 
     add_error("Error: Invalid char constant", yytext, line_no);
 }
