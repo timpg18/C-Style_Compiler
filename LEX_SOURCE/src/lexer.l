@@ -269,7 +269,7 @@ DOUBLE_HASH "##"
             line_no++;  // Increment line number for each newline in the unterminated multi-line comment
         }
     }
-    add_error("Error: Unterminated Multiline Comment", yytext, line_no);
+    add_error("Error: Unterminated Multiline Comment", "/* ...", line_no);
 }
 
 
@@ -324,15 +324,17 @@ DOUBLE_HASH "##"
 {COMMA} { addtosymtab(yytext, "PUNC_COMMA", line_no); }
 {PREPROCESSOR_TOKEN} { addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
 {DOUBLE_HASH} { addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
-
-"\"" { add_error("Error: Missing Terminal \" ", yytext, line_no); }
-"'" { add_error("Error: Missing Terminal \' ", yytext, line_no); }
-'([^\\'\n]{2,}|(\\[abfnrtv0'\"\\]){2,}|\\[^abfnrtv0'\"\\])' { 
-    add_error("Error: Invalid char constant", yytext, line_no);
+'(.{2,})' { 
+    add_error("Error: Invalid char constant", yytext, line_no); /* is >= 2 char => invalid... ig single char always valid?*/
 }
-
 [ \t\r]+    { /* Ignore whitespaces */ }
 \n {line_no++;}
+"\"" { add_error("Error: Missing Terminal \" ", yytext, line_no); }
+"'" { add_error("Error: Missing Terminal \' ", yytext, line_no); }
+. {
+    add_error("Error: Unrecognized token",yytext,line_no); 
+}
+
 %%
 main(int argc, char **argv)
 {
