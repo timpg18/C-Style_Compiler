@@ -355,8 +355,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 102
-#define YY_END_OF_BUFFER 103
+#define YY_NUM_RULES 101
+#define YY_END_OF_BUFFER 102
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -366,35 +366,35 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[277] =
     {   0,
-        0,    0,  103,  101,   98,   99,   63,   95,   93,   65,
-       58,   96,   50,   51,   59,   60,   92,   61,   54,   64,
-       40,   40,   80,   79,   70,   81,   71,   78,   47,   47,
-       47,   48,   49,   74,   47,   47,   47,   47,   47,   47,
-       47,   47,   47,   47,   47,   47,   47,   47,   47,   47,
-       52,   75,   53,   62,   98,   73,    0,   46,    0,   94,
-       84,   76,   89,    0,    0,   82,   56,    0,   40,   40,
-       85,   57,   86,   55,   41,    0,   43,   83,   39,    0,
-        0,   66,   68,   72,   69,   67,   47,   47,   47,   90,
-       47,   47,   47,   47,   47,   47,   47,   47,   22,   47,
+        0,    0,  102,  101,   99,  100,   64,   96,   94,   66,
+       59,   97,   51,   52,   60,   61,   93,   62,   55,   65,
+       40,   40,   81,   80,   71,   82,   72,   79,   48,   48,
+       48,   49,   50,   75,   48,   48,   48,   48,   48,   48,
+       48,   48,   48,   48,   48,   48,   48,   48,   48,   48,
+       53,   76,   54,   63,   99,   74,    0,   45,    0,   95,
+       85,   77,   90,    0,    0,   83,   57,    0,   40,   40,
+       86,   58,   87,   56,   41,    0,   43,   84,   39,    0,
+        0,   67,   69,   73,   70,   68,   48,   48,   48,   91,
+       48,   48,   48,   48,   48,   48,   48,   48,   22,   48,
 
-       47,   47,   47,   47,   47,   17,   47,   47,   47,   47,
-       47,   47,   47,   47,   47,   47,   47,   47,   47,   91,
-       77,    0,   45,    0,    0,    0,    0,  100,    0,   43,
-        0,   41,   42,   87,   88,   47,   47,   47,   47,   47,
-       47,   47,   47,   47,   47,   47,   47,   47,   47,   47,
-       20,   47,    1,   47,   47,   47,   47,   47,   47,   47,
-       47,   47,   47,   47,   47,   47,   47,   47,   47,   47,
-        0,   97,    0,    0,   41,   44,   47,   38,   15,    7,
-       47,   31,    3,   47,   47,   47,   47,   47,   18,   27,
-       47,   47,   23,    5,   47,   47,   47,   47,   47,   47,
+       48,   48,   48,   48,   48,   17,   48,   48,   48,   48,
+       48,   48,   48,   48,   48,   48,   48,   48,   48,   92,
+       78,    0,   44,    0,    0,    0,    0,   47,    0,   43,
+        0,   41,   42,   88,   89,   48,   48,   48,   48,   48,
+       48,   48,   48,   48,   48,   48,   48,   48,   48,   48,
+       20,   48,    1,   48,   48,   48,   48,   48,   48,   48,
+       48,   48,   48,   48,   48,   48,   48,   48,   48,   48,
+        0,   98,    0,    0,   41,   46,   48,   38,   15,    7,
+       48,   31,    3,   48,   48,   48,   48,   48,   18,   27,
+       48,   48,   23,    5,   48,   48,   48,   48,   48,   48,
 
-       47,   47,   47,   47,   47,   47,   47,   29,   47,   47,
-        0,    0,   24,   33,   10,   47,   47,   47,   47,    4,
-       47,   47,   47,   47,   47,    6,   47,   47,   47,   47,
-       47,   28,   47,   47,   21,    0,    0,   47,   47,    2,
-       13,   47,   47,   34,   47,   32,    8,   11,   26,   19,
-       47,   47,   47,    0,    0,   47,   30,   35,   47,   47,
-       16,   47,   47,    0,   25,   47,   14,    9,   12,    0,
+       48,   48,   48,   48,   48,   48,   48,   29,   48,   48,
+        0,    0,   24,   33,   10,   48,   48,   48,   48,    4,
+       48,   48,   48,   48,   48,    6,   48,   48,   48,   48,
+       48,   28,   48,   48,   21,    0,    0,   48,   48,    2,
+       13,   48,   48,   34,   48,   32,    8,   11,   26,   19,
+       48,   48,   48,    0,    0,   48,   30,   35,   48,   48,
+       16,   48,   48,    0,   25,   48,   14,    9,   12,    0,
        36,    0,    0,    0,   37,    0
     } ;
 
@@ -1239,309 +1239,315 @@ YY_RULE_SETUP
 {} /*do nothing*/
 	YY_BREAK
 case 44:
-/* rule 44 can match eol */
 YY_RULE_SETUP
 #line 256 "src/lexer.l"
-{} /* do nothing */
+{ addtosymtab(yytext, "CHARACTER CONSTANT", line_no); } /*contains any char except \ , if there is \, then there must be another character behind it. */
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
 #line 257 "src/lexer.l"
-{ addtosymtab(yytext, "CHARACTER CONSTANT", line_no); } /*contains any char except \ , if there is \, then there must be another character behind it. */
-	YY_BREAK
-case 46:
-YY_RULE_SETUP
-#line 258 "src/lexer.l"
 { addtosymtab(yytext, "STRING LITERAL", line_no); } /*allows all characters, no escape sequences defined*/
 	YY_BREAK
-case 47:
+case 46:
+/* rule 46 can match eol */
 YY_RULE_SETUP
-#line 263 "src/lexer.l"
-{addtosymtab(yytext, "ID", line_no);}
+#line 258 "src/lexer.l"
+{ 
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        if (yytext[i] == '\n') {
+            line_no++;  // Increment line number for each newline in the multi-line comment
+        }
+    }
+}
+	YY_BREAK
+case 47:
+/* rule 47 can match eol */
+YY_RULE_SETUP
+#line 266 "src/lexer.l"
+{
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        if (yytext[i] == '\n') {
+            line_no++;  // Increment line number for each newline in the unterminated multi-line comment
+        }
+    }
+    add_error("Error: Unterminated Multiline Comment", yytext, line_no);
+}
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 265 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LEFT_SQ_BRACKET", line_no); }
+#line 278 "src/lexer.l"
+{addtosymtab(yytext, "ID", line_no);}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 266 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_RIGHT_SQ_BRACKET", line_no); }
+#line 280 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LEFT_SQ_BRACKET", line_no); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 267 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LEFT_BRACKET", line_no); }
+#line 281 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_RIGHT_SQ_BRACKET", line_no); }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 268 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_RIGHT_BRACKET", line_no); }
+#line 282 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LEFT_BRACKET", line_no); }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 269 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LEFT_CURLY_BRACKET", line_no); }
+#line 283 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_RIGHT_BRACKET", line_no); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 270 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_RIGHT_CURLY_BRACKET", line_no); }
+#line 284 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LEFT_CURLY_BRACKET", line_no); }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 271 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_DOT", line_no); }
+#line 285 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_RIGHT_CURLY_BRACKET", line_no); }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 272 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_ARROW", line_no); }
+#line 286 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_DOT", line_no); }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 273 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_INCREMENT", line_no); }
+#line 287 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_ARROW", line_no); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 274 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_DECREMENT", line_no); }
+#line 288 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_INCREMENT", line_no); }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 275 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_BITWISE_AND", line_no); }
+#line 289 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_DECREMENT", line_no); }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 276 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_STAR", line_no); }
+#line 290 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_BITWISE_AND", line_no); }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 277 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_PLUS", line_no); }
+#line 291 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_STAR", line_no); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 278 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_MINUS", line_no); }
+#line 292 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_PLUS", line_no); }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 279 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_BITWISE_NOT", line_no); }
+#line 293 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_MINUS", line_no); }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 280 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_NOT", line_no); }
+#line 294 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_BITWISE_NOT", line_no); }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 281 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_SLASH", line_no); }
+#line 295 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_NOT", line_no); }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 282 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_MOD", line_no); }
+#line 296 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_SLASH", line_no); }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 283 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LSHIFT", line_no); }
+#line 297 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_MOD", line_no); }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 284 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_RSHIFT", line_no); }
+#line 298 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LSHIFT", line_no); }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 285 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LESS_THAN_OR_EQUAL", line_no); }
+#line 299 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_RSHIFT", line_no); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 286 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_GREATER_THAN_OR_EQUAL", line_no); }
+#line 300 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LESS_THAN_OR_EQUAL", line_no); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 287 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LESS_THAN", line_no); }
+#line 301 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_GREATER_THAN_OR_EQUAL", line_no); }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 288 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_GREATER_THAN", line_no); }
+#line 302 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LESS_THAN", line_no); }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 289 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_EQUALS", line_no); }
+#line 303 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_GREATER_THAN", line_no); }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 290 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_NOT_EQUAL", line_no); }
+#line 304 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_EQUALS", line_no); }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 291 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_BITWISE_XOR", line_no); }
+#line 305 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_NOT_EQUAL", line_no); }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 292 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_BITWISE_OR", line_no); }
+#line 306 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_BITWISE_XOR", line_no); }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 293 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_AND", line_no); }
+#line 307 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_BITWISE_OR", line_no); }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 294 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_OR", line_no); }
+#line 308 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_AND", line_no); }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 295 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_TERNARY", line_no); }
+#line 309 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_OR", line_no); }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 296 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_SEMICOLON", line_no); }
+#line 310 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_TERNARY", line_no); }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 297 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_COLON", line_no); }
+#line 311 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_SEMICOLON", line_no); }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 298 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_ASSIGN", line_no); }
+#line 312 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_COLON", line_no); }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 299 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_MULT_ASSIGN", line_no); }
+#line 313 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_ASSIGN", line_no); }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 300 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_SLASH_ASSIGN", line_no); }
+#line 314 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_MULT_ASSIGN", line_no); }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 301 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_MOD_ASSIGN", line_no); }
+#line 315 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_SLASH_ASSIGN", line_no); }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 302 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_PLUS_ASSIGN", line_no); }
+#line 316 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_MOD_ASSIGN", line_no); }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 303 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_MINUS_ASSIGN", line_no); }
+#line 317 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_PLUS_ASSIGN", line_no); }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 304 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_LSHIFT_ASSIGN", line_no); }
+#line 318 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_MINUS_ASSIGN", line_no); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 305 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_RSHIFT_ASSIGN", line_no); }
+#line 319 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_LSHIFT_ASSIGN", line_no); }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 306 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_AND_ASSIGN", line_no); }
+#line 320 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_RSHIFT_ASSIGN", line_no); }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 307 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_XOR_ASSIGN", line_no); }
+#line 321 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_AND_ASSIGN", line_no); }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 308 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_OR_ASSIGN", line_no); }
+#line 322 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_XOR_ASSIGN", line_no); }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 309 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_COMMA", line_no); }
+#line 323 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_OR_ASSIGN", line_no); }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 310 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
+#line 324 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_COMMA", line_no); }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 311 "src/lexer.l"
-{ addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
+#line 325 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_PREPROCESSOR_TOKEN", line_no); }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 313 "src/lexer.l"
-{ add_error("Error: Missing Terminal \" ", yytext, line_no); }
+#line 326 "src/lexer.l"
+{ addtosymtab(yytext, "PUNC_DOUBLE_HASH", line_no); }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 314 "src/lexer.l"
-{ add_error("Error: Missing Terminal \' ", yytext, line_no); }
+#line 328 "src/lexer.l"
+{ add_error("Error: Missing Terminal \" ", yytext, line_no); }
 	YY_BREAK
 case 97:
-/* rule 97 can match eol */
 YY_RULE_SETUP
-#line 315 "src/lexer.l"
+#line 329 "src/lexer.l"
+{ add_error("Error: Missing Terminal \' ", yytext, line_no); }
+	YY_BREAK
+case 98:
+/* rule 98 can match eol */
+YY_RULE_SETUP
+#line 330 "src/lexer.l"
 { 
     add_error("Error: Invalid char constant", yytext, line_no);
 }
 	YY_BREAK
-case 98:
-YY_RULE_SETUP
-#line 319 "src/lexer.l"
-{ /* Ignore whitespaces */ }
-	YY_BREAK
 case 99:
-/* rule 99 can match eol */
 YY_RULE_SETUP
-#line 320 "src/lexer.l"
-{line_no++;}
+#line 334 "src/lexer.l"
+{ /* Ignore whitespaces */ }
 	YY_BREAK
 case 100:
 /* rule 100 can match eol */
 YY_RULE_SETUP
-#line 321 "src/lexer.l"
-{ add_error("Error: Unterminated Multiline Comment", yytext, line_no); }
+#line 335 "src/lexer.l"
+{line_no++;}
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 322 "src/lexer.l"
-{
-    add_error("Error: Unrecognized token",yytext,line_no); 
-}
-	YY_BREAK
-case 102:
-YY_RULE_SETUP
-#line 325 "src/lexer.l"
+#line 336 "src/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1545 "src/lex.yy.c"
+#line 1551 "src/lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2546,13 +2552,13 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 325 "src/lexer.l"
+#line 336 "src/lexer.l"
 
 main(int argc, char **argv)
 {
 yylex();
-print_symtab();
-print_errors();
+if(error_count == 0)print_symtab();
+else print_errors();
 return 0;
 }
  

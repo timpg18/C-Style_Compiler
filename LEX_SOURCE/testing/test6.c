@@ -6,7 +6,8 @@
 */
 '
 'hello'
-"hello;
+"hello;\
 hello"
-"hello
+"hello"
 '\t\n'
+

@@ -253,9 +253,24 @@ DOUBLE_HASH "##"
 {FLOAT_CONST} { addtosymtab(yytext, "FLOAT", line_no); } /*also matches 1e3 as float which is intended (without decimal) */
 {HEX_CONST} { addtosymtab(yytext, "HEX_CONST", line_no); }
 {LINE_COMMENT} {} /*do nothing*/
-{MULTILINE_COMMENT} {} /* do nothing */
 {CHAR_CONST} { addtosymtab(yytext, "CHARACTER CONSTANT", line_no); } /*contains any char except \ , if there is \, then there must be another character behind it. */
 {STRING_CONST} { addtosymtab(yytext, "STRING LITERAL", line_no); } /*allows all characters, no escape sequences defined*/
+{MULTILINE_COMMENT} { 
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        if (yytext[i] == '\n') {
+            line_no++;  // Increment line number for each newline in the multi-line comment
+        }
+    }
+}
+
+{UNTERMINATED_MULTILINE_COMMENT} {
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        if (yytext[i] == '\n') {
+            line_no++;  // Increment line number for each newline in the unterminated multi-line comment
+        }
+    }
+    add_error("Error: Unterminated Multiline Comment", yytext, line_no);
+}
 
 
 
@@ -318,10 +333,6 @@ DOUBLE_HASH "##"
 
 [ \t\r]+    { /* Ignore whitespaces */ }
 \n {line_no++;}
-{UNTERMINATED_MULTILINE_COMMENT} { add_error("Error: Unterminated Multiline Comment", yytext, line_no); }
-. {
-    add_error("Error: Unrecognized token",yytext,line_no); 
-}
 %%
 main(int argc, char **argv)
 {
