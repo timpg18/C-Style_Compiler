@@ -3,7 +3,7 @@
 //                                TEST 1
 //                         VARIABLE DECLARATION
 //===================================================================
-
+(5 + 5)
 #include<stdio.h>
 
 extern int z;

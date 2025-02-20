@@ -90,6 +90,7 @@ primary_expression
 	| constant
 	| string
 	| '(' expression ')'
+	| '(' expression error { yyerrok; }
 	;
 
 constant
@@ -148,6 +149,7 @@ unary_operator
 cast_expression
 	: unary_expression
 	| '(' type_name ')' cast_expression
+	| '(' type_name error cast_expression { yyerrok; }
 	;
 
 multiplicative_expression
@@ -244,6 +246,8 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'
+	| declaration_specifiers error { yyerrok; }
+    | declaration_specifiers init_declarator_list error {yyerrok;}
 	;
 
 declaration_specifiers
@@ -428,6 +432,12 @@ direct_declarator
        tokenTable[idx].token_type = strdup("PROCEDURE");
        $$ = idx;
     }
+	direct_declarator '[' assignment_expression error {
+          /* Catch an invalid array declaration (missing ']'). 
+             Use the default error message and recover. */
+          yyerrok;
+          $$ = $1;  /* Propagate the index as is */
+      }
 	;
 
 pointer
@@ -555,6 +565,7 @@ labeled_statement
 compound_statement
 	: '{' '}'
 	| '{'  block_item_list '}'
+	| '{'  block_item_list error { yyerrok; }
 	;
 
 block_item_list
@@ -570,6 +581,7 @@ block_item
 expression_statement
 	: ';'
 	| expression ';'
+	| expression error {yyerrok;}
 	;
 
 selection_statement
@@ -608,6 +620,7 @@ external_declaration
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
 	| declaration_specifiers declarator compound_statement
+	| declaration_specifiers declarator error { yyerrok; }
 	;
 
 declaration_list
@@ -617,12 +630,15 @@ declaration_list
 
 %%
 void yyerror(const char *s) {
-	fflush(stdout);
+    fflush(stdout);
     fprintf(stderr, "Syntax Error: %s at line %d\n", s, line_no);
+    // Optionally, increment an error counter if you want to track total errors:
+    // error_count++;
 }
 
 
-main(int argc, char **argv) {
+
+int main(int argc, char **argv) {
 int parserresult = yyparse(); // Parser calls yylex() internally
 
 if (parserresult == 0 && error_count == 0) {
