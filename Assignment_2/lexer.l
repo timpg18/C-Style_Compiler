@@ -130,6 +130,7 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
 "short"     { return SHORT; }
 "bool"      { return BOOL; }
 "signed"    { return SIGNED; }
+"sizeof"    { return SIZEOF;}
 "unsigned"  { return UNSIGNED; }
 "const"     { return CONST; }
 "volatile"  { return VOLATILE; }

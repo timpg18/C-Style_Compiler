@@ -17,19 +17,23 @@ enum Color {
     BLUE
 };
 
+unsigned long long int* func(int a){
+
+}
+
 int main() {
+    compute(1,2);
     if(a>1){ // misisng } in if statement
-    int a =2 - 2 // missing semicolon
-    int* p;
+    int a =(int 2 - 2 // missing semicolon
+    const int int int int* p;
     double* y;
     int a = (int 2 + 2; // missed ) in casting
     int*** u;
     char* string="hello world";
     struct Person p;
-    union Data d;
     enum Color t;
     int a[53534][2; // invalid array declaration
-    double t[1232][][][];
+    double t[1232][][][;
     int result = sum(a, 10);
     double comp = compute(s, l, ui, flag);
     int a = 10;

@@ -41,8 +41,6 @@ void print_token_table() {
     }
     printf("=================================================================\n");
 }
-
-
 %}
 
 %union{
@@ -73,9 +71,10 @@ void print_token_table() {
 %token CLASS PUBLIC PRIVATE PROTECTED
 
 %type <index> direct_declarator declarator 
-%type <id> type_specifier struct_or_union_specifier struct_or_union
+%type <id> struct_or_union_specifier struct_or_union
 %type <id> constant_expression assignment_expression
 %type <id> pointer type_qualifier_list
+%type <id> declaration_specifiers type_specifier storage_class_specifier type_qualifier conditional_expression
 
 
 
@@ -252,12 +251,36 @@ declaration
 
 declaration_specifiers
 	: storage_class_specifier declaration_specifiers
+	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */ }
 	| storage_class_specifier
 	| type_specifier declaration_specifiers
-	| type_specifier
+	      {
+              /* Concatenate the current type_specifier ($1) with the following declaration_specifiers ($2).
+                 A space is inserted between the two parts. */
+              char *combined = malloc(strlen($1) + strlen($2) + 2);
+              sprintf(combined, "%s %s", $1, $2);
+              $$ = combined;
+              currentType = $$; /* Update the global currentType */
+          }
+	| type_specifier 
+	      { 
+              $$ = $1; 
+              currentType = $$; 
+          }
 	| type_qualifier declaration_specifiers
+	    { 
+			char *combined = malloc(strlen($1) + strlen($2) + 2);
+			sprintf(combined, "%s %s", $1, $2);
+			$$ = combined;
+			currentType = $$; 
+			$$ = $2; 
+		}
 	| type_qualifier
+	      { $$ = $1; 
+		  currentType = $$;
+		  }
 	;
+
 
 init_declarator_list
 	: init_declarator
@@ -294,17 +317,17 @@ type_specifier
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' struct_declaration_list '}'{
+	: struct_or_union '{' struct_declaration_list '}' ';'{
          /* Anonymous struct or union */
          $$ = malloc(strlen($1) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$, "%s (anonymous)", $1);
     }
-	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'{
+	| struct_or_union IDENTIFIER '{' struct_declaration_list '}' ';'{
          /* Named struct/union with body */
          $$ = malloc(strlen($1) + strlen($2) + 2); // one space plus null
          sprintf($$, "%s %s", $1, $2);
     }
-	| struct_or_union IDENTIFIER{
+	| struct_or_union IDENTIFIER ';' {
          /* Named struct/union declaration without body */
          $$ = malloc(strlen($1) + strlen($2) + 2);
          sprintf($$, "%s %s", $1, $2);
@@ -363,8 +386,8 @@ enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	;
 
 type_qualifier
-	: CONST
-	| VOLATILE
+	: CONST { $$ = strdup("CONST"); }
+	| VOLATILE { $$ = strdup("VOLATILE"); }
 	;
 
 
