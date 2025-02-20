@@ -135,6 +135,7 @@ PUBLIC   "public"
 PRIVATE  "private"
 PROTECTED "protected"
 TYPEDEF "typedef" 
+NEW "new"
 
 /*regex for literals*/
 IDENTIFIER [a-zA-Z_][a-zA-Z0-9_]*
@@ -236,6 +237,7 @@ DOUBLE_HASH "##"
 
 {VOID} { addtosymtab(yytext, "Keyword", line_no); }
 {DEFAULT} { addtosymtab(yytext, "Keyword", line_no); }
+{NEW} { addtosymtab(yytext, "Keyword", line_no); }
 
 {CASE} { addtosymtab(yytext, "Keyword", line_no); }
 

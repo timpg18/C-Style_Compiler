@@ -49,6 +49,7 @@ void add_error(const char* msg, const char* token, int line_no) {
 
 /* Function to print all errors in a structured format */
 void print_errors() {
+    
     printf("\n==================================================================================================================\n");
     printf("                                              ERROR REPORT\n");
     printf("==================================================================================================================\n");
@@ -166,7 +167,7 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
 "INT_(MAX|MIN)" { return I_CONSTANT; }
 "NULL"      { return I_CONSTANT; }
 {OCTAL_CONST} { return I_CONSTANT; }
-{INT_CONST}   { return I_CONSTANT; }
+{INT_CONST}   {  yylval.id = strdup(yytext); return I_CONSTANT; }
 {FLOAT_CONST} { return F_CONSTANT; }
 {HEX_CONST}   { return I_CONSTANT; }
 {LINE_COMMENT} {} /* Ignore comments */
@@ -189,7 +190,7 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
     add_error("Error: Unterminated Multiline Comment", "/* ...", line_no);
 }
 
-[a-zA-Z_][a-zA-Z0-9_]* { return IDENTIFIER;}
+[a-zA-Z_][a-zA-Z0-9_]* { yylval.id = strdup(yytext); return IDENTIFIER;}
 
 ";"          { return(';'); }
 "{"          { return('{'); }

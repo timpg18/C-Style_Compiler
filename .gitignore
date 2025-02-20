@@ -1,3 +1,7 @@
 lex.yy.c
 lexer
 github_link.txt
+grammar.tab.c
+grammar.tab.h
+grammar.y
+a.out
