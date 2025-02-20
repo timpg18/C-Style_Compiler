@@ -432,7 +432,7 @@ direct_declarator
        tokenTable[idx].token_type = strdup("PROCEDURE");
        $$ = idx;
     }
-	direct_declarator '[' assignment_expression error {
+	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 
              Use the default error message and recover. */
           yyerrok;
@@ -630,15 +630,12 @@ declaration_list
 
 %%
 void yyerror(const char *s) {
-    fflush(stdout);
+	fflush(stdout);
     fprintf(stderr, "Syntax Error: %s at line %d\n", s, line_no);
-    // Optionally, increment an error counter if you want to track total errors:
-    // error_count++;
 }
 
 
-
-int main(int argc, char **argv) {
+main(int argc, char **argv) {
 int parserresult = yyparse(); // Parser calls yylex() internally
 
 if (parserresult == 0 && error_count == 0) {
@@ -654,4 +651,3 @@ if (parserresult == 0 && error_count == 0) {
 }
 return 0;
 }
- 
