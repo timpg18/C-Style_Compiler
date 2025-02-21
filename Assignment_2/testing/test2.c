@@ -19,7 +19,14 @@ int f(int& a){
     return 1;
 }
 
-class Hello{
+
+class e{
+protected:{
+    int w;
+    char *lex;
+}
+} hehhe;
+class Hello : public e{
     public:{
         int x;
         int y;
