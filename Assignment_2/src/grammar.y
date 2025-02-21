@@ -251,8 +251,18 @@ declaration
 
 declaration_specifiers
 	: storage_class_specifier declaration_specifiers
-	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */ }
-	| storage_class_specifier
+	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */
+			char *combined = malloc(strlen($1) + strlen($2) + 2);
+              sprintf(combined, "%s %s", $1, $2);
+              $$ = combined;
+              currentType = $$;
+              free($1);
+              free($2);
+		   }
+	| storage_class_specifier{
+		$$ = $1;
+        currentType = $$;
+	}
 	| type_specifier declaration_specifiers
 	      {
               /* Concatenate the current type_specifier ($1) with the following declaration_specifiers ($2).
@@ -293,11 +303,11 @@ init_declarator
 	;
 
 storage_class_specifier
-	: TYPEDEF	/* identifiers must be flagged as TYPEDEF_NAME */
-	| EXTERN
-	| STATIC
-	| AUTO
-	| REGISTER
+	: TYPEDEF	{ $$ = strdup("typedef"); }/* identifiers must be flagged as TYPEDEF_NAME */
+	| EXTERN { $$ = strdup("extern"); }
+	| STATIC { $$ = strdup("static"); }
+	| AUTO { $$ = strdup("auto"); }
+	| REGISTER { $$ = strdup("register"); }
 	;
 
 type_specifier
@@ -312,22 +322,22 @@ type_specifier
 	| UNSIGNED { currentType = strdup("UNSIGNED"); $$ = currentType; }
 	| BOOL { currentType = strdup("BOOL"); $$ = currentType; }
 	| struct_or_union_specifier { currentType = $1; $$ = currentType; }
-	| enum_specifier { currentType = strdup("ENUM"); $$ = currentType; }
-	| TYPEDEF_NAME	{ currentType = strdup("TYPEDEF_NAME"); $$ = currentType; }
+	| enum_specifier { currentType = $1; $$ = currentType; }
+	| TYPEDEF_NAME	{ currentType = strdup(TYPEDEF_NAME); $$ = currentType; }
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' struct_declaration_list '}' ';'{
+	: struct_or_union '{' struct_declaration_list '}'{
          /* Anonymous struct or union */
          $$ = malloc(strlen($1) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$, "%s (anonymous)", $1);
     }
-	| struct_or_union IDENTIFIER '{' struct_declaration_list '}' ';'{
+	| struct_or_union IDENTIFIER '{' struct_declaration_list '}' {
          /* Named struct/union with body */
          $$ = malloc(strlen($1) + strlen($2) + 2); // one space plus null
          sprintf($$, "%s %s", $1, $2);
     }
-	| struct_or_union IDENTIFIER ';' {
+	| struct_or_union IDENTIFIER {
          /* Named struct/union declaration without body */
          $$ = malloc(strlen($1) + strlen($2) + 2);
          sprintf($$, "%s %s", $1, $2);
@@ -368,12 +378,31 @@ struct_declarator
 	;
 
 enum_specifier
-	: ENUM '{' enumerator_list '}'
-	| ENUM '{' enumerator_list ',' '}'
-	| ENUM IDENTIFIER '{' enumerator_list '}'
-	| ENUM IDENTIFIER '{' enumerator_list ',' '}'
-	| ENUM IDENTIFIER
-	;
+    : ENUM '{' enumerator_list '}' { 
+          /* Anonymous enum; you might choose to simply return "enum" */
+          $$ = strdup("enum");
+      }
+    | ENUM '{' enumerator_list ',' '}' { 
+          $$ = strdup("enum");
+      }
+    | ENUM IDENTIFIER '{' enumerator_list '}' { 
+          /* Named enum: produce "enum <identifier>" */
+          char *tmp = malloc(strlen("enum") + strlen($2) + 2);
+          sprintf(tmp, "enum %s", $2);
+          $$ = tmp;
+      }
+    | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
+          char *tmp = malloc(strlen("enum") + strlen($2) + 2);
+          sprintf(tmp, "enum %s", $2);
+          $$ = tmp;
+      }
+    | ENUM IDENTIFIER { 
+          char *tmp = malloc(strlen("enum") + strlen($2) + 2);
+          sprintf(tmp, "enum %s", $2);
+          $$ = tmp;
+      }
+    ;
+
 
 enumerator_list
 	: enumerator
@@ -410,7 +439,7 @@ declarator
 
 direct_declarator
 	: IDENTIFIER{
-        add_to_token_table($1, currentType ? currentType : "INT");
+        add_to_token_table($1, currentType ? currentType : "INVALID");
         $$ = token_count - 1;
     }
 	| '(' declarator ')' { $$ = $2; }
