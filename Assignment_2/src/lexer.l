@@ -151,6 +151,7 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
 "switch"    { return SWITCH; }
 "for"       { return FOR; }
 "while"     { return WHILE; }
+"until"     { return UNTIL;}
 "do"        { return DO; }
 "goto"      { return GOTO; }
 "break"     { return BREAK; }
