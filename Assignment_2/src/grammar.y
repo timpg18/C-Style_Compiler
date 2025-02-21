@@ -362,7 +362,7 @@ class_member_list
     ;
 
 class_member
-    : access_specifier ':' '{' struct_declaration_list '}'
+    : access_specifier ':' '{' translation_unit '}'
     ;
 
 

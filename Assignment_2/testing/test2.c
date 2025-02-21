@@ -36,6 +36,9 @@ class Hello : public e{
     }
     private:{
         int gg;
+        int eee(int zz){
+            return 0;
+        }
     }
 } W;
 
