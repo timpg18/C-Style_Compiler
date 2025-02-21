@@ -7,6 +7,7 @@ This project is a C-style compiler, and it includes a lexer written using Flex. 
 Before proceeding, ensure you have the following:
 
 1. **Windows 10/11** with WSL (Windows Subsystem for Linux) installed.
+   OR any Linux installation
 2. **Flex** and **GCC** installed on WSL.
 
 ### Step 1: Install WSL on Windows (if not already installed)
