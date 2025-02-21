@@ -10,7 +10,7 @@
 extern void yyerror(const char *);
 extern int sym_type(const char *);
 static int check_type(void);
-#define sym_type(identifier) IDENTIFIER /* with no symbol table, fake it */
+//#define sym_type(identifier) IDENTIFIER /* with no symbol table, fake it */
 
 #define MAX_SYMBOLS 20000
 
@@ -98,6 +98,15 @@ void print_symtab() {
     }
 
     printf("=========================================================================================================\n");
+}
+
+void update_symtab(char* ttoken){
+    for(int i=0;i<symcount;i++){
+        if(strcmp(Symboltable[i].lexeme,ttoken) == 0){
+            strcpy(Symboltable[i].token, "typedef");
+            break;
+        }
+    }
 }
 
 
@@ -192,7 +201,20 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
     add_error("Error: Unterminated Multiline Comment", "/* ...", line_no);
 }
 
-[a-zA-Z_][a-zA-Z0-9_]* { yylval.id = strdup(yytext); return IDENTIFIER;}
+[a-zA-Z_][a-zA-Z0-9_]* {
+    yylval.id = strdup(yytext);
+    // Check if the identifier already exists in the symbol table.
+    for (int i = 0; i < symcount; i++) {
+        if (strcmp(Symboltable[i].lexeme, yytext) == 0) {
+            if(strcmp(Symboltable[i].token,"typedef")==0){
+               printf("%s    %s\n",Symboltable[i].lexeme,Symboltable[i].token);
+               return TYPEDEF_NAME;
+        }
+        }
+    }
+    addtosymtab(yytext, "identifier", line_no);
+    return IDENTIFIER;
+}
 
 ";"          { return(';'); }
 "{"          { return('{'); }
@@ -255,16 +277,3 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
 }
 
 %%
-
-static int check_type(void)
-{
-    switch (sym_type(yytext))
-    {
-    case TYPEDEF_NAME:                /* previously defined */
-        return TYPEDEF_NAME;
-    case ENUMERATION_CONSTANT:        /* previously defined */
-        return ENUMERATION_CONSTANT;
-    default:                          /* includes undefined */
-        return IDENTIFIER;
-    }
-}

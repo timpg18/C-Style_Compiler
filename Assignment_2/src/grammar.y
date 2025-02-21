@@ -7,6 +7,9 @@ extern int line_no;
 extern void print_errors();
 extern void print_symtab();
 extern int error_count;
+extern void update_symtab(char* ttoken);
+extern int symcount;
+extern char* yytext;
 
 typedef struct{
 	char* token;
@@ -15,9 +18,10 @@ typedef struct{
 
 #define MAX_TOKENS 20000
 
+int parser_errror=0;
+
 token_table tokenTable[MAX_TOKENS];
 int token_count=0;
-
 /* Global variable to store the current elementary type */
 char *currentType = NULL;
 
@@ -25,6 +29,9 @@ void add_to_token_table(const char *token, const char *token_type) {
     if (token_count < MAX_TOKENS) {
         tokenTable[token_count].token = strdup(token);
         tokenTable[token_count].token_type = strdup(token_type);
+		if (strstr(token_type, "typedef") != NULL){
+			update_symtab(tokenTable[token_count].token);
+		  }
         token_count++;
     }
 }
@@ -68,15 +75,16 @@ void print_token_table() {
 %token	 ENUMERATION_CONSTANT
 
 /* Define keyword tokens missing in this C file.*/
-%token CLASS PUBLIC PRIVATE PROTECTED
+%token <id> CLASS 
+%token PUBLIC PRIVATE PROTECTED
 
 %type <index> direct_declarator declarator 
 %type <id> struct_or_union_specifier struct_or_union
+%type <id> enum_specifier
 %type <id> constant_expression assignment_expression
 %type <id> pointer type_qualifier_list
 %type <id> declaration_specifiers type_specifier storage_class_specifier type_qualifier conditional_expression
-
-
+%type <id> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -289,6 +297,7 @@ declaration_specifiers
 	      { $$ = $1; 
 		  currentType = $$;
 		  }
+	| declaration_specifiers '&'
 	;
 
 
@@ -322,8 +331,83 @@ type_specifier
 	| UNSIGNED { currentType = strdup("UNSIGNED"); $$ = currentType; }
 	| BOOL { currentType = strdup("BOOL"); $$ = currentType; }
 	| struct_or_union_specifier { currentType = $1; $$ = currentType; }
+	| class_specifier {currentType = $1; $$ = currentType;}
 	| enum_specifier { currentType = $1; $$ = currentType; }
-	| TYPEDEF_NAME	{ currentType = strdup(TYPEDEF_NAME); $$ = currentType; }
+	| TYPEDEF_NAME	{ currentType = strdup(yytext); $$ = currentType;}
+	;
+
+class_specifier
+    : CLASS '{' class_member_list '}'
+         {
+		 $$ = malloc(strlen("class") + 14); 
+         sprintf($$, "class (anonymous)");
+		   }
+	| CLASS IDENTIFIER base_clause_opt  '{' class_member_list '}'
+         { 
+		    $$ = malloc( strlen("class") + strlen($2) + 14 ); // one space plus null
+         sprintf($$, "class %s", $2);
+		   
+		   }
+	| CLASS IDENTIFIER base_clause_opt  
+         { 
+           $$ = malloc(strlen("class") + strlen($2) + 14);
+           sprintf($$, "class %s", $2);
+		 }
+    ;
+
+
+class_member_list
+    : class_member
+    | class_member_list class_member
+    ;
+
+class_member
+    : access_specifier ':' '{' struct_declaration_list '}'
+    ;
+
+
+access_specifier
+    : PUBLIC { $$ = strdup("public"); }
+    | PRIVATE { $$ = strdup("private"); }
+    | PROTECTED { $$ = strdup("protected"); }
+    ;
+/* Optional inheritance clause */
+base_clause_opt
+    : ':' base_specifier_list { $$ = $2; }
+    | /* empty */ { $$ = NULL; }
+    ;
+
+base_specifier_list
+    : base_specifier { $$ = $1; }
+    | base_specifier_list ',' base_specifier 
+         { 
+           /* Concatenate the list, e.g., "public Base1, private Base2" */
+           char *tmp = malloc(strlen($1) + strlen($3) + 14);
+           sprintf(tmp, "%s, %s", $1, $3);
+           $$ = tmp;
+         }
+    ;
+
+/* A single base specifier with an optional access specifier */
+base_specifier
+    : access_specifier_opt IDENTIFIER
+         { 
+           if ($1)
+           {
+              $$ = malloc(strlen($1) + strlen($2) + 14);
+              sprintf($$, "%s %s", $1, $2);
+           }
+           else
+           {
+              $$ = strdup($2);
+           }
+         }
+    ;
+
+/* Optional access specifier in the base clause */
+access_specifier_opt
+	: /* empty */ {$$ = NULL;}
+	| access_specifier {$$ = $1;}
 	;
 
 struct_or_union_specifier
@@ -422,7 +506,7 @@ type_qualifier
 
 
 declarator
-	: pointer direct_declarator { 
+	: pointer direct_declarator {
           int idx = $2;  // $2 is the token table index from direct_declarator.
           char newType[256];
           /* Assume tokenTable[idx].token_type currently holds the base type,
@@ -431,6 +515,9 @@ declarator
           sprintf(newType, "%s%s", tokenTable[idx].token_type, $1);
           free(tokenTable[idx].token_type);
           tokenTable[idx].token_type = strdup(newType);
+		  if (strstr(newType, "typedef") != NULL){
+			update_symtab(tokenTable[idx].token);
+		  }
           $$ = idx;
           free($1); /* free the pointer string */
       }
@@ -449,6 +536,9 @@ direct_declarator
           sprintf(newType, "%s[]", tokenTable[idx].token_type);
           free(tokenTable[idx].token_type);
           tokenTable[idx].token_type = strdup(newType);
+		  if (strstr(newType, "typedef") != NULL){
+			update_symtab(tokenTable[idx].token);
+		  }
           $$ = idx;
       }
 	| direct_declarator '[' '*' ']'
@@ -464,6 +554,9 @@ direct_declarator
           sprintf(newType, "%s[%s]", tokenTable[idx].token_type, $3);
           free(tokenTable[idx].token_type);
           tokenTable[idx].token_type = strdup(newType);
+		  if (strstr(newType, "typedef") != NULL){
+			update_symtab(tokenTable[idx].token);
+		  }
           $$ = idx;
       }
 	| direct_declarator '(' parameter_type_list ')' {
@@ -683,6 +776,7 @@ declaration_list
 
 %%
 void yyerror(const char *s) {
+	parser_errror++;
 	fflush(stdout);
     fprintf(stderr, "Syntax Error: %s at line %d\n", s, line_no);
 }
@@ -691,15 +785,18 @@ void yyerror(const char *s) {
 main(int argc, char **argv) {
 int parserresult = yyparse(); // Parser calls yylex() internally
 
-if (parserresult == 0 && error_count == 0) {
-	printf("Success in parsing\n");
+if (parserresult == 0 && error_count == 0 && parser_errror == 0) {
+	printf("LEX and Parsing Success\n");
+	
 	print_token_table();
 } else {
 	if(error_count > 0){
-		printf("Errors in LEX stage:\n");
+		printf("Errors in LEX stage:\n PARSING FAILED.");
 		print_errors();
-	} else {
+	} 
+	else {
 		printf("Error in parsing with errorcode: %d\n", parserresult);
+		
 	}
 }
 return 0;

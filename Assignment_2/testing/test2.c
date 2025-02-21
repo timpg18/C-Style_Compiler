@@ -10,15 +10,36 @@ enum MyEnum {
 
 enum Day {
     Monday,
-     Tuesday, 
-     Wednesday} z;
+    Tuesday, 
+    Wednesday} z;
 
-enum MyEnum x = Y;  // Valid: x is a variable of type enum MyEnum initialized with the enumerator Y
-enum Day G = Monday;
+    
+
+int f(int& a){
+    return 1;
+}
+
+class Hello{
+    public:{
+        int x;
+        int y;
+    }
+    private:{
+        int z;
+    }
+    private:{
+        int gg;
+    }
+} W;
+
+struct{
+    int x;
+    int y;
+} A;
 
 int main(){
 // typedef int myint;
-
-
+class Hello y;
+enum Day g = Monday;
 struct hello y;
 }
