@@ -48,7 +48,16 @@ ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY
 %%
 
 primary_expression
-	: IDENTIFIER
+	: IDENTIFIER{
+		char *name = strdup($1);
+		std::string tmp = name;
+		
+		if(st.lookup(tmp) == false){
+			std::string err = "Undeclared Identifier: " + tmp;
+    		yyerror(err.c_str());
+			
+		}
+	}
 	| constant
 	| string
 	| '(' expression ')'

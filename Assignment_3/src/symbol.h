@@ -78,14 +78,23 @@ public:
 		  }
     }
 
-    const Symbol* lookup(const std::string& name) const {
-        // Search from current scope outward
+    // const Symbol* lookup(const std::string& name) const {
+    //     // Search from current scope outward
+    //     for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
+    //         if (auto search = it->find(name); search != it->end()) {
+    //             return &search->second;
+    //         }
+    //     }
+    //     return nullptr;
+    // }
+
+    bool lookup(const std::string &name) const {
         for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
             if (auto search = it->find(name); search != it->end()) {
-                return &search->second;
+                return true;
             }
         }
-        return nullptr;
+        return false;
     }
 
     void print_symbol_table() const {
