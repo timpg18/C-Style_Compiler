@@ -20,6 +20,9 @@ extern int error_count;
 extern void update_symtab(char* ttoken);
 extern int symcount;
 extern char* yytext;
+
+
+
 class SymbolTable {
 public:
     struct Symbol {

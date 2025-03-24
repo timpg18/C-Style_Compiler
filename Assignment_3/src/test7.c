@@ -1,5 +1,4 @@
 int main(){
-    typedef int myint;
-    myint x;
-    
+    float a;
+    int x = a<<2;
 }

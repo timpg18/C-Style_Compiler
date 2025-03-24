@@ -536,7 +536,7 @@ Nonterminals, with rules where they appear
     assignment_expression <atr> (115)
         on left: 70 71
         on right: 23 24 71 83 84 171 172 174 175 177 181 204 205 206 207 209 212 213 214 215 217 224
-    assignment_operator (116)
+    assignment_operator <atr> (116)
         on left: 72 73 74 75 76 77 78 79 80 81 82
         on right: 71
     expression (117)

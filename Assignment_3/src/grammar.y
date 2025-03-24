@@ -1,6 +1,7 @@
 %{
 
 #include "symbol.h"
+#include "Utility_func.h"
 SymbolTable st;
 
 
@@ -54,7 +55,8 @@ SymbolTable st;
 %type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
 %type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator
-%type <atr> initializer
+%type <atr> initializer, assignment_operator
+
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY 
@@ -70,10 +72,7 @@ primary_expression
 			std::string err = "Undeclared Identifier: " + tmp;
     		yyerror(err.c_str());
 		}
-		if(currentType != st.lookup(tmp)->type){
-			std::string err = "expression involving incompatible types: ";
-			yyerror(err.c_str());
-		}
+		
 		
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
@@ -174,9 +173,15 @@ multiplicative_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| multiplicative_expression '*' cast_expression
-	| multiplicative_expression '/' cast_expression
-	| multiplicative_expression '%' cast_expression
+	| multiplicative_expression '*' cast_expression {
+		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+	}
+	| multiplicative_expression '/' cast_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+	}
+	| multiplicative_expression '%' cast_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in %: ");
+	}
 	;
 
 additive_expression
@@ -184,8 +189,12 @@ additive_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| additive_expression '+' multiplicative_expression
-	| additive_expression '-' multiplicative_expression
+	| additive_expression '+' multiplicative_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
+	}
+	| additive_expression '-' multiplicative_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in - : ");
+	}
 	;
 
 shift_expression
@@ -193,8 +202,26 @@ shift_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| shift_expression LEFT_OP additive_expression
-	| shift_expression RIGHT_OP additive_expression
+	| shift_expression LEFT_OP additive_expression{
+		//NEWWWW
+		
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err,  $3.type);
+        yyerror(err);
+		}
+		
+	}
+	| shift_expression RIGHT_OP additive_expression{
+		//NEWWW
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err, $3.type );
+        yyerror(err);
+		}
+	}
 	;
 
 relational_expression
@@ -202,10 +229,18 @@ relational_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	| relational_expression '<' shift_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
+	}
+	| relational_expression '>' shift_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
+	}
+	| relational_expression LE_OP shift_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
+	}
+	| relational_expression GE_OP shift_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
+	}
 	;
 
 equality_expression
@@ -213,8 +248,12 @@ equality_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| equality_expression EQ_OP relational_expression
-	| equality_expression NE_OP relational_expression
+	| equality_expression EQ_OP relational_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
+	}
+	| equality_expression NE_OP relational_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
+	}
 	;
 
 and_expression
@@ -222,7 +261,14 @@ and_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| and_expression '&' equality_expression
+	| and_expression '&' equality_expression {
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands in & must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err, $3.type );
+        yyerror(err);
+		}
+	}
 	;
 
 exclusive_or_expression
@@ -230,7 +276,14 @@ exclusive_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| exclusive_or_expression '^' and_expression
+	| exclusive_or_expression '^' and_expression{
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands in ^ must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err, $3.type );
+        yyerror(err);
+		}
+	}
 	;
 
 inclusive_or_expression
@@ -238,7 +291,14 @@ inclusive_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| inclusive_or_expression '|' exclusive_or_expression
+	| inclusive_or_expression '|' exclusive_or_expression{
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands in | must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err, $3.type );
+        yyerror(err);
+		}
+	}
 	;
 
 logical_and_expression
@@ -246,7 +306,9 @@ logical_and_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| logical_and_expression AND_OP inclusive_or_expression
+	| logical_and_expression AND_OP inclusive_or_expression{
+		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
+	}
 	;
 
 logical_or_expression
@@ -254,7 +316,9 @@ logical_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| logical_or_expression OR_OP logical_and_expression
+	| logical_or_expression OR_OP logical_and_expression{
+		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
+	}
 	;
 
 conditional_expression
@@ -270,21 +334,38 @@ assignment_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| unary_expression assignment_operator assignment_expression
+	| unary_expression assignment_operator assignment_expression {
+		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
+			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands must be int, int in ";
+			err = concat(err, $2.type);
+			err = concat(err, "but are: ");
+        	err = concat(err,$1.type);
+        	err = concat(err, $3.type );
+       	 yyerror(err);
+			}
+		}
+		else{
+			char* s1 = "incompatible type expression involved in";
+			s1 = concat(s1,$2.type);
+			s1 = concat(s1," : ");
+			check_type($1.type, $3.type,s1);
+		}
+	}
 	;
 
 assignment_operator
 	: '='
-	| MUL_ASSIGN
-	| DIV_ASSIGN
-	| MOD_ASSIGN
-	| ADD_ASSIGN
-	| SUB_ASSIGN
-	| LEFT_ASSIGN
-	| RIGHT_ASSIGN
-	| AND_ASSIGN
-	| XOR_ASSIGN
-	| OR_ASSIGN
+	| MUL_ASSIGN {$$.type = "*=";}
+	| DIV_ASSIGN {$$.type = "/=";}
+	| MOD_ASSIGN {$$.type = "%=";}
+	| ADD_ASSIGN {$$.type = "+=";}
+	| SUB_ASSIGN {$$.type = "-=";} 
+	| LEFT_ASSIGN {$$.type = "<<=";}
+	| RIGHT_ASSIGN {$$.type = ">>=";}
+	| AND_ASSIGN {$$.type = "&=";}
+	| XOR_ASSIGN {$$.type = "^=";}
+	| OR_ASSIGN {$$.type = "|=";}
 	;
 
 expression
@@ -357,7 +438,18 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
-		
+		if(eq($1.type , $3.type) == false){
+			char *err = "incompatible type declaration: ";
+			err = concat(err,$1.type);
+			err = concat(err, $3.type);
+			yyerror(err);
+		}
+		else{
+			if($1.type == "PROCEDURE"){
+				std::string err = "cannot declare procedure with = ";
+			yyerror(err.c_str());
+			}
+		}	
 	}
 	| declarator
 	;
@@ -577,6 +669,8 @@ direct_declarator
 	: IDENTIFIER{
         st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
         $$.index = st.token_table_.size() - 1;
+		$$.type = currentType;
+		$$.kind = "IDENTIFIER";
     }
 	| '(' declarator ')' { $$.index = $2.index; }
 	| direct_declarator '[' ']'{
