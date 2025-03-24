@@ -60,7 +60,8 @@ public:
     void insert_symbol(const std::string& name, const std::string& type) {
         // Check current scope first for redeclaration
         if (scopes_.back().count(name)) {
-            std::cerr << "Error: Redeclaration of '" << name << "' in current scope\n";
+            std::string s =  "Error: Redeclaration of '" + name + "' in current scope\n";
+            yyerror(s.c_str());
             return;
         }
 
