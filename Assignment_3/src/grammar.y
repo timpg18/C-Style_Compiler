@@ -3,14 +3,22 @@
 #include "symbol.h"
 SymbolTable st;
 
+
 %}
+
 %debug
 %union{
 	char *id;
     int index;
+	typedef struct {
+    char* type;
+    char* kind;
+	int index;
+	} attribute_t;
+	attribute_t atr;
 }
 
-%token <id> IDENTIFIER 
+%token <atr> IDENTIFIER 
 %token I_CONSTANT F_CONSTANT STRING_LIT CHAR_LIT
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
@@ -22,25 +30,31 @@ SymbolTable st;
 %token STRUCT UNION ENUM 
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN UNTIL
-
 %start Global
+
 
 /* idk uses of this */
 %token    FUNC_NAME 
 %token	 ENUMERATION_CONSTANT
 
 /* Define keyword tokens missing in this C file.*/
-%token <id> CLASS 
+%token <atr> CLASS 
 %token PUBLIC PRIVATE PROTECTED
 
-%type <index> direct_declarator declarator 
-%type <id> struct_or_union_specifier struct_or_union
-%type <id> enum_specifier
-%type <id> constant_expression assignment_expression
-%type <id> pointer type_qualifier_list
-%type <id> declaration_specifiers type_specifier storage_class_specifier type_qualifier conditional_expression
-%type <id> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
+%type <atr> type_specifier declaration_specifiers
+%type <atr> direct_declarator declarator 
+%type <atr> struct_or_union_specifier struct_or_union
+%type <atr> enum_specifier
+%type <atr> constant_expression 
+%type <atr> pointer type_qualifier_list
+%type <atr>   storage_class_specifier type_qualifier 
+%type <atr> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
 
+%type <atr> primary_expression constant 
+%type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
+%type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
+%type <atr> init_declarator
+%type <atr> initializer
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
 ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY 
@@ -49,30 +63,51 @@ ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY
 
 primary_expression
 	: IDENTIFIER{
-		char *name = strdup($1);
+		char *name = strdup($1.type);
 		std::string tmp = name;
 
-		if(st.lookup(tmp) == false){
+		if(st.lookup(tmp) == nullptr){
 			std::string err = "Undeclared Identifier: " + tmp;
     		yyerror(err.c_str());
-			
 		}
+		if(currentType != st.lookup(tmp)->type){
+			std::string err = "expression involving incompatible types: ";
+			yyerror(err.c_str());
+		}
+		
+		$$.type = strdup(st.lookup(tmp)->type.c_str());
+		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 	}
-	| constant
-	| string
+	| constant{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
+	| string {
+		$$.type = "STRING";
+		$$.kind = "IDENTIFIER";
+	}
 	| '(' expression ')'
 	| '(' expression error { yyerrok; }
 	;
 
 constant
-	: I_CONSTANT		/* includes character_constant */
-	| F_CONSTANT
-	| ENUMERATION_CONSTANT	/* after it has been defined as such */
+	: I_CONSTANT{
+		$$.type = "INT";
+		$$.kind = "CONST";
+	}		/* includes character_constant */
+	| F_CONSTANT{
+		$$.type = "FLOAT";
+		$$.kind = "CONST";
+	}
+	| ENUMERATION_CONSTANT{
+		$$.type = "INT";
+		$$.kind = "ENUM_CONST";
+	}	/* after it has been defined as such */
 	;
 
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER {
-		st.insert_symbol($1, "enumeration_constant");
+		st.insert_symbol($1.type,"INT" , "enumeration_constant");
 	}
 	;
 
@@ -84,7 +119,10 @@ string
 
 
 postfix_expression
-	: primary_expression
+	: primary_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| postfix_expression '[' expression ']'
 	| postfix_expression '(' ')'
 	| postfix_expression '(' argument_expression_list ')'
@@ -102,7 +140,10 @@ argument_expression_list
 	;
 
 unary_expression
-	: postfix_expression
+	: postfix_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| INC_OP unary_expression
 	| DEC_OP unary_expression
 	| unary_operator cast_expression
@@ -120,32 +161,47 @@ unary_operator
 	;
 
 cast_expression
-	: unary_expression
+	: unary_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| '(' type_name ')' cast_expression
 	| '(' type_name error cast_expression { yyerrok; }
 	;
 
 multiplicative_expression
-	: cast_expression
+	: cast_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| multiplicative_expression '*' cast_expression
 	| multiplicative_expression '/' cast_expression
 	| multiplicative_expression '%' cast_expression
 	;
 
 additive_expression
-	: multiplicative_expression
+	: multiplicative_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| additive_expression '+' multiplicative_expression
 	| additive_expression '-' multiplicative_expression
 	;
 
 shift_expression
-	: additive_expression
+	: additive_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| shift_expression LEFT_OP additive_expression
 	| shift_expression RIGHT_OP additive_expression
 	;
 
 relational_expression
-	: shift_expression
+	: shift_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| relational_expression '<' shift_expression
 	| relational_expression '>' shift_expression
 	| relational_expression LE_OP shift_expression
@@ -153,43 +209,67 @@ relational_expression
 	;
 
 equality_expression
-	: relational_expression
+	: relational_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| equality_expression EQ_OP relational_expression
 	| equality_expression NE_OP relational_expression
 	;
 
 and_expression
-	: equality_expression
+	: equality_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| and_expression '&' equality_expression
 	;
 
 exclusive_or_expression
-	: and_expression
+	: and_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| exclusive_or_expression '^' and_expression
 	;
 
 inclusive_or_expression
-	: exclusive_or_expression
+	: exclusive_or_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| inclusive_or_expression '|' exclusive_or_expression
 	;
 
 logical_and_expression
-	: inclusive_or_expression
+	: inclusive_or_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| logical_and_expression AND_OP inclusive_or_expression
 	;
 
 logical_or_expression
-	: logical_and_expression
+	: logical_and_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| logical_or_expression OR_OP logical_and_expression
 	;
 
 conditional_expression
-	: logical_or_expression
+	: logical_or_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| logical_or_expression '?' expression ':' conditional_expression
 	;
 
 assignment_expression
-	: conditional_expression
+	: conditional_expression{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	| unary_expression assignment_operator assignment_expression
 	;
 
@@ -226,42 +306,45 @@ declaration
 declaration_specifiers
 	: storage_class_specifier declaration_specifiers
 	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */
-			char *combined = (char*)malloc(strlen($1) + strlen($2) + 2);
-              sprintf(combined, "%s %s", $1, $2);
-              $$ = combined;
-              currentType = $$;
-              free($1);
-              free($2);
+			char *combined = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
+              sprintf(combined, "%s %s", $1.type, $2.type);
+              $$.type = combined;
+              currentType = $$.type;
+              free($1.type);
+              free($2.type);
 		   }
 	| storage_class_specifier{
-		$$ = $1;
-        currentType = $$;
+		$$.type = $1.type;
+        currentType = $$.type;
 	}
 	| type_specifier declaration_specifiers
 	      {
               /* Concatenate the current type_specifier ($1) with the following declaration_specifiers ($2).
                  A space is inserted between the two parts. */
-              char *combined = (char*)malloc(strlen($1) + strlen($2) + 2);
-              sprintf(combined, "%s %s", $1, $2);
-              $$ = combined;
-              currentType = $$; /* Update the global currentType */
+              char *combined = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
+              sprintf(combined, "%s %s", $1.type, $2.type);
+              $$.type = combined;
+              currentType = $$.type; /* Update the global currentType */
           }
 	| type_specifier 
 	      { 
-              $$ = $1; 
-              currentType = $$; 
+              $$.type = $1.type; 
+              currentType = $$.type; 
           }
 	| type_qualifier declaration_specifiers
 	    { 
-			char *combined = (char*)malloc(strlen($1) + strlen($2) + 2);
-			sprintf(combined, "%s %s", $1, $2);
-			$$ = combined;
-			currentType = $$; 
-			$$ = $2; 
+			char *combined = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
+			sprintf(combined, "%s %s", $1.type, $2.type);
+			/* type qualifier is const, volatile. we add it to property, cuz 
+			const int and int both must be compatible...
+			but wait, const int on left must throw an error so see it
+			*/
+			$$.type = combined;
+			currentType = $$.type; 
 		}
 	| type_qualifier
-	      { $$ = $1; 
-		  currentType = $$;
+	      { $$.type = $1.type; 
+		  currentType = $$.type;
 		  }
 	| declaration_specifiers '&'
 	;
@@ -273,51 +356,53 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator '=' initializer
+	: declarator '=' initializer {
+		
+	}
 	| declarator
 	;
 
 storage_class_specifier
-	: TYPEDEF	{ $$ = strdup("typedef"); }/* identifiers must be flagged as TYPEDEF_NAME */
-	| EXTERN { $$ = strdup("extern"); }
-	| STATIC { $$ = strdup("static"); }
-	| AUTO { $$ = strdup("auto"); }
-	| REGISTER { $$ = strdup("register"); }
+	: TYPEDEF	{ $$.type = strdup("typedef"); }/* identifiers must be flagged as TYPEDEF_NAME */
+	| EXTERN { $$.type = strdup("extern"); }
+	| STATIC { $$.type = strdup("static"); }
+	| AUTO { $$.type = strdup("auto"); }
+	| REGISTER { $$.type = strdup("register"); }
 	;
 
 type_specifier
-	: VOID { currentType = strdup("VOID"); $$ = currentType; }
-	| CHAR { currentType = strdup("CHAR"); $$ = currentType; }
-	| SHORT { currentType = strdup("SHORT"); $$ = currentType; }
-	| INT { currentType = strdup("INT"); $$ = currentType; }
-	| LONG { currentType = strdup("LONG"); $$ = currentType; }
-	| FLOAT { currentType = strdup("FLOAT"); $$ = currentType; }
-	| DOUBLE { currentType = strdup("DOUBLE"); $$ = currentType; }
-	| SIGNED { currentType = strdup("SIGNED"); $$ = currentType; }
-	| UNSIGNED { currentType = strdup("UNSIGNED"); $$ = currentType; }
-	| BOOL { currentType = strdup("BOOL"); $$ = currentType; }
-	| struct_or_union_specifier { currentType = $1; $$ = currentType; }
-	| class_specifier {currentType = $1; $$ = currentType;}
-	| enum_specifier { currentType = $1; $$ = currentType; }
-	| TYPEDEF_NAME	{ currentType = strdup(yytext); $$ = currentType;}
+	: VOID { currentType = strdup("VOID"); $$.type = currentType; }
+	| CHAR { currentType = strdup("CHAR"); $$.type = currentType; }
+	| SHORT { currentType = strdup("SHORT"); $$.type = currentType; }
+	| INT { currentType = strdup("INT"); $$.type = currentType; }
+	| LONG { currentType = strdup("LONG"); $$.type = currentType; }
+	| FLOAT { currentType = strdup("FLOAT"); $$.type = currentType; }
+	| DOUBLE { currentType = strdup("DOUBLE"); $$.type = currentType; }
+	| SIGNED { currentType = strdup("SIGNED"); $$.type = currentType; }
+	| UNSIGNED { currentType = strdup("UNSIGNED"); $$.type = currentType; }
+	| BOOL { currentType = strdup("BOOL"); $$.type = currentType; }
+	| struct_or_union_specifier { currentType = $1.type; $$.type = currentType; }
+	| class_specifier {currentType = $1.type; $$.type = currentType;}
+	| enum_specifier { currentType = $1.type; $$.type = currentType; }
+	| TYPEDEF_NAME	{ currentType = strdup(yytext); $$.type = currentType;}
 	;
 
 class_specifier
     : CLASS '{' PushScope class_member_list '}' PopScope
          {
-		 $$ = (char*)malloc(strlen("class") + 14); 
-         sprintf($$, "class (anonymous)");
+		 $$.type = (char*)malloc(strlen("class") + 14); 
+         sprintf($$.type, "class (anonymous)");
 		   }
 	| CLASS IDENTIFIER base_clause_opt  '{' PushScope class_member_list '}' PopScope
          { 
-		    $$ = (char*)malloc( strlen("class") + strlen($2) + 14 ); // one space plus null
-         sprintf($$, "class %s", $2);
+		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
+         sprintf($$.type, "class %s", $2.type);
 		   
 		   }
 	| CLASS IDENTIFIER base_clause_opt  
          { 
-           $$ = (char*)malloc(strlen("class") + strlen($2) + 14);
-           sprintf($$, "class %s", $2);
+           $$.type = (char*)malloc(strlen("class") + strlen($2.type) + 14);
+           sprintf($$.type, "class %s", $2.type);
 		 }
     ;
 
@@ -333,24 +418,24 @@ class_member
 
 
 access_specifier
-    : PUBLIC { $$ = strdup("public"); }
-    | PRIVATE { $$ = strdup("private"); }
-    | PROTECTED { $$ = strdup("protected"); }
+    : PUBLIC { $$.type = strdup("public"); }
+    | PRIVATE { $$.type = strdup("private"); }
+    | PROTECTED { $$.type = strdup("protected"); }
     ;
 /* Optional inheritance clause */
 base_clause_opt
-    : ':' base_specifier_list { $$ = $2; }
-    | /* empty */ { $$ = NULL; }
+    : ':' base_specifier_list { $$.type = $2.type; }
+    | /* empty */ { $$.type = NULL; }
     ;
 
 base_specifier_list
-    : base_specifier { $$ = $1; }
+    : base_specifier { $$.type = $1.type; }
     | base_specifier_list ',' base_specifier 
          { 
            /* Concatenate the list, e.g., "public Base1, private Base2" */
-           char *tmp = (char*)malloc(strlen($1) + strlen($3) + 14);
-           sprintf(tmp, "%s, %s", $1, $3);
-           $$ = tmp;
+           char *tmp = (char*)malloc(strlen($1.type) + strlen($3.type) + 14);
+           sprintf(tmp, "%s, %s", $1.type, $3.type);
+           $$.type= tmp;
          }
     ;
 
@@ -358,45 +443,45 @@ base_specifier_list
 base_specifier
     : access_specifier_opt IDENTIFIER
          { 
-           if ($1)
+           if ($1.type)
            {
-              $$ = (char*)malloc(strlen($1) + strlen($2) + 14);
-              sprintf($$, "%s %s", $1, $2);
+              $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 14);
+              sprintf($$.type, "%s %s", $1.type, $2.type);
            }
            else
            {
-              $$ = strdup($2);
+              $$.type = strdup($2.type);
            }
          }
     ;
 
 /* Optional access specifier in the base clause */
 access_specifier_opt
-	: /* empty */ {$$ = NULL;}
-	| access_specifier {$$ = $1;}
+	: /* empty */ {$$.type = NULL;}
+	| access_specifier {$$.type = $1.type;}
 	;
 
 struct_or_union_specifier
 	: struct_or_union '{' PushScope struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
-         $$ = (char*)malloc(strlen($1) + 14); // Enough for " (anonymous)" and '\0'
-         sprintf($$, "%s (anonymous)", $1);
+         $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
+         sprintf($$.type, "%s (anonymous)", $1.type);
     }
 	| struct_or_union IDENTIFIER '{' PushScope struct_declaration_list '}' PopScope {
          /* Named struct/union with body */
-         $$ = (char*)malloc(strlen($1) + strlen($2) + 2); // one space plus null
-         sprintf($$, "%s %s", $1, $2);
+         $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
+         sprintf($$.type, "%s %s", $1.type, $2.type);
     }
 	| struct_or_union IDENTIFIER {
          /* Named struct/union declaration without body */
-         $$ = (char*)malloc(strlen($1) + strlen($2) + 2);
-         sprintf($$, "%s %s", $1, $2);
+         $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
+         sprintf($$.type, "%s %s", $1.type, $2.type);
     }
 	;
 
 struct_or_union
-	: STRUCT{ $$ = strdup("struct"); }
-	| UNION { $$ = strdup("union"); }
+	: STRUCT{ $$.type = strdup("struct"); }
+	| UNION { $$.type = strdup("union"); }
 	;
 
 struct_declaration_list
@@ -430,26 +515,26 @@ struct_declarator
 enum_specifier
     : ENUM '{' enumerator_list '}' { 
           /* Anonymous enum; you might choose to simply return "enum" */
-          $$ = strdup("enum");
+          $$.type = strdup("enum");
       }
     | ENUM '{' enumerator_list ',' '}' { 
-          $$ = strdup("enum");
+          $$.type = strdup("enum");
       }
     | ENUM IDENTIFIER '{' enumerator_list '}' { 
           /* Named enum: produce "enum <identifier>" */
-          char *tmp = (char*)malloc(strlen("enum") + strlen($2) + 2);
-          sprintf(tmp, "enum %s", $2);
-          $$ = tmp;
+          char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
+          sprintf(tmp, "enum %s", $2.type);
+          $$.type = tmp;
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
-          char *tmp = (char*)malloc(strlen("enum") + strlen($2) + 2);
-          sprintf(tmp, "enum %s", $2);
-          $$ = tmp;
+          char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
+          sprintf(tmp, "enum %s", $2.type);
+          $$.type = tmp;
       }
     | ENUM IDENTIFIER { 
-          char *tmp = (char*)malloc(strlen("enum") + strlen($2) + 2);
-          sprintf(tmp, "enum %s", $2);
-          $$ = tmp;
+          char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
+          sprintf(tmp, "enum %s", $2.type);
+          $$.type = tmp;
       }
     ;
 
@@ -465,41 +550,40 @@ enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
 	;
 
 type_qualifier
-	: CONST { $$ = strdup("CONST"); }
-	| VOLATILE { $$ = strdup("VOLATILE"); }
+	: CONST { $$.type = strdup("CONST"); }
+	| VOLATILE { $$.type = strdup("VOLATILE"); }
 	;
 
 
 
 declarator
 	: pointer direct_declarator {
-          int idx = $2;  // $2 is the token table index from direct_declarator.
+          int idx = $2.index;  // $2 is the token table index from direct_declarator.
            char newType[256];
-          sprintf(newType, "%s%s", st.token_table_[idx].token_type, $1);
-          
-          st.token_table_[idx].token_type += std::string($1);
+          sprintf(newType, "%s%s", st.token_table_[idx].token_type, $1.type);
+          st.token_table_[idx].token_type += std::string($1.type);
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
 			update_symtab(temp);
 		  }
-          $$ = idx;
-          free($1); /* free the pointer string */
+          $$.index = idx;
+          free($1.type); /* free the pointer string */
       }
-	| direct_declarator { $$ = $1; }
+	| direct_declarator { $$.index = $1.index; }
 	;
 
 direct_declarator
 	: IDENTIFIER{
-        st.insert_symbol($1, currentType ? currentType : "INVALID");
-        $$ = st.token_table_.size() - 1;
+        st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
+        $$.index = st.token_table_.size() - 1;
     }
-	| '(' declarator ')' { $$ = $2; }
+	| '(' declarator ')' { $$.index = $2.index; }
 	| direct_declarator '[' ']'{
-          int idx = $1;
+          int idx = $1.index;
           char newType[256];
           sprintf(newType, "%s[]",st.token_table_[idx].token_type);
-           st.token_table_[idx].token_type += "[]";
+           st.token_table_[idx].token_type += "*";
          
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
@@ -507,7 +591,7 @@ direct_declarator
 			update_symtab(temp);
 			
 		  }
-          $$ = idx;
+          $$.index = idx;
       }
 	| direct_declarator '[' '*' ']'
 	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
@@ -517,42 +601,50 @@ direct_declarator
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
 	| direct_declarator '[' assignment_expression ']'{
-          int idx = $1;
+			if($3.type == "INT" && $3.kind == "CONST"){
+				 int idx = $1.index;
           char newType[256];
-          sprintf(newType, "%s[%s]", st.token_table_[idx].token_type, $3);
+          sprintf(newType, "%s[%s]", st.token_table_[idx].token_type, $3.type);
           
-         st.token_table_[idx].token_type += "[" + std::string($3)+ "]";
+         st.token_table_[idx].token_type += "*";
 		  if (strstr(newType, "typedef") != NULL){
 			char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
 			update_symtab(temp);
 		  }
-          $$ = idx;
+          $$.index = idx;
+		}
+		else{
+			std::string err = "declaration must have only integer constants inside: ";
+			yyerror(err.c_str());
+		}
+	
       }
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
-       int idx = $1;  // $1 is now of type int (the token index)
+       int idx = $1.index;  // $1 is now of type int (the token index)
       
-       st.token_table_[idx].token_type = strdup("PROCEDURE");
-       $$ = idx;
+       st.token_table_[idx].token_type = strdup(currentType);
+	   st.token_table_[idx].kind = strdup("PROCEDURE");
+       $$.index = idx;
     }
 	| direct_declarator '('   ')'  {
-       int idx = $1;
-       
-       st.token_table_[idx].token_type = strdup("PROCEDURE");
-       $$ = idx;
+       int idx = $1.index;
+       st.token_table_[idx].token_type = strdup(currentType);
+	   st.token_table_[idx].kind = strdup("PROCEDURE");
+       $$.index = idx;
     }
 	| direct_declarator '('  identifier_list ')'{
-       int idx = $1;
-       
-       st.token_table_[idx].token_type = strdup("PROCEDURE");
-       $$ = idx;
+       int idx = $1.index;
+        st.token_table_[idx].token_type = strdup(currentType);
+	   st.token_table_[idx].kind = strdup("PROCEDURE");
+       $$.index = idx;
     }
 	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 
              Use the default error message and recover. */
           yyerrok;
-          $$ = $1;  /* Propagate the index as is */
+          $$.index = $1.index;  /* Propagate the index as is */
       }
 	;
 
@@ -562,13 +654,13 @@ pointer
 	| '*' pointer{
           /* $2 is a string representing the pointer from the recursive production.
              Prepend a '*' to it. */
-          int len = strlen($2) + 2;
-          $$ = (char*)malloc(len);
-          sprintf($$, "*%s", $2);
-          free($2);
+          int len = strlen($2.type) + 2;
+          $$.type = (char*)malloc(len);
+          sprintf($$.type, "*%s", $2.type);
+          free($2.type);
       }
 	| '*' {
-          $$ = strdup("*");
+          $$.type = strdup("*");
       }
 	;
 
@@ -576,7 +668,7 @@ type_qualifier_list
 	: type_qualifier
 	| type_qualifier_list type_qualifier{ 
           /* For now, ignore qualifiers */
-          $$ = $1; 
+          $$.type = $1.type; 
       }
 	;
 
@@ -639,7 +731,10 @@ direct_abstract_declarator
 initializer
 	: '{' initializer_list '}'
 	| '{' initializer_list ',' '}'
-	| assignment_expression
+	| assignment_expression {
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	;
 
 initializer_list

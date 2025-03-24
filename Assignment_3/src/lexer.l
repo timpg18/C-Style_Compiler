@@ -121,7 +121,7 @@ void update_symtab(char* ttoken){
 INT_CONST [0-9]+
 OCTAL_CONST 0[0-7]+ 
 HEX_CONST 0[xX][0-9a-fA-F]+
-FLOAT_CONST ([0-9]*\.[0-9]+([eE][+-]?[0-9]+)?)|([+-]?[0-9]+([eE][+-]?[0-9]+)?)
+FLOAT_CONST ([0-9]*\.[0-9]+([eE][+-]?[0-9]+)?)|([0-9]+([eE][+-]?[0-9]+)?)
 LINE_COMMENT "//".*
 MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*\*+"/"
 CHAR_CONST  '([^\\'\n]|\\[abfnrtv0\'\"\\])' 

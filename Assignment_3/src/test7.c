@@ -1,4 +1,5 @@
 int main(){
-    int a,b;
-    int* c;
+    typedef int myint;
+    myint x;
+    
 }
