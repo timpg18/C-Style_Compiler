@@ -51,7 +51,7 @@ primary_expression
 	: IDENTIFIER{
 		char *name = strdup($1);
 		std::string tmp = name;
-		
+
 		if(st.lookup(tmp) == false){
 			std::string err = "Undeclared Identifier: " + tmp;
     		yyerror(err.c_str());
@@ -71,7 +71,9 @@ constant
 	;
 
 enumeration_constant		/* before it has been defined as such */
-	: IDENTIFIER
+	: IDENTIFIER {
+		st.insert_symbol($1, "enumeration_constant");
+	}
 	;
 
 string
@@ -301,12 +303,12 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' class_member_list '}'
+    : CLASS '{' PushScope class_member_list '}' PopScope
          {
 		 $$ = (char*)malloc(strlen("class") + 14); 
          sprintf($$, "class (anonymous)");
 		   }
-	| CLASS IDENTIFIER base_clause_opt  '{' class_member_list '}'
+	| CLASS IDENTIFIER base_clause_opt  '{' PushScope class_member_list '}' PopScope
          { 
 		    $$ = (char*)malloc( strlen("class") + strlen($2) + 14 ); // one space plus null
          sprintf($$, "class %s", $2);
@@ -375,12 +377,12 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' struct_declaration_list '}'{
+	: struct_or_union '{' PushScope struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
          $$ = (char*)malloc(strlen($1) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$, "%s (anonymous)", $1);
     }
-	| struct_or_union IDENTIFIER '{' struct_declaration_list '}' {
+	| struct_or_union IDENTIFIER '{' PushScope struct_declaration_list '}' PopScope {
          /* Named struct/union with body */
          $$ = (char*)malloc(strlen($1) + strlen($2) + 2); // one space plus null
          sprintf($$, "%s %s", $1, $2);
