@@ -439,6 +439,7 @@ init_declarator_list
 init_declarator
 	: declarator '=' initializer {
 		if(eq($1.type , $3.type) == false){
+
 			char *err = "incompatible type declaration: ";
 			err = concat(err,$1.type);
 			err = concat(err, $3.type);
@@ -654,15 +655,22 @@ declarator
            char newType[256];
           sprintf(newType, "%s%s", st.token_table_[idx].token_type, $1.type);
           st.token_table_[idx].token_type += std::string($1.type);
+		  free($$.type);
+		  $$.type = strdup(newType);
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
 			update_symtab(temp);
 		  }
           $$.index = idx;
+		  $$.kind = $2.kind;
           free($1.type); /* free the pointer string */
       }
-	| direct_declarator { $$.index = $1.index; }
+	| direct_declarator {
+		 $$.index = $1.index;
+		 $$.type = $1.type;
+		 $$.kind = $1.kind;
+		  }
 	;
 
 direct_declarator
@@ -676,9 +684,10 @@ direct_declarator
 	| direct_declarator '[' ']'{
           int idx = $1.index;
           char newType[256];
-          sprintf(newType, "%s[]",st.token_table_[idx].token_type);
+          sprintf(newType, "%s*",st.token_table_[idx].token_type);
            st.token_table_[idx].token_type += "*";
-         
+		   free($$.type);
+			$$.type = strdup(newType);
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
@@ -698,8 +707,9 @@ direct_declarator
 			if($3.type == "INT" && $3.kind == "CONST"){
 				 int idx = $1.index;
           char newType[256];
-          sprintf(newType, "%s[%s]", st.token_table_[idx].token_type, $3.type);
-          
+          sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
+		  free($$.type);
+          $$.type = newType;
          st.token_table_[idx].token_type += "*";
 		  if (strstr(newType, "typedef") != NULL){
 			char *temp = new char[st.token_table_[idx].token.size()+1];
@@ -720,18 +730,24 @@ direct_declarator
       
        st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	   $$.type = strdup(currentType);
+	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
        st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	   $$.type = strdup(currentType);
+	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
     }
 	| direct_declarator '('  identifier_list ')'{
        int idx = $1.index;
         st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	   $$.type = strdup(currentType);
+	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
     }
 	| direct_declarator '[' assignment_expression error {

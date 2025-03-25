@@ -1,4 +1,4 @@
 int main(){
-    float a;
-    int x = a<<2;
+    int b,c;
+    int a = b + c;
 }
