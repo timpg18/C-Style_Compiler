@@ -15,6 +15,7 @@ SymbolTable st;
     char* type;
     char* kind;
 	int index;
+	char* name;
 	} attribute_t;
 	attribute_t atr;
 }
@@ -55,7 +56,7 @@ SymbolTable st;
 %type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
 %type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator
-%type <atr> initializer, assignment_operator
+%type <atr> initializer assignment_operator
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -65,6 +66,7 @@ ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY
 
 primary_expression
 	: IDENTIFIER{
+		
 		char *name = strdup($1.type);
 		std::string tmp = name;
 
@@ -72,10 +74,15 @@ primary_expression
 			std::string err = "Undeclared Identifier: " + tmp;
     		yyerror(err.c_str());
 		}
-		
-		
+		else{
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
+		
+		}
+		
+		
+		
+		
 	}
 	| constant{
 		$$.type = $1.type;
@@ -432,7 +439,7 @@ declaration_specifiers
 
 
 init_declarator_list
-	: init_declarator
+	: init_declarator 
 	| init_declarator_list ',' init_declarator
 	;
 
@@ -452,7 +459,7 @@ init_declarator
 			}
 		}	
 	}
-	| declarator
+	| declarator 
 	;
 
 storage_class_specifier
@@ -655,8 +662,10 @@ declarator
            char newType[256];
           sprintf(newType, "%s%s", st.token_table_[idx].token_type, $1.type);
           st.token_table_[idx].token_type += std::string($1.type);
-		  free($$.type);
-		  $$.type = strdup(newType);
+		  //$2.name is name of id
+		  $$.name = $2.name;
+		  st.lookup(std::string($2.name))->type = st.token_table_[idx].token_type;
+		  $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
@@ -665,6 +674,7 @@ declarator
           $$.index = idx;
 		  $$.kind = $2.kind;
           free($1.type); /* free the pointer string */
+		  
       }
 	| direct_declarator {
 		 $$.index = $1.index;
@@ -679,15 +689,20 @@ direct_declarator
         $$.index = st.token_table_.size() - 1;
 		$$.type = currentType;
 		$$.kind = "IDENTIFIER";
+		$$.name = $1.type;
     }
-	| '(' declarator ')' { $$.index = $2.index; }
+	| '(' declarator ')' {
+		 $$.index = $2.index;
+		$$.name = $2.name;
+	 }
 	| direct_declarator '[' ']'{
           int idx = $1.index;
           char newType[256];
           sprintf(newType, "%s*",st.token_table_[idx].token_type);
            st.token_table_[idx].token_type += "*";
-		   free($$.type);
-			$$.type = strdup(newType);
+		   $$.name = $1.name;
+		   st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newType, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
@@ -708,9 +723,11 @@ direct_declarator
 				 int idx = $1.index;
           char newType[256];
           sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
-		  free($$.type);
-          $$.type = newType;
+		  $$.name = $1.name;
+          
          st.token_table_[idx].token_type += "*";
+		 st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		 $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newType, "typedef") != NULL){
 			char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
@@ -730,25 +747,34 @@ direct_declarator
       
        st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 	   $$.type = strdup(currentType);
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
+	   $$.name = $1.name;
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
        st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 	   $$.type = strdup(currentType);
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
+	   $$.name = $1.name;
     }
 	| direct_declarator '('  identifier_list ')'{
        int idx = $1.index;
         st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
+	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 	   $$.type = strdup(currentType);
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
+	   $$.name = $1.name;
     }
 	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 

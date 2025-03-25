@@ -84,7 +84,7 @@ public:
             update_symtab(ttoken);
         }
     }
-    const Symbol* lookup(const std::string& name) const {
+    Symbol* lookup(const std::string& name) {
         // Search from current scope outward
         for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
             if (auto search = it->find(name); search != it->end()) {

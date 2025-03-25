@@ -1,4 +1,4 @@
 int main(){
-    int b,c;
-    int a = b + c;
+   int *b,  *c;
+    int* a = b + c;
 }
