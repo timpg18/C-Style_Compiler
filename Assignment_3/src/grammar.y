@@ -21,7 +21,7 @@ SymbolTable st;
 }
 
 %token <atr> IDENTIFIER 
-%token I_CONSTANT F_CONSTANT STRING_LIT CHAR_LIT
+%token I_CONSTANT F_CONSTANT STRING_LIT CHAR_LIT TRUE FALSE
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -79,10 +79,6 @@ primary_expression
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		
 		}
-		
-		
-		
-		
 	}
 	| constant{
 		$$.type = $1.type;
@@ -109,6 +105,10 @@ constant
 		$$.type = "INT";
 		$$.kind = "ENUM_CONST";
 	}	/* after it has been defined as such */
+	| BOOLEAN{
+		$$.type = "BOOL";
+		$$.kind = "CONST";
+	}
 	;
 
 enumeration_constant		/* before it has been defined as such */
@@ -116,6 +116,10 @@ enumeration_constant		/* before it has been defined as such */
 		st.insert_symbol($1.type,"INT" , "enumeration_constant");
 	}
 	;
+
+BOOLEAN
+	: TRUE 
+	| FALSE
 
 string
 	: STRING_LIT
@@ -685,11 +689,19 @@ declarator
 
 direct_declarator
 	: IDENTIFIER{
-        st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
+		std::string tmp = $1.type;
+		if(st.lookup(tmp) != nullptr){
+			std::string err = st.lookup(tmp)->name + " already declared before: ";
+			yyerror(err.c_str());
+		}
+		else{
+			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
         $$.index = st.token_table_.size() - 1;
 		$$.type = currentType;
 		$$.kind = "IDENTIFIER";
 		$$.name = $1.type;
+		}
+        
     }
 	| '(' declarator ')' {
 		 $$.index = $2.index;
@@ -744,28 +756,41 @@ direct_declarator
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
        int idx = $1.index;  // $1 is now of type int (the token index)
-      
-       st.token_table_[idx].token_type = strdup(currentType);
+      /*
+	  char *newtype = concat(st.token_table_[idx].token_type, "(");
+	  char *newtype = concat(newType, $3.//);
+	  char *newtype = concat(newType, ")");
+	  st.token_table_[idx].token_type = strdup(newType);
+	  st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+	  */
+
+       
 	   st.token_table_[idx].kind = strdup("PROCEDURE");
-	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-	   $$.type = strdup(currentType);
+		
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+	   $$.type = strdup(st.token_table_[idx].token_type.c_str());
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
 	   $$.name = $1.name;
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
-       st.token_table_[idx].token_type = strdup(currentType);
-	   st.token_table_[idx].kind = strdup("PROCEDURE");
-	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-	   $$.type = strdup(currentType);
+       
+	  
+	    char *newtype = concat(st.token_table_[idx].token_type.c_str(), "(");
+		newtype = concat(newtype, ")");
+		st.token_table_[idx].token_type = strdup(newtype);
+		 st.token_table_[idx].kind = strdup("PROCEDURE");
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+	   $$.type = strdup(newtype);
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
 	   $$.name = $1.name;
     }
 	| direct_declarator '('  identifier_list ')'{
+
+		//HOW TO DO THISSS
        int idx = $1.index;
         st.token_table_[idx].token_type = strdup(currentType);
 	   st.token_table_[idx].kind = strdup("PROCEDURE");

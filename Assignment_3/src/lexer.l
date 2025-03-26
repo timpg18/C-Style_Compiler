@@ -174,7 +174,8 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
 "public"    { return PUBLIC; }
 "private"   { return PRIVATE; }
 "protected" { return PROTECTED; }
-
+"true" {return TRUE;}
+"false" {return FALSE;}
 "INT_(MAX|MIN)" { return I_CONSTANT; }
 "NULL"      { return I_CONSTANT; }
 {OCTAL_CONST} { return I_CONSTANT; }
