@@ -55,7 +55,7 @@ SymbolTable st;
 %type <atr> primary_expression constant 
 %type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
 %type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
-%type <atr> init_declarator
+%type <atr> init_declarator unary_operator
 %type <atr> initializer assignment_operator
 
 /* currently removed for now 
@@ -133,15 +133,49 @@ postfix_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| postfix_expression '[' expression ']'
-	| postfix_expression '(' ')'
-	| postfix_expression '(' argument_expression_list ')'
-	| postfix_expression '.' IDENTIFIER
-	| postfix_expression PTR_OP IDENTIFIER
-	| postfix_expression INC_OP
-	| postfix_expression DEC_OP
-	| '(' type_name ')' '{' initializer_list '}'
-	| '(' type_name ')' '{' initializer_list ',' '}'
+	| postfix_expression '[' expression ']' {
+		std::string s = std::string($1.type);
+		if(s.back() == '*'){
+			s.pop_back();
+			$$.type = strdup(s.c_str());
+		}
+		else{
+			yyerror("dereferencing by [ ] invalid");
+		}
+	}
+	| postfix_expression '(' ')'{
+		$$.kind = "PROCEDURE";
+		$$.type = $1.type;
+	}
+	| postfix_expression '(' argument_expression_list ')'{
+		$$.kind = "PROCEDURE";
+		$$.type = $1.type;
+		//FUNC_CALL h expression pe.
+		//CHECK argument_expression_list MATCHES WITH FUNC SIGNATUREEE!!!
+	}
+	| postfix_expression '.' IDENTIFIER{
+		//STRUCT ACCESS, FIX LATER
+	}
+	| postfix_expression PTR_OP IDENTIFIER{
+		//arrow operator, dereferencing then access
+		//access ka do it like old
+	}
+	| postfix_expression INC_OP{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
+	| postfix_expression DEC_OP{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
+	| '(' type_name ')' '{' initializer_list '}'{
+		//C99 style to declare temporary arrays.
+		//we aint doin this shi
+	}
+	| '(' type_name ')' '{' initializer_list ',' '}'{
+		//C99 style to declare temporary arrays.
+		//we aint doin this shi
+	}
 	;
 
 argument_expression_list
@@ -154,20 +188,71 @@ unary_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| INC_OP unary_expression
-	| DEC_OP unary_expression
-	| unary_operator cast_expression
-	| SIZEOF unary_expression
-	| SIZEOF '(' type_name ')'
+	| INC_OP unary_expression{
+		$$.type = $2.type;
+		$$.kind = $2.kind;
+	}
+	| DEC_OP unary_expression{
+		$$.type = $2.type;
+		$$.kind = $2.kind;
+	}
+	| unary_operator cast_expression{
+		char *ptr = "*";
+		if(eq($1.type, ptr) == true){
+			//we have to dereference
+			std::string s = std::string($2.type);
+			if(s.back() == '*'){
+				s.pop_back();
+			}
+			else{
+				yyerror("dereferencing not valid");
+			}
+			$$.type = strdup(s.c_str());
+		}
+		else{
+		ptr = "&";
+		if(eq($1.type,ptr) == true){
+			//we have to convert T to T*
+			std::string s = std::string($2.type);
+			s.push_back('*');
+			$$.type = strdup(s.c_str());
+		}
+		else{
+			$$.type = $2.type;
+		}
+		}
+		$$.kind = $2.kind;
+
+	}
+	| SIZEOF unary_expression{
+		$$.type = "INT";
+		$$.kind = "CONST";
+	}
+	| SIZEOF '(' type_name ')'{
+		$$.type = "INT";
+		$$.kind = "CONST";
+	}
 	;
 
 unary_operator
-	: '&'
-	| '*'
-	| '+'
-	| '-'
-	| '~'
-	| '!'
+	: '&' {
+		$$.type = "&";
+	}
+	| '*' {
+		$$.type = "*";
+	}
+	| '+'{
+		$$.type = "+";
+	}
+	| '-'{
+		$$.type = "-";
+	}
+	| '~'{
+		$$.type = "~";
+	}
+	| '!'{
+		$$.type = "!";
+	}
 	;
 
 cast_expression
@@ -175,7 +260,10 @@ cast_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| '(' type_name ')' cast_expression
+	| '(' type_name ')' cast_expression{
+		//TYPECASTINGGGG
+		//ABSTRACT HOJAYE TOH YE BHI DONEEEE
+	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
 
@@ -222,7 +310,6 @@ shift_expression
         	err = concat(err,  $3.type);
         yyerror(err);
 		}
-		
 	}
 	| shift_expression RIGHT_OP additive_expression{
 		//NEWWW
@@ -337,7 +424,9 @@ conditional_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| logical_or_expression '?' expression ':' conditional_expression
+	| logical_or_expression '?' expression ':' conditional_expression {
+		//DO WE NEED TYPE CHECKING HERE? I DOUBT IT
+	}
 	;
 
 assignment_expression
@@ -346,6 +435,9 @@ assignment_expression
 		$$.kind = $1.kind;
 	}
 	| unary_expression assignment_operator assignment_expression {
+		if($1.kind == "PROCEDURE"){
+			yyerror("Cannot assign to a function type ( )");
+		}
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int in ";
@@ -380,7 +472,9 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression
+	: assignment_expression {
+		//for function call h ye, update later if needed
+	}
 	| expression ',' assignment_expression
 	;
 
@@ -668,6 +762,7 @@ declarator
           st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
+		  
 		  st.lookup(std::string($2.name))->type = st.token_table_[idx].token_type;
 		  $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newType, "typedef") != NULL){
@@ -677,8 +772,8 @@ declarator
 		  }
           $$.index = idx;
 		  $$.kind = $2.kind;
-          free($1.type); /* free the pointer string */
 		  
+          free($1.type); /* free the pointer string */
       }
 	| direct_declarator {
 		 $$.index = $1.index;
@@ -775,15 +870,10 @@ direct_declarator
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
-       
-	  
-	    char *newtype = concat(st.token_table_[idx].token_type.c_str(), "(");
-		newtype = concat(newtype, ")");
-		st.token_table_[idx].token_type = strdup(newtype);
-		 st.token_table_[idx].kind = strdup("PROCEDURE");
+		 st.token_table_[idx].kind = strdup("PROCEDURE ( )");
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-	   $$.type = strdup(newtype);
+	   $$.type = strdup(st.token_table_[idx].token_type.c_str());
 	   $$.kind = strdup("PROCEDURE");
        $$.index = idx;
 	   $$.name = $1.name;

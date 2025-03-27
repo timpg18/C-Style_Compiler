@@ -503,7 +503,7 @@ Nonterminals, with rules where they appear
     unary_expression <atr> (104)
         on left: 28 29 30 31 32 33
         on right: 29 30 32 40 74
-    unary_operator (105)
+    unary_operator <atr> (105)
         on left: 34 35 36 37 38 39
         on right: 31
     cast_expression <atr> (106)
