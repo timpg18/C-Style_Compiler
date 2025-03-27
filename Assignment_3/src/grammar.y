@@ -58,6 +58,7 @@ SymbolTable st;
 %type <atr> init_declarator unary_operator
 %type <atr> initializer assignment_operator
 %type <atr> parameter_type_list parameter_list parameter_declaration 
+%type <atr> argument_expression_list
 
 
 /* currently removed for now 
@@ -79,6 +80,7 @@ primary_expression
 		else{
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
+		$$.name = strdup(st.lookup(tmp)->name.c_str());
 		
 		}
 	}
@@ -134,6 +136,7 @@ postfix_expression
 	: primary_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -148,12 +151,19 @@ postfix_expression
 	| postfix_expression '(' ')'{
 		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
+		$$.name = $1.name;
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		$$.kind = "PROCEDURE";
-		$$.type = $1.type;
-		//FUNC_CALL h expression pe.
-		//CHECK argument_expression_list MATCHES WITH FUNC SIGNATUREEE!!!
+		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		char* to_check = extract_between_parentheses(func_kind);
+		printf("\n\n\n%s\n\n\n%s\n\n\n",to_check,$3.type);
+		if(eq(to_check,$3.type)==true){
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
+		}
+		else{
+			yyerror("invalid function arguments");
+		}
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT ACCESS, FIX LATER
@@ -181,8 +191,13 @@ postfix_expression
 	;
 
 argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
+	: assignment_expression{
+		$$.type=$1.type;
+	}
+	| argument_expression_list ',' assignment_expression{
+		char* newtype = concat($1.type,$3.type);
+		$$.type=newtype;
+	}
 	;
 
 unary_expression
