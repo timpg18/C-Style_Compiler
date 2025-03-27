@@ -98,33 +98,33 @@ public:
     void print_symbol_table() const {
         std::cout << "\nSymbol Table:\n";
         // Updated header with Kind
-        std::cout << "-------------------------------------------------------------------\n";
-        std::cout << "| Name               | Type               | Kind      | Scope |\n";
-        std::cout << "-------------------------------------------------------------------\n";
+        std::cout << "-------------------------------------------------------------------------------------------\n";
+        std::cout << "| Name               | Type               | Kind                                | Scope |\n";
+        std::cout <<"-------------------------------------------------------------------------------------------\n";
         
         for (const auto& scope : scopes_) {
             for (const auto& [name, sym] : scope) {
                 // Added kind to print
-                std::printf("| %-18s | %-18s | %-10s | %-5d |\n", 
+                std::printf("| %-18s | %-18s | %-35s | %-5d |\n", 
                           name.c_str(), sym.type.c_str(), sym.kind.c_str(), sym.scope_level);
             }
         }
-        std::cout << "-------------------------------------------------------------------\n";
+        std::cout << "-------------------------------------------------------------------------------------------\n";
     }
 
     void print_token_table() const {
         std::cout << "\nToken Table:\n";
         // Updated header with Kind
-        std::cout << "-------------------------------------------------------------------\n";
-        std::cout << "| Token              | Type               | Kind      | Scope |\n";
-        std::cout << "-------------------------------------------------------------------\n";
+        std::cout << "-------------------------------------------------------------------------------------------\n";
+        std::cout << "| Token              | Type               | Kind                                | Scope |\n";
+        std::cout <<"-------------------------------------------------------------------------------------------\n";
         
         for (const auto& entry : token_table_) {
             // Added kind to print
-            std::printf("| %-18s | %-18s | %-10s | %-5d |\n", 
+            std::printf("| %-18s | %-18s | %-35s | %-5d |\n", 
                       entry.token.c_str(), entry.token_type.c_str(), entry.kind.c_str(), entry.scope_level);
         }
-        std::cout << "-------------------------------------------------------------------\n";
+        std::cout << "-------------------------------------------------------------------------------------------\n";
     }
 
     std::vector<std::unordered_map<std::string, Symbol>> scopes_;
