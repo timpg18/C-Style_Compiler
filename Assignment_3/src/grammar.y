@@ -823,7 +823,7 @@ direct_declarator
           int idx = $1.index;
           char newType[256];
           sprintf(newType, "%s*",st.token_table_[idx].token_type);
-           st.token_table_[idx].token_type += "*";
+           st.token_table_[idx].token_type += " *";
 		   $$.name = $1.name;
 		   st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 			$$.type = strdup(st.token_table_[idx].token_type.c_str());
@@ -846,10 +846,10 @@ direct_declarator
 			if($3.type == "INT" && $3.kind == "CONST"){
 				 int idx = $1.index;
           char newType[256];
-          sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
+          sprintf(newType, "%s *", st.token_table_[idx].token_type, $3.type);
 		  $$.name = $1.name;
           
-         st.token_table_[idx].token_type += "*";
+         st.token_table_[idx].token_type += " *";
 		 st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 		 $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newType, "typedef") != NULL){
