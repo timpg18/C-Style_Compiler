@@ -57,6 +57,8 @@ SymbolTable st;
 %type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator
 %type <atr> initializer assignment_operator
+%type <atr> parameter_type_list parameter_list parameter_declaration 
+
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -661,16 +663,16 @@ type_qualifier
 
 
 declarator
-	: pointer direct_declarator {
+	: pointer direct_declarator { // concatenation of * will be spearate everywhere
           int idx = $2.index;  // $2 is the token table index from direct_declarator.
-           char newType[256];
-          sprintf(newType, "%s%s", st.token_table_[idx].token_type, $1.type);
-          st.token_table_[idx].token_type += std::string($1.type);
+          char* newtype = concat(st.token_table_[idx].token_type.c_str(), $1.type);
+          st.token_table_[idx].token_type += " ";
+		  st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
 		  st.lookup(std::string($2.name))->type = st.token_table_[idx].token_type;
 		  $$.type = strdup(st.token_table_[idx].token_type.c_str());
-		  if (strstr(newType, "typedef") != NULL){
+		  if (strstr(newtype, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
             std::strcpy(temp,st.token_table_[idx].token.c_str());
 			update_symtab(temp);
@@ -765,41 +767,47 @@ direct_declarator
 	  */
 
        
-	   st.token_table_[idx].kind = strdup("PROCEDURE");
-		
+	   	st.token_table_[idx].kind = strdup("PROCEDURE");
+		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
+		newkind = concat(newkind,$3.type);
+		newkind = concat(newkind,")");
+		st.token_table_[idx].kind = strdup(newkind);
+
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-	   $$.type = strdup(st.token_table_[idx].token_type.c_str());
-	   $$.kind = strdup("PROCEDURE");
-       $$.index = idx;
-	   $$.name = $1.name;
+	  	$$.type = strdup(st.token_table_[idx].token_type.c_str());
+	   	$$.kind = newkind;
+      	$$.index = idx;
+	   	$$.name = $1.name;
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
-       
-	  
-	    char *newtype = concat(st.token_table_[idx].token_type.c_str(), "(");
-		newtype = concat(newtype, ")");
-		st.token_table_[idx].token_type = strdup(newtype);
-		 st.token_table_[idx].kind = strdup("PROCEDURE");
+
+		st.token_table_[idx].kind = strdup("PROCEDURE");
+		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
+		newkind = concat(newkind, ")");
+		st.token_table_[idx].kind = newkind;
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-	   $$.type = strdup(newtype);
-	   $$.kind = strdup("PROCEDURE");
+
+	   $$.type = strdup(st.token_table_[idx].token_type.c_str());
+	   $$.kind = strdup(newkind);
        $$.index = idx;
 	   $$.name = $1.name;
+
+	   
     }
 	| direct_declarator '('  identifier_list ')'{
 
 		//HOW TO DO THISSS
-       int idx = $1.index;
-        st.token_table_[idx].token_type = strdup(currentType);
-	   st.token_table_[idx].kind = strdup("PROCEDURE");
+       	int idx = $1.index;
+    	st.token_table_[idx].token_type = strdup(currentType);
+	   	st.token_table_[idx].kind = strdup("PROCEDURE");
 	    st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		 st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-	   $$.type = strdup(currentType);
-	   $$.kind = strdup("PROCEDURE");
-       $$.index = idx;
-	   $$.name = $1.name;
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+	   	$$.type = strdup(currentType);
+	   	$$.kind = strdup("PROCEDURE");
+       	$$.index = idx;
+	   	$$.name = $1.name;
     }
 	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 
@@ -808,17 +816,22 @@ direct_declarator
           $$.index = $1.index;  /* Propagate the index as is */
       }
 	;
-
+					// completed the implementation of pointer class;
+					
 pointer
-	: '*' type_qualifier_list pointer
-	| '*' type_qualifier_list
+	: '*' type_qualifier_list pointer {
+		char* newtype = concat("*",$2.type);
+		newtype = concat(newtype,$3.type);
+		$$.type = newtype;
+	}
+	| '*' type_qualifier_list {
+		char* newtype = concat("*",$2.type);
+		$$.type = newtype;
+	}
 	| '*' pointer{
-          /* $2 is a string representing the pointer from the recursive production.
-             Prepend a '*' to it. */
-          int len = strlen($2.type) + 2;
-          $$.type = (char*)malloc(len);
-          sprintf($$.type, "*%s", $2.type);
-          free($2.type);
+          // note change in implementation of concatenating *. earlier ** was ** now its * *. 
+		  char* newtype = concat("*",$2.type);
+		  $$.type = newtype;
       }
 	| '*' {
           $$.type = strdup("*");
@@ -826,27 +839,41 @@ pointer
 	;
 
 type_qualifier_list
-	: type_qualifier
+	: type_qualifier{
+		$$.type = $1.type;
+	}
 	| type_qualifier_list type_qualifier{ 
-          /* For now, ignore qualifiers */
-          $$.type = $1.type; 
+          // Concatenate the qualifiers
+		  char* newtype =concat($1.type,$2.type);
+          $$.type = newtype;
       }
 	;
 
 
 parameter_type_list
-	: parameter_list
+	: parameter_list{  //Progation of type
+		$$.type = $1.type;
+	}
 	;
 
 parameter_list
-	: parameter_declaration
-	| parameter_list ',' parameter_declaration
+	: parameter_declaration{ //Progation of type
+		$$.type = $1.type;
+	}
+	| parameter_list ',' parameter_declaration { // Concatenate the types
+		char* newtype = concat($1.type,$3.type);
+		$$.type = newtype;
+	}
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator
-	| declaration_specifiers abstract_declarator
-	| declaration_specifiers
+	: declaration_specifiers declarator { //Progation of type
+		$$.type = $2.type;
+	}
+	| declaration_specifiers abstract_declarator // To be added as error
+	| declaration_specifiers{ //Progation of type
+		$$.type = $1.type;
+	}
 	;
 
 identifier_list

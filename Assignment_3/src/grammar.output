@@ -641,13 +641,13 @@ Nonterminals, with rules where they appear
     type_qualifier_list <atr> (150)
         on left: 189 190
         on right: 174 176 177 178 179 185 186 190 207 209 210 211 215 217 218 219
-    parameter_type_list (151)
+    parameter_type_list <atr> (151)
         on left: 191
         on right: 181 222 224
-    parameter_list (152)
+    parameter_list <atr> (152)
         on left: 192 193
         on right: 191 193
-    parameter_declaration (153)
+    parameter_declaration <atr> (153)
         on left: 194 195 196
         on right: 192 193
     identifier_list (154)
