@@ -588,12 +588,12 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' PushScope class_member_list '}' PopScope
+    : CLASS '{' {st.push_scope("Class Anonymous");} class_member_list '}' PopScope
          {
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
 		   }
-	| CLASS IDENTIFIER base_clause_opt  '{' PushScope class_member_list '}' PopScope
+	| CLASS IDENTIFIER base_clause_opt  '{' {st.push_scope(std::string(strdup($2.type)));} class_member_list '}' PopScope
          { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          sprintf($$.type, "class %s", $2.type);
@@ -662,12 +662,12 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' PushScope struct_declaration_list '}' PopScope {
+	: struct_or_union '{' {st.push_scope("Struct Anonymous");} struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
     }
-	| struct_or_union IDENTIFIER '{' PushScope struct_declaration_list '}' PopScope {
+	| struct_or_union IDENTIFIER '{' {st.push_scope(std::string(strdup($1.type)));} struct_declaration_list '}' PopScope {
          /* Named struct/union with body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
          sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -788,6 +788,7 @@ direct_declarator
 	: IDENTIFIER{
 		std::string tmp = $1.type;
 		if(st.lookup(tmp) != nullptr){
+			//THIS GIVES ERROR EVEN IF IN PARENT SCOPE... (ie conflict with parent scope)
 			std::string err = st.lookup(tmp)->name + " already declared before: ";
 			yyerror(err.c_str());
 		}
@@ -1038,7 +1039,7 @@ designator
 
 statement
 	: labeled_statement
-	|  compound_statement 
+	|  {st.push_scope();} compound_statement {st.pop_scope();}
 	| expression_statement
 	| selection_statement
 	| iteration_statement
@@ -1052,9 +1053,9 @@ labeled_statement
 	;
 
 compound_statement
-	: '{' PushScope  '}' PopScope
-	| '{' PushScope block_item_list '}' PopScope
-	| '{' PushScope  block_item_list error {  st.pop_scope();
+	: '{'   '}' 
+	| '{'  block_item_list '}' 
+	| '{'   block_item_list error {  
      yyerrok;}
 	;
 
@@ -1099,7 +1100,7 @@ jump_statement
 	;
 
 Global
-	: PushScope translation_unit PopScope
+	:  translation_unit 
 
 translation_unit
 	: external_declaration
@@ -1113,8 +1114,8 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers  declarator  declaration_list compound_statement 
-	| declaration_specifiers  declarator  compound_statement 
+	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {st.pop_scope();}
+	| declaration_specifiers  declarator {st.push_scope(std::string(strdup($2.name)));} compound_statement {st.pop_scope();}
 	| declaration_specifiers   declarator  error { yyerrok; }
 	;
 
@@ -1149,6 +1150,7 @@ int parserresult = yyparse(); // Parser calls yylex() internally
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	
+	st.print_hierarchy();
 	st.print_token_table();
 } else {
 	if(error_count > 0){

@@ -1,8 +1,9 @@
 #include <iostream>
-#include <vector>
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <memory>
+#include <algorithm>
 #include <cstring>
 int yylex();
 void yyerror(const char *s);
@@ -22,113 +23,199 @@ extern int symcount;
 extern char* yytext;
 
 
+#include <iostream>
+#include <vector>
+#include <string>
+#include <memory>
+#include <unordered_map>
+#include <list>
+#include <cstring>
 
 class SymbolTable {
 public:
     struct Symbol {
         std::string name;
         std::string type;
-        std::string kind;  // Added kind
+        std::string kind;
         int scope_level;
-        Symbol() = default;
-        Symbol(const std::string& n, const std::string& t, const std::string& k, int lvl)
+        std::unique_ptr<SymbolTable> child_table;
+
+        Symbol(const std::string& n, const std::string& t, 
+              const std::string& k, int lvl)
             : name(n), type(t), kind(k), scope_level(lvl) {}
     };
 
     struct TokenEntry {
         std::string token;
         std::string token_type;
-        std::string kind;  // Added kind
+        std::string kind;
         int scope_level;
     };
 
+    struct Scope {
+        std::list<Symbol> ordered_symbols;
+        std::unordered_map<std::string, std::list<Symbol>::iterator> symbol_map;
+        Scope* parent_scope;
+        std::string scope_name;
+        int scope_level;
+        std::vector<Scope*> children;
+
+        Scope(Scope* parent = nullptr, 
+             std::string name = "global", 
+             int level = 0)
+            : parent_scope(parent), 
+              scope_name(name), 
+              scope_level(level) {}
+    };
+
+    std::vector<TokenEntry> token_table_;
+
     SymbolTable() {
-        push_scope();
+        global_scope_ = new Scope(nullptr, "global", 0);
+        current_scope_ = global_scope_;
+        scopes_.emplace_back(global_scope_);
     }
 
-    void push_scope() {
-        scopes_.emplace_back();
-        current_level_++;
-        std::cout << "Pushed scope level " << current_level_ << "\n";
+    void push_scope(const std::string& parent_symbol_name = "") {
+        std::string scope_name = parent_symbol_name.empty() ? 
+            "anonymous" : parent_symbol_name;
+        
+        Scope* new_scope = new Scope(
+            current_scope_,
+            scope_name,
+            current_scope_->scope_level + 1
+        );
+        
+        current_scope_->children.push_back(new_scope);
+        scopes_.emplace_back(new_scope);
+        
+        if (!parent_symbol_name.empty()) {
+            Scope* search_scope = current_scope_;
+            while (search_scope) {
+                auto it = search_scope->symbol_map.find(parent_symbol_name);
+                if (it != search_scope->symbol_map.end()) {
+                    it->second->child_table = std::make_unique<SymbolTable>();
+                    it->second->child_table->current_scope_ = new_scope;
+                    break;
+                }
+                search_scope = search_scope->parent_scope;
+            }
+        }
+
+        current_scope_ = new_scope;
     }
 
     void pop_scope() {
-        if (scopes_.size() <= 1) {
-            std::cerr << "Cannot pop global scope\n";
-            return;
+        if (current_scope_->parent_scope) {
+            current_scope_ = current_scope_->parent_scope;
         }
-        
-        scopes_.pop_back();
-        current_level_--;
-        std::cout << "Popped scope. Current level: " << current_level_ << "\n";
+        else{
+            yyerror("Cannot pop global scope");
+        }
     }
 
-    // Updated to include kind parameter
-    void insert_symbol(const std::string& name, const std::string& type, const std::string& kind) {
-        if (scopes_.back().count(name)) {
+    void insert_symbol(const std::string& name, const std::string& type, 
+                      const std::string& kind) {
+        token_table_.push_back({name, type, kind, current_scope_->scope_level});
+
+        if (current_scope_->symbol_map.find(name) != current_scope_->symbol_map.end()) {
             std::string s =  "Error: Redeclaration of '" + name + "' in current scope\n";
             yyerror(s.c_str());
             return;
         }
 
-        // Added kind to symbol creation
-        scopes_.back().emplace(name, Symbol(name, type, kind, current_level_));
-        
-        // Added kind to token entry
-        token_table_.push_back({name, type, kind, current_level_});
-        char *token_type = new char[type.size()+1];
-        char *ttoken = new char[name.size()+1];
-        strcpy(ttoken, name.c_str());
-        strcpy(token_type,type.c_str());
-        if (strstr(token_type, "typedef") != NULL){
+        current_scope_->ordered_symbols.emplace_back(name, type, kind, current_scope_->scope_level);
+        auto it = --current_scope_->ordered_symbols.end();
+        current_scope_->symbol_map[name] = it;
+
+        if (type.find("typedef") != std::string::npos) {
+            char* ttoken = new char[name.size() + 1];
+            std::strcpy(ttoken, name.c_str());
             update_symtab(ttoken);
         }
     }
+
     Symbol* lookup(const std::string& name) {
-        // Search from current scope outward
-        for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
-            if (auto search = it->find(name); search != it->end()) {
-                return &search->second;
+        Scope* scope = current_scope_;
+        while (scope) {
+            auto it = scope->symbol_map.find(name);
+            if (it != scope->symbol_map.end()) {
+                return &(*it->second);
             }
+            scope = scope->parent_scope;
         }
         return nullptr;
     }
-   
 
-    void print_symbol_table() const {
-        std::cout << "\nSymbol Table:\n";
-        // Updated header with Kind
-        std::cout << "-------------------------------------------------------------------------------------------\n";
-        std::cout << "| Name               | Type               | Kind                                | Scope |\n";
-        std::cout <<"-------------------------------------------------------------------------------------------\n";
-        
-        for (const auto& scope : scopes_) {
-            for (const auto& [name, sym] : scope) {
-                // Added kind to print
-                std::printf("| %-18s | %-18s | %-35s | %-5d |\n", 
-                          name.c_str(), sym.type.c_str(), sym.kind.c_str(), sym.scope_level);
+    // ENCLOSING FUNCTION FINDER (NEW)
+    Symbol* get_enclosing_procedure() {
+        Scope* current = current_scope_;
+        while (current && current != global_scope_) {
+            // Check parent scope for procedure symbols
+            if (current->parent_scope) {
+                for (auto& sym : current->parent_scope->ordered_symbols) {
+                    if (sym.kind == "procedure" && 
+                        sym.child_table && 
+                        sym.child_table->current_scope_ == current) {
+                        return &sym;
+                    }
+                }
             }
+            current = current->parent_scope;
         }
-        std::cout << "-------------------------------------------------------------------------------------------\n";
+        return nullptr;
     }
 
+    // HIERARCHY PRINTER (NEW)
+    void print_hierarchy() const {
+        std::cout << "\nScope Hierarchy:\n";
+        print_scope(global_scope_);
+    }
+
+    // FLAT TABLE PRINTER (ORIGINAL)
     void print_token_table() const {
         std::cout << "\nToken Table:\n";
-        // Updated header with Kind
-        std::cout << "-------------------------------------------------------------------------------------------\n";
-        std::cout << "| Token              | Type               | Kind                                | Scope |\n";
-        std::cout <<"-------------------------------------------------------------------------------------------\n";
-        
+        std::cout << "--------------------------------------------------------\n";
+        std::cout << "| Name       | Type       | Kind        | Scope Level |\n";
+        std::cout << "--------------------------------------------------------\n";
         for (const auto& entry : token_table_) {
-            // Added kind to print
-            std::printf("| %-18s | %-18s | %-35s | %-5d |\n", 
-                      entry.token.c_str(), entry.token_type.c_str(), entry.kind.c_str(), entry.scope_level);
+            std::printf("| %-10s | %-10s | %-12s | %-11d |\n",
+                       entry.token.c_str(),
+                       entry.token_type.c_str(),
+                       entry.kind.c_str(),
+                       entry.scope_level);
         }
-        std::cout << "-------------------------------------------------------------------------------------------\n";
+        std::cout << "--------------------------------------------------------\n";
     }
 
-    std::vector<std::unordered_map<std::string, Symbol>> scopes_;
-    std::vector<TokenEntry> token_table_;
-    int current_level_ = -1;
-}; 
+private:
+    Scope* global_scope_;
+    Scope* current_scope_;
+    std::vector<std::unique_ptr<Scope>> scopes_;
+
+    void print_scope(Scope* scope, int depth = 0) const {
+        std::string indent(depth * 2, ' ');
+        std::cout << indent << "└─ " << scope->scope_name 
+                 << " (level: " << scope->scope_level << ")\n";
+
+        // Print symbols in declaration order
+        for (const auto& sym : scope->ordered_symbols) {
+            std::cout << indent << "   ├─ " << sym.name << " : " << sym.type
+                     << " [" << sym.kind << "]\n";
+            if (sym.child_table) {
+                sym.child_table->print_scope(
+                    sym.child_table->current_scope_,
+                    depth + 2
+                );
+            }
+        }
+
+        // Print anonymous scopes in insertion order
+        for (auto child : scope->children) {
+            if (child->scope_name == "anonymous") {
+                print_scope(child, depth + 2);
+            }
+        }
+    }
+};
 
