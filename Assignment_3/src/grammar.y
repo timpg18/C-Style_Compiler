@@ -3,7 +3,8 @@
 #include "symbol.h"
 #include "Utility_func.h"
 SymbolTable st;
-
+int isStruct=0;
+char* structName = nullptr;
 
 %}
 
@@ -156,7 +157,6 @@ postfix_expression
 	| postfix_expression '(' argument_expression_list ')'{
 		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 		char* to_check = extract_between_parentheses(func_kind);
-		printf("\n\n\n%s\n\n\n%s\n\n\n",to_check,$3.type);
 		if(eq(to_check,$3.type)==true){
 			$$.kind = "PROCEDURE";
 			$$.type = $1.type;
@@ -166,6 +166,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression '.' IDENTIFIER{
+		char* name = strdup($3.type);
 		//STRUCT ACCESS, FIX LATER
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
@@ -231,7 +232,7 @@ unary_expression
 		if(eq($1.type,ptr) == true){
 			//we have to convert T to T*
 			std::string s = std::string($2.type);
-			s.push_back('*');
+			s += "*";
 			$$.type = strdup(s.c_str());
 		}
 		else{
@@ -603,12 +604,12 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' PushScope class_member_list '}' PopScope
+    : CLASS '{'  class_member_list '}' 
          {
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
 		   }
-	| CLASS IDENTIFIER base_clause_opt  '{' PushScope class_member_list '}' PopScope
+	| CLASS IDENTIFIER base_clause_opt  '{'  class_member_list '}' 
          { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          sprintf($$.type, "class %s", $2.type);
@@ -677,12 +678,12 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' PushScope struct_declaration_list '}' PopScope {
+	: struct_or_union '{'   struct_declaration_list '}'  {
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
     }
-	| struct_or_union IDENTIFIER '{' PushScope struct_declaration_list '}' PopScope {
+	| struct_or_union IDENTIFIER '{' struct_declaration_list '}'   {
          /* Named struct/union with body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
          sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -775,7 +776,6 @@ declarator
 	: pointer direct_declarator { // concatenation of * will be spearate everywhere
           int idx = $2.index;  // $2 is the token table index from direct_declarator.
           char* newtype = concat(st.token_table_[idx].token_type.c_str(), $1.type);
-          st.token_table_[idx].token_type += " ";
 		  st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
@@ -925,18 +925,24 @@ direct_declarator
 					
 pointer
 	: '*' type_qualifier_list pointer {
-		char* newtype = concat("*",$2.type);
-		newtype = concat(newtype,$3.type);
-		$$.type = newtype;
+		std::string s = "*";
+		s += std::string(std::string($2.type));
+		s += " ";
+		s += std::string(std::string($3.type));
+		$$.type = strdup(s.c_str());
 	}
 	| '*' type_qualifier_list {
-		char* newtype = concat("*",$2.type);
-		$$.type = newtype;
+		std::string s = "*";
+		s += " ";
+		s += std::string(std::string($2.type));
+		$$.type = strdup(s.c_str());
+
 	}
 	| '*' pointer{
           // note change in implementation of concatenating *. earlier ** was ** now its * *. 
-		  char* newtype = concat("*",$2.type);
-		  $$.type = newtype;
+		  std::string s = "*";
+		  s += std::string($2.type);
+		  $$.type = strdup(s.c_str());
       }
 	| '*' {
           $$.type = strdup("*");

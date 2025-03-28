@@ -1,9 +1,9 @@
-int foo(int y[], int* b){
-    return 0;
-}
+struct animal {
+    int a,b;
+    char* h;
+} yoyo;
 
 int main(){
-    int*j;
-    int p[1];
-    int a = foo(p,j);
+    yoyo.a=1;
+    
 }
