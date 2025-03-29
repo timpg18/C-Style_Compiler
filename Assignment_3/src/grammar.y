@@ -53,11 +53,12 @@ SymbolTable st;
 %type <atr> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
 
 %type <atr> primary_expression constant 
-%type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
-%type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
+%type <atr> unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
+%type <atr> inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator unary_operator
 %type <atr> initializer assignment_operator
 %type <atr> parameter_type_list parameter_list parameter_declaration 
+%type <atr> init_declarator_list
 
 
 /* currently removed for now 
@@ -79,6 +80,7 @@ primary_expression
 		else{
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
+		$$.name = name;
 		
 		}
 	}
@@ -134,6 +136,7 @@ postfix_expression
 	: primary_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -156,7 +159,15 @@ postfix_expression
 		//CHECK argument_expression_list MATCHES WITH FUNC SIGNATUREEE!!!
 	}
 	| postfix_expression '.' IDENTIFIER{
-		//STRUCT ACCESS, FIX LATER
+		//STRUCT TYPE CHECKING HANDLED
+		std::string s = std::string($1.name) + "." + std::string($3.type);
+		if(st.lookup(s) != nullptr){
+			$$.type = strdup(st.lookup(s)->type.c_str());
+		}
+		else{
+			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
+		}
+		
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
@@ -486,7 +497,9 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-	| declaration_specifiers init_declarator_list ';'
+	| declaration_specifiers init_declarator_list ';'{
+		st.declare_struct_variables(std::string($1.type),std::string($2.name));
+	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
 	;
@@ -539,8 +552,12 @@ declaration_specifiers
 
 
 init_declarator_list
-	: init_declarator 
-	| init_declarator_list ',' init_declarator
+	: init_declarator {
+		$$.name = $1.name;
+	}
+	| init_declarator_list ',' init_declarator {
+		$$.name = concat($1.name,$3.name);
+	}
 	;
 
 init_declarator
@@ -559,7 +576,9 @@ init_declarator
 			}
 		}	
 	}
-	| declarator 
+	| declarator {
+		$$.name=$1.name;
+	}
 	;
 
 storage_class_specifier
@@ -662,12 +681,17 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' {st.push_scope("Struct Anonymous");} struct_declaration_list '}' PopScope {
+	: struct_or_union '{' {st.push_scope("struct anonymous");} struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
     }
-	| struct_or_union IDENTIFIER '{' {st.push_scope(std::string(strdup($1.type)));} struct_declaration_list '}' PopScope {
+	| struct_or_union IDENTIFIER '{' {
+			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
+			st.insert_symbol(std::string($2.type),"STRUCT/UNION","USER DEFINED");
+			st.push_scope(s);
+			}
+		 struct_declaration_list '}' PopScope {
          /* Named struct/union with body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
          sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -780,6 +804,7 @@ declarator
 		 $$.index = $1.index;
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
+		 $$.name = $1.name;
 		  }
 	;
 

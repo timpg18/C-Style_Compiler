@@ -578,7 +578,7 @@ Nonterminals, with rules where they appear
     declaration_specifiers <atr> (123)
         on left: 93 94 95 96 97 98 99
         on right: 89 90 91 92 93 95 97 99 198 199 200 282 284 285
-    init_declarator_list (124)
+    init_declarator_list <atr> (124)
         on left: 100 101
         on right: 90 92 101
     init_declarator <atr> (125)
