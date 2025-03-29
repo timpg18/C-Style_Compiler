@@ -3,7 +3,7 @@
 #include "symbol.h"
 #include "Utility_func.h"
 SymbolTable st;
-
+int classDef = 0;
 
 %}
 
@@ -498,7 +498,22 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
-		st.declare_struct_variables(std::string($1.type),std::string($2.name));
+		printf("\n\n\n%s\n\n\n%s\n\n\n",$1.type,$2.name);
+		if(classDef){
+
+		}
+		else{
+			char* tocheck = "struct";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+			tocheck = "class";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+		}
+		
+		
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -607,12 +622,19 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' {st.push_scope("Class Anonymous");} class_member_list '}' PopScope
+    : CLASS '{' {st.push_scope("class anonymous");} class_member_list '}' PopScope
          {
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
 		   }
-	| CLASS IDENTIFIER base_clause_opt  '{' {st.push_scope(std::string(strdup($2.type)));} class_member_list '}' PopScope
+	| CLASS IDENTIFIER base_clause_opt  '{' 
+		{   
+			classDef=1;
+			std::string s = std::string("class ") + std::string(strdup($2.type));
+			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
+			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
+		}
+		class_member_list '}' {classDef=0;}PopScope
          { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          sprintf($$.type, "class %s", $2.type);
@@ -1177,6 +1199,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	
 	st.print_hierarchy();
 	st.print_token_table();
+	st.print_global_children();
+	st.print_all_scopes();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

@@ -1,9 +1,15 @@
-struct animal{
-    int a;
+class animal {
+    public:{
+        int a,uy;
+        int fun(){
+            return 0;
+        }
+    }
+    private:{
+        int y;
+    }
 };
 
 int main(){
-    struct animal h;
-    h.a=1;
     return 0;
 }
