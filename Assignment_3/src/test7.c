@@ -1,11 +1,15 @@
 typedef int myint;
 
+int fun(int o ,int u){
+    return 0;
+}
+
 
 int main(){
     myint x,y,z;
     int arr[1000][1000];
      int**** p;
-    
+     const int* const const * i;
      int zz = 12;
     
    

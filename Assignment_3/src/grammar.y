@@ -760,7 +760,6 @@ declarator
 	: pointer direct_declarator { // concatenation of * will be spearate everywhere
           int idx = $2.index;  // $2 is the token table index from direct_declarator.
           char* newtype = concat(st.token_table_[idx].token_type.c_str(), $1.type);
-          st.token_table_[idx].token_type += " ";
 		  st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
@@ -911,18 +910,19 @@ direct_declarator
 					
 pointer
 	: '*' type_qualifier_list pointer {
-		char* newtype = concat("*",$2.type);
-		newtype = concat(newtype,$3.type);
-		$$.type = newtype;
+		std::string s = "* ";
+		s += std::string($2.type);
+		s += std::string($3.type);
+		$$.type = strdup(s.c_str());
 	}
 	| '*' type_qualifier_list {
 		char* newtype = concat("*",$2.type);
 		$$.type = newtype;
 	}
 	| '*' pointer{
-          // note change in implementation of concatenating *. earlier ** was ** now its * *. 
-		  char* newtype = concat("*",$2.type);
-		  $$.type = newtype;
+		std::string s = "*";
+		s += std::string($2.type);
+		$$.type = strdup(s.c_str());
       }
 	| '*' {
           $$.type = strdup("*");
