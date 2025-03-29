@@ -49,7 +49,8 @@ char* extract_between_parentheses(const char* str) {
     end--;
     start++;
     start++;
-    size_t len = end - start;
+    int len = end - start;
+    if(len<=0)return "";
     char* result = (char*)malloc(len + 1);
     if (!result) return NULL;  
     strncpy(result, start, len);

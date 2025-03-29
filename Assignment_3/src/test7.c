@@ -16,8 +16,6 @@ int foo(int ***a){
 }
 
 int main(){
-    int **yy;
-    int u = foo();
-    return 0;
->>>>>>> origin/sem
+    class animal h;
+    h.fun();
 }

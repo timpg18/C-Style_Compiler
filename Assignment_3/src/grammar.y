@@ -152,8 +152,11 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
+		printf("\n\n\n%s\n\n\n",$1.name);
 		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		printf("\n\n\n%s\n\n\n",func_kind);
 		char* to_check = extract_between_parentheses(func_kind);
+		printf("\n\n\n%s\n\n\n",to_check);
 		if(eq(to_check,"")==true){
 			$$.kind = "PROCEDURE";
 			$$.type = $1.type;
@@ -179,6 +182,9 @@ postfix_expression
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		if(st.lookup(s) != nullptr){
 			$$.type = strdup(st.lookup(s)->type.c_str());
+			$$.kind = strdup(st.lookup(s)->kind.c_str());
+			$$.name = strdup(s.c_str());
+			printf("\n\n\n%s\n\n\n",$$.type);
 		}
 		else{
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
