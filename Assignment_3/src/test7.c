@@ -1,6 +1,18 @@
 
 class animal {
-    public:{
+    protected:{
+        int a,uy;
+        int fun(){
+            return 0;
+        }
+    }
+    private:{
+        int y;
+    }
+};
+
+class jooooo {
+    protected:{
         int a,uy;
         int fun(){
             return 0;
@@ -17,5 +29,7 @@ int foo(int ***a){
 
 int main(){
     class animal h;
-    h.fun();
+    class lele j;
+    h.a=0;
+    j.a=0;
 }

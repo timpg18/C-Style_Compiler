@@ -136,6 +136,28 @@ public:
         }
     }
 
+    // To update the Kind for access specifier in class
+    void update_class_types(const std::string& priMem,const std::string& pubMem,const std::string& proMem){
+        std::istringstream iss(priMem);
+        std::string token;
+        while (iss >> token) {
+            auto it = current_scope_->symbol_map.find(token);
+            it->second->kind += " PRIVATE";
+        }
+
+        std::istringstream isss(proMem);
+        while (isss >> token) {
+            auto it = current_scope_->symbol_map.find(token);
+            it->second->kind += " PROTECTED";
+        }
+
+        std::istringstream issss(pubMem);
+        while (issss >> token) {
+            auto it = current_scope_->symbol_map.find(token);
+            it->second->kind += " PUBLIC";
+        }
+    }
+
     Symbol* lookup(const std::string& name) {
         Scope* scope = current_scope_;
         while (scope) {

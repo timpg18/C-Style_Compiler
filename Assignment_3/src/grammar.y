@@ -4,6 +4,8 @@
 #include "Utility_func.h"
 SymbolTable st;
 int classDef = 0;
+int isPub=0,isPro=0,isPri=0;
+std::string pubMem,proMem,priMem = "";
 
 %}
 
@@ -152,11 +154,8 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
-		printf("\n\n\n%s\n\n\n",$1.name);
 		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-		printf("\n\n\n%s\n\n\n",func_kind);
 		char* to_check = extract_between_parentheses(func_kind);
-		printf("\n\n\n%s\n\n\n",to_check);
 		if(eq(to_check,"")==true){
 			$$.kind = "PROCEDURE";
 			$$.type = $1.type;
@@ -181,10 +180,15 @@ postfix_expression
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		if(st.lookup(s) != nullptr){
+			if(contains(strdup(st.lookup(s)->kind.c_str()),"PRIVATE")){
+				yyerror("Cannot access the private member of the class");
+			}
+			else if(contains(strdup(st.lookup(s)->kind.c_str()),"PROTECTED")){
+				yyerror("Cannot access the protected member of the class");
+			}
 			$$.type = strdup(st.lookup(s)->type.c_str());
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
 			$$.name = strdup(s.c_str());
-			printf("\n\n\n%s\n\n\n",$$.type);
 		}
 		else{
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
@@ -655,12 +659,21 @@ class_specifier
 			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
 		}
-		class_member_list '}' {classDef=0;}PopScope
-         { 
+		class_member_list '}' 
+		{
+			classDef=0;
+			std::cout<<priMem<<"\n"<<proMem<<"\n"<<pubMem<<"\n";
+			st.update_class_types(priMem,pubMem,proMem);
+			priMem = "";
+			proMem = "";
+			pubMem = ""; 
+		}
+		PopScope
+        { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
-         sprintf($$.type, "class %s", $2.type);
+         	sprintf($$.type, "class %s", $2.type);
 		   
-		   }
+		}
 	| CLASS IDENTIFIER base_clause_opt  
          { 
            $$.type = (char*)malloc(strlen("class") + strlen($2.type) + 14);
@@ -675,14 +688,18 @@ class_member_list
     ;
 
 class_member
-    : access_specifier ':' '{' translation_unit '}'
+    : access_specifier ':' '{' translation_unit '}' {
+		isPub=0;
+		isPri=0;
+		isPro=0;
+	}
     ;
 
 
 access_specifier
-    : PUBLIC { $$.type = strdup("public"); }
-    | PRIVATE { $$.type = strdup("private"); }
-    | PROTECTED { $$.type = strdup("protected"); }
+    : PUBLIC { $$.type = strdup("public"); isPub=1; }
+    | PRIVATE { $$.type = strdup("private"); isPri=1; }
+    | PROTECTED { $$.type = strdup("protected"); isPro=1; }
     ;
 /* Optional inheritance clause */
 base_clause_opt
@@ -861,6 +878,18 @@ direct_declarator
 		}
 		else{
 			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
+			if(classDef==1){
+				if(isPri==1){
+					priMem += " " + std::string($1.type);
+				}
+				else if(isPub==1){
+					pubMem += " " + std::string($1.type);
+				}
+				else if(isPro==1){
+					proMem += " " + std::string($1.type);
+				}
+			}
+			
         $$.index = st.token_table_.size() - 1;
 		$$.type = currentType;
 		$$.kind = "IDENTIFIER";
