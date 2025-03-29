@@ -10,6 +10,12 @@ class animal {
     }
 };
 
+int foo(int ***a){
+    return 0;
+}
+
 int main(){
+    int **yy;
+    int u = foo();
     return 0;
 }

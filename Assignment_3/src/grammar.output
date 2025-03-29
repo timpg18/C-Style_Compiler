@@ -517,7 +517,7 @@ Nonterminals, with rules where they appear
     postfix_expression <atr> (102)
         on left: 16 17 18 19 20 21 22 23 24 25
         on right: 17 18 19 20 21 22 23 28
-    argument_expression_list (103)
+    argument_expression_list <atr> (103)
         on left: 26 27
         on right: 19 27
     unary_expression <atr> (104)

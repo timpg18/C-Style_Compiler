@@ -59,6 +59,7 @@ int classDef = 0;
 %type <atr> initializer assignment_operator
 %type <atr> parameter_type_list parameter_list parameter_declaration 
 %type <atr> init_declarator_list
+%type <atr> argument_expression_list
 
 
 /* currently removed for now 
@@ -149,14 +150,27 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
-		$$.kind = "PROCEDURE";
-		$$.type = $1.type;
+		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		char* to_check = extract_between_parentheses(func_kind);
+		if(eq(to_check,"")==true){
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
+		}
+		else{
+			yyerror("to few arguments passed");
+		}
+		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		$$.kind = "PROCEDURE";
-		$$.type = $1.type;
-		//FUNC_CALL h expression pe.
-		//CHECK argument_expression_list MATCHES WITH FUNC SIGNATUREEE!!!
+		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		char* to_check = extract_between_parentheses(func_kind);
+		if(eq(to_check,$3.type)==true){
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
+		}
+		else{
+			yyerror("invalid function arguments");
+		}
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
@@ -192,8 +206,13 @@ postfix_expression
 	;
 
 argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
+	: assignment_expression{
+		$$.type=$1.type;
+	}
+	| argument_expression_list ',' assignment_expression{
+		char* newtype = concat($1.type,$3.type);
+		$$.type=newtype;
+	}
 	;
 
 unary_expression
