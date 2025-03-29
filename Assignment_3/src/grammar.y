@@ -63,7 +63,7 @@ std::string pubMem,proMem,priMem = "";
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
-%type <atr> argument_expression_list
+%type <atr> argument_expression_list  expression
 
 
 /* currently removed for now 
@@ -97,7 +97,10 @@ primary_expression
 		$$.type = "STRING";
 		$$.kind = "IDENTIFIER";
 	}
-	| '(' expression ')'
+	| '(' expression ')'{
+		$$.name = $2.name;
+		$$.type = $2.type; 
+	}
 	| '(' expression error { yyerrok; }
 	;
 
@@ -223,6 +226,7 @@ unary_expression
 	: postfix_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| INC_OP unary_expression{
 		$$.type = $2.type;
@@ -257,6 +261,7 @@ unary_expression
 			$$.type = $2.type;
 		}
 		}
+		$$.name = $2.name;
 		$$.kind = $2.kind;
 
 	}
@@ -295,6 +300,7 @@ cast_expression
 	: unary_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| '(' type_name ')' cast_expression{
 		//TYPECASTINGGGG
@@ -309,6 +315,7 @@ multiplicative_expression
 	: cast_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| multiplicative_expression '*' cast_expression {
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
@@ -325,6 +332,7 @@ additive_expression
 	: multiplicative_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| additive_expression '+' multiplicative_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
@@ -338,6 +346,7 @@ shift_expression
 	: additive_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| shift_expression LEFT_OP additive_expression{
 		//NEWWWW
@@ -364,6 +373,7 @@ relational_expression
 	: shift_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| relational_expression '<' shift_expression{
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
@@ -383,6 +393,7 @@ equality_expression
 	: relational_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| equality_expression EQ_OP relational_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
@@ -396,6 +407,7 @@ and_expression
 	: equality_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| and_expression '&' equality_expression {
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
@@ -411,6 +423,7 @@ exclusive_or_expression
 	: and_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| exclusive_or_expression '^' and_expression{
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
@@ -426,6 +439,7 @@ inclusive_or_expression
 	: exclusive_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
@@ -441,6 +455,7 @@ logical_and_expression
 	: inclusive_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
@@ -451,6 +466,7 @@ logical_or_expression
 	: logical_and_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| logical_or_expression OR_OP logical_and_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
@@ -461,6 +477,7 @@ conditional_expression
 	: logical_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| logical_or_expression '?' expression ':' conditional_expression {
 		//DO WE NEED TYPE CHECKING HERE? I DOUBT IT
@@ -471,6 +488,7 @@ assignment_expression
 	: conditional_expression{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| unary_expression assignment_operator assignment_expression {
 		if($1.kind == "PROCEDURE"){
@@ -511,7 +529,8 @@ assignment_operator
 
 expression
 	: assignment_expression {
-		//for function call h ye, update later if needed
+		$$.type=$1.type;
+		$$.name=$1.name;
 	}
 	| expression ',' assignment_expression
 	;
@@ -523,7 +542,6 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
-		printf("\n\n\n%s\n\n\n%s\n\n\n",$1.type,$2.name);
 		if(classDef){
 
 		}
@@ -533,12 +551,10 @@ declaration
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
 			tocheck = "class";
-			if(contains(($1.type),tocheck)){
+			if(contains(($2.type),tocheck)){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
 		}
-		
-		
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -594,9 +610,11 @@ declaration_specifiers
 init_declarator_list
 	: init_declarator {
 		$$.name = $1.name;
+		$$.type=$1.type;
 	}
 	| init_declarator_list ',' init_declarator {
 		$$.name = concat($1.name,$3.name);
+		$$.type=$1.type;
 	}
 	;
 
@@ -618,6 +636,7 @@ init_declarator
 	}
 	| declarator {
 		$$.name=$1.name;
+		$$.type=$1.type;
 	}
 	;
 
@@ -857,8 +876,6 @@ declarator
 		  }
           $$.index = idx;
 		  $$.kind = $2.kind;
-		  
-          free($1.type); /* free the pointer string */
       }
 	| direct_declarator {
 		 $$.index = $1.index;
