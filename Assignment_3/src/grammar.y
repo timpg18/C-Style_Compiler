@@ -3,7 +3,7 @@
 #include "symbol.h"
 #include "Utility_func.h"
 SymbolTable st;
-
+int classDef = 0;
 
 %}
 
@@ -53,12 +53,16 @@ SymbolTable st;
 %type <atr> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
 
 %type <atr> primary_expression constant 
-%type <atr>  unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
-%type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
+%type <atr> unary_expression postfix_expression cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression
+%type <atr> inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator unary_operator
 %type <atr> initializer assignment_operator
+
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
+%type <atr> init_declarator_list
+%type <atr> argument_expression_list
+
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -79,6 +83,7 @@ primary_expression
 		else{
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
+		$$.name = name;
 		
 		}
 	}
@@ -134,6 +139,7 @@ postfix_expression
 	: primary_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -146,17 +152,38 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
-		$$.kind = "PROCEDURE";
-		$$.type = $1.type;
+		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		char* to_check = extract_between_parentheses(func_kind);
+		if(eq(to_check,"")==true){
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
+		}
+		else{
+			yyerror("to few arguments passed");
+		}
+		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		$$.kind = "PROCEDURE";
-		$$.type = $1.type;
-		//FUNC_CALL h expression pe.
-		//CHECK argument_expression_list MATCHES WITH FUNC SIGNATUREEE!!!
+		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+		char* to_check = extract_between_parentheses(func_kind);
+		if(eq(to_check,$3.type)==true){
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
+		}
+		else{
+			yyerror("invalid function arguments");
+		}
 	}
 	| postfix_expression '.' IDENTIFIER{
-		//STRUCT ACCESS, FIX LATER
+		//STRUCT TYPE CHECKING HANDLED
+		std::string s = std::string($1.name) + "." + std::string($3.type);
+		if(st.lookup(s) != nullptr){
+			$$.type = strdup(st.lookup(s)->type.c_str());
+		}
+		else{
+			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
+		}
+		
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
@@ -173,8 +200,13 @@ postfix_expression
 	;
 
 argument_expression_list
-	: assignment_expression
-	| argument_expression_list ',' assignment_expression
+	: assignment_expression{
+		$$.type=$1.type;
+	}
+	| argument_expression_list ',' assignment_expression{
+		char* newtype = concat($1.type,$3.type);
+		$$.type=newtype;
+	}
 	;
 
 unary_expression
@@ -480,7 +512,24 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-	| declaration_specifiers init_declarator_list ';'
+	| declaration_specifiers init_declarator_list ';'{
+		printf("\n\n\n%s\n\n\n%s\n\n\n",$1.type,$2.name);
+		if(classDef){
+
+		}
+		else{
+			char* tocheck = "struct";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+			tocheck = "class";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+		}
+		
+		
+	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
 	;
@@ -533,8 +582,12 @@ declaration_specifiers
 
 
 init_declarator_list
-	: init_declarator 
-	| init_declarator_list ',' init_declarator
+	: init_declarator {
+		$$.name = $1.name;
+	}
+	| init_declarator_list ',' init_declarator {
+		$$.name = concat($1.name,$3.name);
+	}
 	;
 
 init_declarator
@@ -553,7 +606,9 @@ init_declarator
 			}
 		}	
 	}
-	| declarator 
+	| declarator {
+		$$.name=$1.name;
+	}
 	;
 
 storage_class_specifier
@@ -582,12 +637,19 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' {st.push_scope("Class Anonymous");} class_member_list '}' PopScope
+    : CLASS '{' {st.push_scope("class anonymous");} class_member_list '}' PopScope
          {
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
 		   }
-	| CLASS IDENTIFIER base_clause_opt  '{' {st.push_scope(std::string(strdup($2.type)));} class_member_list '}' PopScope
+	| CLASS IDENTIFIER base_clause_opt  '{' 
+		{   
+			classDef=1;
+			std::string s = std::string("class ") + std::string(strdup($2.type));
+			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
+			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
+		}
+		class_member_list '}' {classDef=0;}PopScope
          { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          sprintf($$.type, "class %s", $2.type);
@@ -656,12 +718,17 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' {st.push_scope("Struct Anonymous");} struct_declaration_list '}' PopScope {
+	: struct_or_union '{' {st.push_scope("struct anonymous");} struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
     }
-	| struct_or_union IDENTIFIER '{' {st.push_scope(std::string(strdup($1.type)));} struct_declaration_list '}' PopScope {
+	| struct_or_union IDENTIFIER '{' {
+			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
+			st.insert_symbol(std::string($2.type),"STRUCT/UNION","USER DEFINED");
+			st.push_scope(s);
+			}
+		 struct_declaration_list '}' PopScope {
          /* Named struct/union with body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
          sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -774,6 +841,7 @@ declarator
 		 $$.index = $1.index;
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
+		 $$.name = $1.name;
 		  }
 	;
 
@@ -1174,6 +1242,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	
 	st.print_hierarchy();
 	st.print_token_table();
+	st.print_global_children();
+	st.print_all_scopes();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

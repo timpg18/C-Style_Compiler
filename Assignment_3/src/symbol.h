@@ -30,6 +30,7 @@ extern char* yytext;
 #include <unordered_map>
 #include <list>
 #include <cstring>
+#include <sstream>
 
 class SymbolTable {
 public:
@@ -187,6 +188,62 @@ public:
         }
         std::cout << "--------------------------------------------------------\n";
     }
+
+    // Declare struct variables in the scope
+    void declare_struct_variables(const std::string& structName,const std::string& varList){
+        for(const auto &scope_ptr:scopes_){
+            if(scope_ptr->scope_name == structName){
+                std::istringstream iss(varList);
+                std::string token;
+                while (iss >> token) {
+                    for (const auto &member : scope_ptr->ordered_symbols) {
+                        std::string newName = token + "." + member.name;
+                        std::cout<< newName<<"\n";
+                        insert_symbol(newName, member.type, member.kind);
+                    }
+                    
+                }
+                return;
+            }
+        }
+        
+        yyerror(("error:" + structName + " is not declared").c_str());
+    }
+
+    // For printing names of all scopes (Debugging)
+    void print_all_scopes() const {
+        std::cout << "Scopes in the symbol table:\n";
+        // Iterate over each scope in the symbol table
+        for (const auto& scope_ptr : scopes_) {
+            std::cout << "Scope Name: " << scope_ptr->scope_name 
+                      << ", Level: " << scope_ptr->scope_level;
+            if (scope_ptr->parent_scope) {
+                std::cout << ", Parent Scope: " << scope_ptr->parent_scope->scope_name;
+            } else {
+                std::cout << ", Parent Scope: None";
+            }
+            std::cout << "\n";
+    
+            // Now print the full hierarchy starting from this scope.
+            // Here we use a depth of 1 (or any starting indent you prefer)
+            print_scope(scope_ptr.get(), 1);
+            std::cout << "\n";
+        }
+    }
+
+    // For printing children of global scope (Debugging)
+    void print_global_children() const {
+        std::cout << "Children of Global Scope:\n";
+        // Iterate through the children of the global scope
+        for (auto child : global_scope_->children) {
+            std::cout << "- " << child->scope_name << "\n";
+        }
+    }
+    
+    
+    
+    
+    
 
 private:
     Scope* global_scope_;

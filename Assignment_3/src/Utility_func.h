@@ -31,3 +31,29 @@ void check_type(const char* s1, const char* s2,  char* s3){
         yyerror(err);
     }
 }
+
+bool contains(const char *str, const char *substr) {
+    if (str == NULL || substr == NULL) {
+        return false;
+    }
+    return (strstr(str, substr) != NULL);
+}
+
+char* extract_between_parentheses(const char* str) {
+    if (!str) return NULL;  
+    const char* start = strchr(str, '(');
+    const char* end = strrchr(str, ')');
+    if (!start || !end || start >= end - 1) {
+        return NULL; 
+    }
+    end--;
+    start++;
+    start++;
+    size_t len = end - start;
+    char* result = (char*)malloc(len + 1);
+    if (!result) return NULL;  
+    strncpy(result, start, len);
+    result[len] = '\0'; 
+
+    return result;
+}
