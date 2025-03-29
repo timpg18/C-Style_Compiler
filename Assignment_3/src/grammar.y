@@ -57,8 +57,8 @@ SymbolTable st;
 %type <atr>  inclusive_or_expression logical_and_expression logical_or_expression conditional_expression assignment_expression
 %type <atr> init_declarator unary_operator
 %type <atr> initializer assignment_operator
-%type <atr> parameter_type_list parameter_list parameter_declaration 
-
+%type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
+%type <atr> specifier_qualifier_list type_name
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -170,14 +170,6 @@ postfix_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
-	| '(' type_name ')' '{' initializer_list '}'{
-		//C99 style to declare temporary arrays.
-		//we aint doin this shi
-	}
-	| '(' type_name ')' '{' initializer_list ',' '}'{
-		//C99 style to declare temporary arrays.
-		//we aint doin this shi
-	}
 	;
 
 argument_expression_list
@@ -265,6 +257,8 @@ cast_expression
 	| '(' type_name ')' cast_expression{
 		//TYPECASTINGGGG
 		//ABSTRACT HOJAYE TOH YE BHI DONEEEE
+		$$.type = $2.type;
+		$$.kind = $2.kind;
 	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
@@ -820,13 +814,6 @@ direct_declarator
 		  }
           $$.index = idx;
       }
-	| direct_declarator '[' '*' ']'
-	| direct_declarator '[' STATIC type_qualifier_list assignment_expression ']'
-	| direct_declarator '[' STATIC assignment_expression ']'
-	| direct_declarator '[' type_qualifier_list '*' ']'
-	| direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
-	| direct_declarator '[' type_qualifier_list assignment_expression ']'
-	| direct_declarator '[' type_qualifier_list ']'
 	| direct_declarator '[' assignment_expression ']'{
 			if($3.type == "INT" && $3.kind == "CONST"){
 				 int idx = $1.index;
@@ -888,7 +875,7 @@ direct_declarator
     }
 	| direct_declarator '('  identifier_list ')'{
 
-		//HOW TO DO THISSS
+		//K&R style function, can remove it
        	int idx = $1.index;
     	st.token_table_[idx].token_type = strdup(currentType);
 	   	st.token_table_[idx].kind = strdup("PROCEDURE");
@@ -961,10 +948,6 @@ parameter_declaration
 	: declaration_specifiers declarator { //Progation of type
 		$$.type = $2.type;
 	}
-	| declaration_specifiers abstract_declarator // To be added as error
-	| declaration_specifiers{ //Progation of type
-		$$.type = $1.type;
-	}
 	;
 
 identifier_list
@@ -973,43 +956,92 @@ identifier_list
 	;
 
 type_name
-	: specifier_qualifier_list abstract_declarator
-	| specifier_qualifier_list
+	: specifier_qualifier_list abstract_declarator{
+		std::string s = std::string($1.type);
+		s += std::string($2.type);
+		$$.type = strdup(s.c_str());
+		$$.kind = $2.kind;
+	
+	}
+	| specifier_qualifier_list{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	;
 
 abstract_declarator
-	: pointer direct_abstract_declarator
-	| pointer
-	| direct_abstract_declarator
+	: pointer direct_abstract_declarator{
+		std::string s = std::string($2.type);
+		s += std::string($1.type);
+		$$.type = strdup(s.c_str());
+		$$.kind = $2.kind;
+	}
+	| pointer {
+		$$.type = strdup("*");
+	}
+	| direct_abstract_declarator{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
 	;
 
 direct_abstract_declarator
-	: '(' abstract_declarator ')'
-	| '[' ']'
-	| '[' '*' ']'
-	| '[' STATIC type_qualifier_list assignment_expression ']'
-	| '[' STATIC assignment_expression ']'
-	| '[' type_qualifier_list STATIC assignment_expression ']'
-	| '[' type_qualifier_list assignment_expression ']'
-	| '[' type_qualifier_list ']'
-	| '[' assignment_expression ']'
-	| direct_abstract_declarator '[' ']'
-	| direct_abstract_declarator '[' '*' ']'
-	| direct_abstract_declarator '[' STATIC type_qualifier_list assignment_expression ']'
-	| direct_abstract_declarator '[' STATIC assignment_expression ']'
-	| direct_abstract_declarator '[' type_qualifier_list assignment_expression ']'
-	| direct_abstract_declarator '[' type_qualifier_list STATIC assignment_expression ']'
-	| direct_abstract_declarator '[' type_qualifier_list ']'
-	| direct_abstract_declarator '[' assignment_expression ']'
-	| '(' ')'
-	| '(' parameter_type_list ')'
-	| direct_abstract_declarator '(' ')'
-	| direct_abstract_declarator '(' parameter_type_list ')'
+	: '(' abstract_declarator ')' {
+		char *tmp = "(";
+		$$.type = concat(tmp,$2.type);
+		tmp = ")";
+		$$.type = concat($$.type,tmp);
+		$$.kind = $2.kind;
+
+	}
+	| '[' ']' {
+		$$.type = strdup("*");
+	}
+	| '[' assignment_expression ']' {
+		$$.type = $2.type;
+		$$.kind = $2.kind;
+	}
+	| direct_abstract_declarator '[' ']'{
+		std::string s = std::string($1.type);
+		s += "*";
+		$$.type = strdup(s.c_str());
+		$$.kind = $1.kind;
+	}
+	| direct_abstract_declarator '[' assignment_expression ']'{
+	}
+	| '(' ')'{
+		$$.type = " ( )";
+		$$.kind = "PROCEDURE";
+	}
+	| '(' parameter_type_list ')'{
+		char *tmp = "(";
+		$$.type = concat(tmp, $2.type);
+		tmp = ")";
+		$$.type = concat($$.type, tmp );
+	}
+	| direct_abstract_declarator '(' ')' {
+		char *tmp = "(";
+		$$.type = concat($1.type, tmp);
+		tmp = ")";
+		$$.type = concat($$.type, tmp );
+		$$.kind = "PROCEDURE";
+	}
+	| direct_abstract_declarator '(' parameter_type_list ')' {
+		char *tmp = "(";
+		$$.type = concat($1.type, tmp);
+		tmp = ")";
+		$$.type = concat($$.type, $3.type );
+		$$.type = concat($$.type,tmp);
+		$$.kind = "PROCEDURE";
+	}
 	;
 
 initializer
-	: '{' initializer_list '}'
-	| '{' initializer_list ',' '}'
+	: '{' initializer_list '}' {
+		std::string s = std::string($2.type);
+		s += "*";
+		$$.type = strdup(s.c_str());
+	}
 	| assignment_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
@@ -1017,24 +1049,14 @@ initializer
 	;
 
 initializer_list
-	: designation initializer
-	| initializer
-	| initializer_list ',' designation initializer
-	| initializer_list ',' initializer
-	;
-
-designation
-	: designator_list '='
-	;
-
-designator_list
-	: designator
-	| designator_list designator
-	;
-
-designator
-	: '[' constant_expression ']'
-	| '.' IDENTIFIER
+	:  initializer{
+		$$.type = $1.type;
+		$$.kind = $1.kind;
+	}
+	| initializer_list ',' initializer{
+		char* err = "initializer must have same types";
+		check_type($1.type,$3.type,err);
+	}
 	;
 
 statement
