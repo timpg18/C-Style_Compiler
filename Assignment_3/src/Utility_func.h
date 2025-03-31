@@ -58,3 +58,11 @@ char* extract_between_parentheses(const char* str) {
 
     return result;
 }
+
+bool is_first_arg_STRING(const char *input) {
+    if (input == NULL) {
+        return false;
+    }
+    
+    return strncmp(input, "STRING", 6) == 0;
+}

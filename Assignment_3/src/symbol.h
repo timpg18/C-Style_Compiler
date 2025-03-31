@@ -75,6 +75,8 @@ public:
         global_scope_ = new Scope(nullptr, "global", 0);
         current_scope_ = global_scope_;
         scopes_.emplace_back(global_scope_);
+        insert_symbol("printf","INT","PROCEDURE ( ARG DEPENDENT )");
+        insert_symbol("scanf","INT","PROCEDURE ( ARG DEPENDENT )");
     }
 
     void push_scope(const std::string& parent_symbol_name = "") {
@@ -261,10 +263,6 @@ public:
             std::cout << "- " << child->scope_name << "\n";
         }
     }
-    
-    
-    
-    
     
 
 private:

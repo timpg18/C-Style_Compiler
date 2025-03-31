@@ -87,7 +87,6 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
-		
 		}
 	}
 	| constant{
@@ -139,12 +138,10 @@ string
 	: STRING_LIT{
 		$$.type = "STRING";
 		$$.kind = "IDENTIFIER";
-		$$.name = $1.type;
 	}
 	| CHAR_LIT {
 		$$.type = "CHAR";
 		$$.kind = "IDENTIFIER";
-		$$.name = $1.type;
 	}
 	| FUNC_NAME {
 
@@ -169,27 +166,54 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
-		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-		char* to_check = extract_between_parentheses(func_kind);
-		if(eq(to_check,"")==true){}
+		if(eq($1.name,"printf")){
+			yyerror("too few arguments to function \'printf\'");
+		}
+		else if(eq($1.name,"scanf")){
+			yyerror("too few arguments to function \'scanf\'");
+		}
 		else{
-			yyerror("to few arguments passed");
+			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+			char* to_check = extract_between_parentheses(func_kind);
+			if(eq(to_check,"")==true){}
+			else{
+				yyerror("to few arguments passed");
+			}
 		}
 		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
 		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-		char* to_check = extract_between_parentheses(func_kind);
-		if(eq(to_check,$3.type)==true){
+		if(eq($1.name,"printf")){
+			printf("\n\n%s\n\n",$3.type);
+			if(is_first_arg_STRING($3.type)==1){
+				// TO BE SEEN LATER;
+			}
+			else{
+				yyerror("expected \'const char * restrict\' but argument is of different type");
+			}
+		}
+		else if(eq($1.name,"scanf")){
+			if(is_first_arg_STRING($3.type)==1){
+				// TO BE SEEN LATER;
+			}
+			else{
+				yyerror("expected \'const char * restrict\' but argument is of different type");
+			}
 		}
 		else{
-			yyerror("invalid function arguments");
+			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+			char* to_check = extract_between_parentheses(func_kind);
+			if(eq(to_check,$3.type)==true){
+			}
+			else{
+				yyerror("invalid function arguments");
+			}
 		}
-
-			$$.kind = "PROCEDURE";
-			$$.type = $1.type;
+		$$.kind = "PROCEDURE";
+		$$.type = $1.type;
+		
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
@@ -230,11 +254,11 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression{
-		$$.type=$1.type;
+		$$.type = $1.type;
 	}
 	| argument_expression_list ',' assignment_expression{
 		char* newtype = concat($1.type,$3.type);
-		$$.type=newtype;
+		$$.type = newtype;
 	}
 	;
 
@@ -1327,8 +1351,6 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	
 	st.print_hierarchy();
 	st.print_token_table();
-	st.print_global_children();
-	st.print_all_scopes();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");
