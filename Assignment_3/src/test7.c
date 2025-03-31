@@ -1,10 +1,7 @@
-
-struct AA {
-    int y;
-};
-
+int fun(){
+    return 0;
+}
 
 int main(){
-    struct AA a;
-    return 0 ;
+    int aa=fun()()()();
 }

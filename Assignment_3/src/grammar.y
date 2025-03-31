@@ -166,6 +166,9 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
+		if(!contains($1.kind,"(")){
+			yyerror("called function cannot be having another pair of calling set");
+		}
 		if(eq($1.name,"printf")){
 			yyerror("too few arguments to function \'printf\'");
 		}
@@ -175,7 +178,9 @@ postfix_expression
 		else{
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,"")==true){}
+			if(eq(to_check,"")==true){
+				
+			}
 			else{
 				yyerror("to few arguments passed");
 			}
@@ -185,6 +190,9 @@ postfix_expression
 		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
+		if(!contains($1.kind,"(")){
+			yyerror("called function cannot be having another pair of calling set");
+		}
 		if(eq($1.name,"printf")){
 			printf("\n\n%s\n\n",$3.type);
 			if(is_first_arg_STRING($3.type)==1){
@@ -682,17 +690,27 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
+			printf("\n%s\n%s\n",$1.kind,$3.kind);
 		if(eq($1.type , $3.type) == false){
-
 			char *err = "incompatible type declaration: ";
 			err = concat(err,$1.type);
 			err = concat(err, $3.type);
 			yyerror(err);
 		}
 		else{
+			printf("\n%s\n%s\n",$1.kind,$3.kind);
 			if($1.type == "PROCEDURE"){
 				std::string err = "cannot declare procedure with = ";
-			yyerror(err.c_str());
+				yyerror(err.c_str());
+			}
+			else if(contains($3.kind,"PROCEDURE")){
+				
+				if(eq($3.kind,"PROCEDURE")){
+
+				}
+				else{
+					yyerror("Cannot assign function to a variable");
+				}
 			}
 		}	
 	}
