@@ -3,5 +3,5 @@ int fun(){
 }
 
 int main(){
-    int aa=fun()()()();
+
 }

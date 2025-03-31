@@ -539,7 +539,7 @@ assignment_expression
 		$$.name = $1.name;
 	}
 	| unary_expression assignment_operator assignment_expression {
-		if($1.kind == "PROCEDURE"){
+		if(contains($1.kind,"PROCEDURE")){
 			yyerror("Cannot assign to a function type ( )");
 		}
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
