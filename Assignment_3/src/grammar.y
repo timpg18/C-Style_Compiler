@@ -6,6 +6,7 @@ SymbolTable st;
 int classDef = 0;
 int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
+std::string currFunc = "";
 
 %}
 
@@ -22,8 +23,8 @@ std::string pubMem,proMem,priMem = "";
 	attribute_t atr;
 }
 
-%token <atr> IDENTIFIER 
-%token I_CONSTANT F_CONSTANT STRING_LIT CHAR_LIT TRUE FALSE
+%token <atr> IDENTIFIER STRING_LIT CHAR_LIT
+%token I_CONSTANT F_CONSTANT TRUE FALSE
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -63,7 +64,7 @@ std::string pubMem,proMem,priMem = "";
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
-%type <atr> argument_expression_list  expression
+%type <atr> argument_expression_list  expression string labeled_statement
 
 
 /* currently removed for now 
@@ -94,8 +95,9 @@ primary_expression
 		$$.kind = $1.kind;
 	}
 	| string {
-		$$.type = "STRING";
-		$$.kind = "IDENTIFIER";
+		$$.type = $1.type;
+		$$.name = $1.name;
+		$$.kind = $1.kind;
 	}
 	| '(' expression ')'{
 		$$.name = $2.name;
@@ -134,9 +136,19 @@ BOOLEAN
 	| FALSE
 
 string
-	: STRING_LIT
-	| CHAR_LIT   /* BEEP BEEP , adding char literals here */
-	| FUNC_NAME
+	: STRING_LIT{
+		$$.type = "STRING";
+		$$.kind = "IDENTIFIER";
+		$$.name = $1.type;
+	}
+	| CHAR_LIT {
+		$$.type = "CHAR";
+		$$.kind = "IDENTIFIER";
+		$$.name = $1.type;
+	}
+	| FUNC_NAME {
+
+	}
 	;
 
 
@@ -159,35 +171,39 @@ postfix_expression
 	| postfix_expression '(' ')'{
 		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 		char* to_check = extract_between_parentheses(func_kind);
-		if(eq(to_check,"")==true){
-			$$.kind = "PROCEDURE";
-			$$.type = $1.type;
-		}
+		if(eq(to_check,"")==true){}
 		else{
 			yyerror("to few arguments passed");
 		}
+		$$.kind = "PROCEDURE";
+		$$.type = $1.type;
 		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
 		char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 		char* to_check = extract_between_parentheses(func_kind);
 		if(eq(to_check,$3.type)==true){
-			$$.kind = "PROCEDURE";
-			$$.type = $1.type;
 		}
 		else{
 			yyerror("invalid function arguments");
 		}
+
+			$$.kind = "PROCEDURE";
+			$$.type = $1.type;
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
+		printf("\n\n%s\n\n",$1.type);
 		if(st.lookup(s) != nullptr){
 			if(contains(strdup(st.lookup(s)->kind.c_str()),"PRIVATE")){
 				yyerror("Cannot access the private member of the class");
 			}
 			else if(contains(strdup(st.lookup(s)->kind.c_str()),"PROTECTED")){
 				yyerror("Cannot access the protected member of the class");
+			}
+			if(contains($1.type,"*")){
+				yyerror("Pointers dont have members");
 			}
 			$$.type = strdup(st.lookup(s)->type.c_str());
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
@@ -960,15 +976,7 @@ direct_declarator
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
        int idx = $1.index;  // $1 is now of type int (the token index)
-      /*
-	  char *newtype = concat(st.token_table_[idx].token_type, "(");
-	  char *newtype = concat(newType, $3.//);
-	  char *newtype = concat(newType, ")");
-	  st.token_table_[idx].token_type = strdup(newType);
-	  st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-	  */
 
-       
 	   	st.token_table_[idx].kind = strdup("PROCEDURE ");
 		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
 		newkind = concat(newkind,$3.type);
@@ -980,16 +988,20 @@ direct_declarator
 	   	$$.kind = newkind;
       	$$.index = idx;
 	   	$$.name = $1.name;
+		currFunc = std::string($$.name);
+		std::cout<<"\n\n"<<currFunc<<"\n\n";
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
-		 st.token_table_[idx].kind = strdup("PROCEDURE ( )");
+		st.token_table_[idx].kind = strdup("PROCEDURE ( )");
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-	   $$.type = strdup(st.token_table_[idx].token_type.c_str());
-	   $$.kind = strdup("PROCEDURE ( )");
-       $$.index = idx;
-	   $$.name = $1.name;
+		$$.type = strdup(st.token_table_[idx].token_type.c_str());
+		$$.kind = strdup("PROCEDURE ( )");
+		$$.index = idx;
+		$$.name = $1.name;
+	   	currFunc = std::string($$.name);
+		std::cout<<"\n\n"<<currFunc<<"\n\n";
 
 	   
     }
@@ -1189,7 +1201,9 @@ statement
 	;
 
 labeled_statement
-	: IDENTIFIER ':' statement
+	: IDENTIFIER ':'{
+		st.insert_symbol($1.type,"LABEL" , "GOTO LABEL");
+	} statement 
 	| CASE constant_expression ':' statement
 	| DEFAULT ':' statement
 	;
@@ -1234,11 +1248,30 @@ iteration_statement
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'
+	: GOTO IDENTIFIER ';' {
+		if(st.lookup(std::string($2.type))==NULL){
+			char * message = "label";
+			message = concat(message,$2.type);
+			message = concat(message, "used but not defined");
+			yyerror(message);
+		}
+	}
 	| CONTINUE ';'
 	| BREAK ';'  
-	| RETURN ';'  
-	| RETURN expression ';'
+	| RETURN ';'  {
+		std::string s = (st.lookup(currFunc)->type);
+		if(s!="VOID"){
+			yyerror("\'return\' with no value, in function returning non-void");
+		}
+	}
+	| RETURN expression ';'{
+		std::string s = (st.lookup(currFunc)->type);
+		std::string typeExp = std::string($2.type);
+		if(s==typeExp){}
+		else{
+			yyerror("The return expression has type different from the declared function");
+		}
+	}
 	;
 
 Global

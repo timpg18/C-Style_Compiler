@@ -1,11 +1,13 @@
-class animal{
-    private:{
-        int a,b;
-    }
-};
-
+void func(int a,int b){
+    return  ;
+}
 int main(){
-    struct animal lion;
-    class animal * ptr = &lion;
-    (*ptr).a;
+    int n=0;
+    LABEL :
+    
+
+    goto LABEL;
+
+
+    return 1 ;
 }
