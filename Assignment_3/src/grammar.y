@@ -2,6 +2,8 @@
 
 #include "symbol.h"
 #include "Utility_func.h"
+#include "types.h"
+TypeSet ts;
 SymbolTable st;
 int classDef = 0;
 int isPub=0,isPro=0,isPri=0;
@@ -52,7 +54,7 @@ std::string currFunc = "";
 %type <atr> enum_specifier
 %type <atr> constant_expression 
 %type <atr> pointer type_qualifier_list
-%type <atr>   storage_class_specifier type_qualifier 
+%type <atr> storage_class_specifier type_qualifier 
 %type <atr> class_specifier access_specifier base_clause_opt base_specifier_list base_specifier  access_specifier_opt
 
 %type <atr> primary_expression constant 
@@ -136,7 +138,7 @@ BOOLEAN
 
 string
 	: STRING_LIT{
-		$$.type = "STRING";
+		$$.type = "CHAR*";
 		$$.kind = "IDENTIFIER";
 	}
 	| CHAR_LIT {
@@ -354,7 +356,7 @@ cast_expression
 		//TYPECASTINGGGG
 		//ABSTRACT HOJAYE TOH YE BHI DONEEEE
 		$$.type = $2.type;
-		$$.kind = $2.kind;
+		$$.kind = $4.kind;
 	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
@@ -554,9 +556,9 @@ assignment_expression
 		}
 		else{
 			if(contains($1.type,"enum")){
-				printf("\n\n%s\n\n%s\n\n",$1.kind,$3.kind);
+				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
 				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if($3.type == "INT"){}
+					if(eq($3.type,"INT")){}
 					else{
 						yyerror("incompatible types when assigning to type 'enum'");
 					}
@@ -566,6 +568,22 @@ assignment_expression
 					s1 = concat(s1,$2.type);
 					s1 = concat(s1," : ");
 					check_type($1.type, $3.type,s1);
+				}
+			}
+			else if(eq($1.type,"auto")){
+				st.lookup(std::string($1.name))->type = std::string($3.type);
+				if(contains($3.kind,"PROCEDURE")){
+					if(eq($3.kind,"PROCEDURE")){
+
+					}
+					else{
+						yyerror("Cannot assign function to a variable");
+					}
+				}
+			}
+			else if(contains($1.type,"CONST")){
+				if(!ts.hasPointer(std::string($1.type))){
+					yyerror("const variable cannot be re-changed");
 				}
 			}
 			else{
@@ -608,23 +626,50 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
-		if(classDef){
+		printf("\n\n%s\n\n",$2.type);
+		// this one is for checking for declaration of const
+		if(contains($2.type,"declared")){
 
 		}
 		else{
-			char* tocheck = "struct";
-			if(contains(($1.type),tocheck)){
-				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			if(contains($1.type,"typedef")){
+				ts.addTypedef(std::string($2.name),std::string($1.type));
 			}
-			tocheck = "class";
-			if(contains(($2.type),tocheck)){
-				st.declare_struct_variables(std::string($1.type),std::string($2.name));
-			}
-			tocheck = "union";
-			if(contains(($1.type),tocheck)){
-				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			else{
+				if(ts.contains(std::string($1.type))){
+					if(!ts.hasPointer(std::string($1.type))){
+						if(!ts.isValidConstDeclaration(std::string($1.type))){
+							yyerror("duplicate \'const\'");
+						}
+						else if (ts.oneConst(std::string($1.type))){
+							yyerror("uninitialized const variable");
+						}
+					}
+					if(classDef){
+
+					}
+					else{
+						char* tocheck = "struct";
+						if(contains(($1.type),tocheck)){
+							st.declare_struct_variables(std::string($1.type),std::string($2.name));
+						}
+						tocheck = "class";
+						if(contains(($2.type),tocheck)){
+							st.declare_struct_variables(std::string($1.type),std::string($2.name));
+						}
+						tocheck = "union";
+						if(contains(($1.type),tocheck)){
+							st.declare_struct_variables(std::string($1.type),std::string($2.name));
+						}
+					}
+				}
+				else{
+					yyerror("Specified type declaration not allowed");
+				}
 			}
 		}
+		
+		
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -690,12 +735,60 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
-			printf("\n%s\n%s\n",$1.kind,$3.kind);
+			printf("\n%s\n%s\n",$1.type,$3.type);
 		if(eq($1.type , $3.type) == false){
-			char *err = "incompatible type declaration: ";
-			err = concat(err,$1.type);
-			err = concat(err, $3.type);
-			yyerror(err);
+			if(eq($1.type,"auto")){
+				st.lookup(std::string($1.name))->type = std::string($3.type);
+				if(contains($3.kind,"PROCEDURE")){
+					if(eq($3.kind,"PROCEDURE")){
+
+					}
+					else{
+						yyerror("Cannot assign function to a variable");
+					}
+				}
+			}
+			else if(contains($1.type,"enum")){
+				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+					if(eq($3.type,"INT")){}
+					else{
+						yyerror("incompatible types when assigning to type 'enum'");
+					}
+				}
+				else{
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$3.type);
+					s1 = concat(s1," : ");
+					check_type($1.type, $3.type,s1);
+				}
+			}
+			else if(contains($1.type,"CONST")){
+				if(!ts.hasPointer(std::string($1.type))){
+					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($1.type)).c_str());
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$3.type);
+					s1 = concat(s1," : ");
+					check_type(matchingType, $3.type,s1);
+					$$.type = $1.type;
+					$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+				}
+			}
+			else if(contains($3.type,"CONST")){
+				if(!ts.hasPointer(std::string($3.type))){
+					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($3.type)).c_str());
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$1.type);
+					s1 = concat(s1," : ");
+					check_type(matchingType, $1.type,s1);
+				}
+			}
+			else{
+				char *err = "incompatible type declaration: ";
+				err = concat(err,$1.type);
+				err = concat(err, $3.type);
+				yyerror(err);
+			}	
 		}
 		else{
 			printf("\n%s\n%s\n",$1.kind,$3.kind);
@@ -742,7 +835,7 @@ type_specifier
 	| struct_or_union_specifier { currentType = $1.type; $$.type = currentType; }
 	| class_specifier {currentType = $1.type; $$.type = currentType;}
 	| enum_specifier { currentType = $1.type; $$.type = currentType; }
-	| TYPEDEF_NAME	{ currentType = strdup(yytext); $$.type = currentType;}
+	| TYPEDEF_NAME	{ currentType = strdup(ts.getTypedef(std::string(yytext)).c_str()); $$.type = currentType;}
 	;
 
 class_specifier
@@ -758,6 +851,7 @@ class_specifier
 			std::string s = std::string("class ") + std::string(strdup($2.type));
 			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
+			ts.addClass(std::string($2.type));
 		}
 		class_member_list '}' 
 		{
@@ -865,9 +959,11 @@ struct_or_union_specifier
 			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
 			if(eq($1.type,"struct")){
 				st.insert_symbol(std::string($2.type),"STRUCT","USER DEFINED");
+				ts.addStruct(std::string($2.type));
 			}
 			else{
 				st.insert_symbol(std::string($2.type),"UNION","USER DEFINED");
+				ts.addUnion(std::string($2.type));
 			}
 			st.push_scope(s);
 			}
@@ -920,20 +1016,24 @@ enum_specifier
     : ENUM '{' enumerator_list '}' { 
           /* Anonymous enum; you might choose to simply return "enum" */
           $$.type = strdup("enum");
+		  yyerror("anonymous enum declaration not allowed");
       }
     | ENUM '{' enumerator_list ',' '}' { 
           $$.type = strdup("enum");
+		   yyerror("anonymous enum declaration not allowed");
       }
     | ENUM IDENTIFIER '{' enumerator_list '}' { 
           /* Named enum: produce "enum <identifier>" */
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
+		  ts.addEnum(std::string($2.type));
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
+		  ts.addEnum(std::string($2.type));
       }
     | ENUM IDENTIFIER { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
@@ -1075,6 +1175,9 @@ direct_declarator
 	   	$$.name = $1.name;
 		currFunc = std::string($$.name);
 		std::cout<<"\n\n"<<currFunc<<"\n\n";
+		if(!ts.contains(st.lookup(std::string($1.name))->type)){
+			yyerror("Specified function return type not allowed");
+		}
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
@@ -1087,6 +1190,9 @@ direct_declarator
 		$$.name = $1.name;
 	   	currFunc = std::string($$.name);
 		std::cout<<"\n\n"<<currFunc<<"\n\n";
+		if(!ts.contains(st.lookup(std::string($1.name))->type)){
+			yyerror("Specified function return type not allowed");
+		}
 
 	   
     }
@@ -1163,6 +1269,9 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator { //Progation of type
+		if(!ts.contains(std::string($1.type))){
+			yyerror("parameter type not allowed");
+		}
 		$$.type = $2.type;
 	}
 	;
@@ -1352,6 +1461,8 @@ jump_statement
 	| RETURN expression ';'{
 		std::string s = (st.lookup(currFunc)->type);
 		std::string typeExp = std::string($2.type);
+		s = ts.removeConstFromDeclaration(s);
+		std::cout<<typeExp<<std::endl;
 		if(s==typeExp){}
 		else{
 			yyerror("The return expression has type different from the declared function");
@@ -1374,8 +1485,19 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {st.pop_scope();}
-	| declaration_specifiers  declarator {st.push_scope(std::string(strdup($2.name)));} compound_statement {st.pop_scope();}
+	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
+		st.pop_scope();
+		yyerror("Declaration before {} is not allowed");
+		}
+	| declaration_specifiers  declarator {
+		st.push_scope(std::string(strdup($2.name)));
+		if(eq($2.name,"main")){
+			if(!eq($1.type,"INT")){
+				yyerror("main must have return type int");
+			}
+		}
+	} 
+	compound_statement {st.pop_scope();}
 	| declaration_specifiers   declarator  error { yyerrok; }
 	;
 
@@ -1413,6 +1535,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	st.print_hierarchy();
 	st.print_token_table();
 	st.print_all_scopes();
+	//ts.printAllTypes();
+	ts.printTypedefs();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

@@ -1,3 +1,6 @@
+#ifndef UTILITY_H
+#define UTILITY_H
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -66,3 +69,5 @@ bool is_first_arg_STRING(const char *input) {
     
     return strncmp(input, "STRING", 6) == 0;
 }
+
+#endif
