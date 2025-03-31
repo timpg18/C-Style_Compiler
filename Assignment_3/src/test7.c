@@ -1,8 +1,10 @@
-enum week{Mon, Tue, Wed, Thur, Fri, Sat, Sun};
+
+struct AA {
+    int y;
+};
+
 
 int main(){
-    enum week day;
-    char* a;
-    day = a;
+    struct AA a;
     return 0 ;
 }

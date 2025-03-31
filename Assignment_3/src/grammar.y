@@ -612,6 +612,10 @@ declaration
 			if(contains(($2.type),tocheck)){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
+			tocheck = "union";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
 		}
 	}
 	| declaration_specifiers error { yyerrok; }
@@ -728,6 +732,7 @@ class_specifier
          {
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
+		 yyerror("anonymous class definition not allowed");
 		   }
 	| CLASS IDENTIFIER base_clause_opt  '{' 
 		{   
@@ -818,14 +823,34 @@ access_specifier_opt
 	;
 
 struct_or_union_specifier
-	: struct_or_union '{' {st.push_scope("struct anonymous");} struct_declaration_list '}' PopScope {
+	: struct_or_union '{'
+	 {
+		if(eq($1.type,"struct")){
+			st.push_scope("struct anonymous");
+		}
+		else{
+			st.push_scope("union anonymous");
+		}
+	 } struct_declaration_list '}' PopScope {
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
+		 if(eq($1.type,"struct")){
+			yyerror("anonymous struct definition not allowed");
+		}
+		else{
+			yyerror("anonymous union definition not allowed");
+		}
+		 
     }
 	| struct_or_union IDENTIFIER '{' {
 			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
-			st.insert_symbol(std::string($2.type),"STRUCT/UNION","USER DEFINED");
+			if(eq($1.type,"struct")){
+				st.insert_symbol(std::string($2.type),"STRUCT","USER DEFINED");
+			}
+			else{
+				st.insert_symbol(std::string($2.type),"UNION","USER DEFINED");
+			}
 			st.push_scope(s);
 			}
 		 struct_declaration_list '}' PopScope {
@@ -1369,6 +1394,7 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	
 	st.print_hierarchy();
 	st.print_token_table();
+	st.print_all_scopes();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");
