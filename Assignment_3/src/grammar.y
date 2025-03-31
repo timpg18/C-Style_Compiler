@@ -126,7 +126,7 @@ constant
 
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER {
-		st.insert_symbol($1.type,"INT" , "enumeration_constant");
+		st.insert_symbol($1.type,"INT" , "ENUM_CONST");
 	}
 	;
 
@@ -545,10 +545,28 @@ assignment_expression
 			}
 		}
 		else{
-			char* s1 = "incompatible type expression involved in";
-			s1 = concat(s1,$2.type);
-			s1 = concat(s1," : ");
-			check_type($1.type, $3.type,s1);
+			if(contains($1.type,"enum")){
+				printf("\n\n%s\n\n%s\n\n",$1.kind,$3.kind);
+				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+					if($3.type == "INT"){}
+					else{
+						yyerror("incompatible types when assigning to type 'enum'");
+					}
+				}
+				else{
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$2.type);
+					s1 = concat(s1," : ");
+					check_type($1.type, $3.type,s1);
+				}
+			}
+			else{
+				char* s1 = "incompatible type expression involved in";
+				s1 = concat(s1,$2.type);
+				s1 = concat(s1," : ");
+				check_type($1.type, $3.type,s1);
+			}
+			
 		}
 	}
 	;

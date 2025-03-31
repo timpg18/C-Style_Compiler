@@ -1,4 +1,8 @@
+enum week{Mon, Tue, Wed, Thur, Fri, Sat, Sun};
+
 int main(){
-    unsigned a ;
+    enum week day;
+    char* a;
+    day = a;
     return 0 ;
 }
