@@ -3,6 +3,7 @@
 #include "symbol.h"
 #include "Utility_func.h"
 #include "types.h"
+#include "typeconversion.h"
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
@@ -229,6 +230,7 @@ postfix_expression
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		printf("\n\n%s\n\n",$1.type);
+		std::cout<<s<<"\n";
 		if(st.lookup(s) != nullptr){
 			if(contains(strdup(st.lookup(s)->kind.c_str()),"PRIVATE")){
 				yyerror("Cannot access the private member of the class");
@@ -238,6 +240,9 @@ postfix_expression
 			}
 			if(contains($1.type,"*")){
 				yyerror("Pointers dont have members");
+			}
+			if(!ts.hasPointer(std::string($1.type))){
+
 			}
 			$$.type = strdup(st.lookup(s)->type.c_str());
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
@@ -353,8 +358,16 @@ cast_expression
 		$$.name = $1.name;
 	}
 	| '(' type_name ')' cast_expression{
-		//TYPECASTINGGGG
-		//ABSTRACT HOJAYE TOH YE BHI DONEEEE
+
+		if(!ts.contains(std::string($2.type))){
+			yyerror("the following type is not a valid type");
+		}
+		else{
+			if(contains($2.type,"enum") || contains($2.type,"class") || contains($2.type,"struct") || contains($2.type,"union")){
+				yyerror("the following type is not a valid type");
+			}
+		}
+		printf("\n\n%s\n\n",$2.type);
 		$$.type = $2.type;
 		$$.kind = $4.kind;
 	}
@@ -368,13 +381,102 @@ multiplicative_expression
 		$$.name = $1.name;
 	}
 	| multiplicative_expression '*' cast_expression {
-		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		std::string type1 = ts.removeStaticFromDeclaration(std::string($1.type));
+		type1 = ts.removeConstFromDeclaration(type1);
+		std::string type2 = ts.removeStaticFromDeclaration(std::string($3.type));
+		type2 = ts.removeConstFromDeclaration(type2);
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		if(isConvertible(std::string($1.type),std::string($3.type)) && isConvertible(std::string($3.type),std::string($1.type)) ){
+			std::string s = getLowerRankType(type1,type2);
+			$$.type = strdup(s.c_str());
+		}
+		else if(
+			isConvertible(std::string($1.type),std::string($3.type))
+		){
+			$$.type = strdup(type1.c_str());
+		}
+		else if(isConvertible(std::string($3.type),std::string($1.type))){
+			$$.type = strdup(type2.c_str());
+		}
+		else{
+			check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		}
+		
 	}
 	| multiplicative_expression '/' cast_expression{
-		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		std::string type1 = ts.removeStaticFromDeclaration(std::string($1.type));
+		type1 = ts.removeConstFromDeclaration(type1);
+		std::string type2 = ts.removeStaticFromDeclaration(std::string($3.type));
+		type2 = ts.removeConstFromDeclaration(type2);
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		if(isConvertible(std::string($1.type),std::string($3.type)) && isConvertible(std::string($3.type),std::string($1.type)) ){
+			std::string s = getLowerRankType(type1,type2);
+			$$.type = strdup(s.c_str());
+		}
+		else if(
+			isConvertible(std::string($1.type),std::string($3.type))
+		){
+			$$.type = strdup(type1.c_str());
+		}
+		else if(isConvertible(std::string($3.type),std::string($1.type))){
+			$$.type = strdup(type2.c_str());
+		}
+		else{
+			check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		}
 	}
 	| multiplicative_expression '%' cast_expression{
-		check_type($1.type, $3.type, "incompatible type expression involved in %: ");
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		std::string type1 = ts.removeStaticFromDeclaration(std::string($1.type));
+		type1 = ts.removeConstFromDeclaration(type1);
+		char* type11 = strdup(type1.c_str());
+		std::string type2 = ts.removeStaticFromDeclaration(std::string($3.type));
+		type2 = ts.removeConstFromDeclaration(type2);
+		char* type22 = strdup(type2.c_str());
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		if(eq(type11, "INT") == false || eq(type22, "INT")==false){
+			char *err = "both operands must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err,  $3.type);
+        	yyerror(err);
+		}
+		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 	}
 	;
 
@@ -385,10 +487,110 @@ additive_expression
 		$$.name = $1.name;
 	}
 	| additive_expression '+' multiplicative_expression{
-		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		std::string type1 = ts.removeStaticFromDeclaration(std::string($1.type));
+		type1 = ts.removeConstFromDeclaration(type1);
+		std::string type2 = ts.removeStaticFromDeclaration(std::string($3.type));
+		type2 = ts.removeConstFromDeclaration(type2);
+		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		else if(ts.hasPointer(type1)){
+			if(!(type2=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type1.c_str());
+			}
+		}
+		else if(ts.hasPointer(type2)){
+			if(!(type1=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type2.c_str());
+			}
+		}
+		else{
+			if(isConvertible(std::string(type1),std::string(type2)) && isConvertible(std::string(type2),std::string(type1)) ){
+				std::string s = getLowerRankType(type1,type2);
+				$$.type = strdup(s.c_str());
+			}
+			else if(
+				isConvertible(std::string(type1),std::string(type2))
+			){
+				$$.type = strdup(type1.c_str());
+			}
+			else if(isConvertible(std::string(type2),std::string(type1))){
+				$$.type = strdup(type2.c_str());
+			}
+			else{
+				check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+			}
+		}
+		
+
 	}
 	| additive_expression '-' multiplicative_expression{
-		check_type($1.type, $3.type,"incompatible type expression involved in - : ");
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		std::string type1 = ts.removeStaticFromDeclaration(std::string($1.type));
+		type1 = ts.removeConstFromDeclaration(type1);
+		std::string type2 = ts.removeStaticFromDeclaration(std::string($3.type));
+		type2 = ts.removeConstFromDeclaration(type2);
+		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		else if(ts.hasPointer(type1)){
+			if(!(type2=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type1.c_str());
+			}
+		}
+		else if(ts.hasPointer(type2)){
+			if(!(type1=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type2.c_str());
+			}
+		}
+		else{
+			if(isConvertible(std::string(type1),std::string(type2)) && isConvertible(std::string(type2),std::string(type1)) ){
+				std::string s = getLowerRankType(type1,type2);
+				$$.type = strdup(s.c_str());
+			}
+			else if(
+				isConvertible(std::string(type1),std::string(type2))
+			){
+				$$.type = strdup(type1.c_str());
+			}
+			else if(isConvertible(std::string(type2),std::string(type1))){
+				$$.type = strdup(type2.c_str());
+			}
+			else{
+				check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+			}
+		}
 	}
 	;
 
@@ -399,23 +601,42 @@ shift_expression
 		$$.name = $1.name;
 	}
 	| shift_expression LEFT_OP additive_expression{
-		//NEWWWW
-		
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err,  $3.type);
-        yyerror(err);
+        	yyerror(err);
 		}
+		$$.type = "INT";
 	}
 	| shift_expression RIGHT_OP additive_expression{
-		//NEWWW
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
         yyerror(err);
 		}
+		$$.type = "INT";
 	}
 	;
 
@@ -426,15 +647,55 @@ relational_expression
 		$$.name = $1.name;
 	}
 	| relational_expression '<' shift_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 	}
 	| relational_expression '>' shift_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
 	}
 	| relational_expression LE_OP shift_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
 	}
 	| relational_expression GE_OP shift_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
 	}
 	;
@@ -446,9 +707,29 @@ equality_expression
 		$$.name = $1.name;
 	}
 	| equality_expression EQ_OP relational_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 	}
 	| equality_expression NE_OP relational_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
 	}
 	;
@@ -460,11 +741,21 @@ and_expression
 		$$.name = $1.name;
 	}
 	| and_expression '&' equality_expression {
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in & must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
 	}
 	;
@@ -476,11 +767,21 @@ exclusive_or_expression
 		$$.name = $1.name;
 	}
 	| exclusive_or_expression '^' and_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in ^ must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
 	}
 	;
@@ -492,11 +793,21 @@ inclusive_or_expression
 		$$.name = $1.name;
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in | must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
 	}
 	;
@@ -508,6 +819,16 @@ logical_and_expression
 		$$.name = $1.name;
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
 	}
 	;
@@ -519,6 +840,16 @@ logical_or_expression
 		$$.name = $1.name;
 	}
 	| logical_or_expression OR_OP logical_and_expression{
+		if(contains($1.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
+		if(contains($3.kind,"PROCEDURE")){
+			if(!eq($3.kind,"PROCEDURE")){
+				yyerror("incompatible return type ");
+			}
+		}
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
 	}
 	;
@@ -544,6 +875,10 @@ assignment_expression
 		if(contains($1.kind,"PROCEDURE")){
 			yyerror("Cannot assign to a function type ( )");
 		}
+		std::string s = ts.removeStaticFromDeclaration(std::string($1.type));
+		$1.type = strdup(s.c_str());
+		s = ts.removeStaticFromDeclaration(std::string($3.type));
+		$3.type = strdup(s.c_str());
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int in ";
@@ -551,14 +886,20 @@ assignment_expression
 			err = concat(err, "but are: ");
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-       	 yyerror(err);
+       	 	yyerror(err);
 			}
 		}
 		else{
 			if(contains($1.type,"enum")){
 				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
 				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if(eq($3.type,"INT")){}
+					if(eq($3.type,"INT")){
+						if(contains($1.type,"CONST")){
+							if(ts.hasConstAfterStar(std::string($1.type))){
+								yyerror("const variable cannot be re-changed");
+							}
+						}
+					}
 					else{
 						yyerror("incompatible types when assigning to type 'enum'");
 					}
@@ -582,15 +923,36 @@ assignment_expression
 				}
 			}
 			else if(contains($1.type,"CONST")){
-				if(!ts.hasPointer(std::string($1.type))){
+				if(!ts.hasConstAfterStar(std::string($1.type))){
 					yyerror("const variable cannot be re-changed");
 				}
 			}
+			else if(contains($3.type,"CONST")){
+				std::string s = ts.removeConstFromDeclaration($3.type);
+				$3.type = strdup(s.c_str());
+				if(ts.hasPointer(s)){
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$2.type);
+					s1 = concat(s1," : ");
+					check_type($1.type, $3.type,s1);
+				}
+				else{
+					if(!isConvertible(std::string($1.type),std::string($3.type))){
+						char* s1 = "incompatible type expression involved in";
+						s1 = concat(s1,$2.type);
+						s1 = concat(s1," : ");
+						check_type($1.type, $3.type,s1);
+					}
+				}
+			}
 			else{
-				char* s1 = "incompatible type expression involved in";
-				s1 = concat(s1,$2.type);
-				s1 = concat(s1," : ");
-				check_type($1.type, $3.type,s1);
+				if(!isConvertible(std::string($1.type),std::string($3.type))){
+					char* s1 = "incompatible type expression involved in";
+					s1 = concat(s1,$2.type);
+					s1 = concat(s1," : ");
+					check_type($1.type, $3.type,s1);
+				}
+				
 			}
 			
 		}
@@ -627,9 +989,23 @@ declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
 		printf("\n\n%s\n\n",$2.type);
+		if(contains($1.type,"static")){
+			ts.addStaticVariable(currFunc,std::string($2.name));
+		}
 		// this one is for checking for declaration of const
 		if(contains($2.type,"declared")){
-
+			char* tocheck = "struct";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+			tocheck = "class";
+			if(contains(($2.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+			tocheck = "union";
+			if(contains(($1.type),tocheck)){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
 		}
 		else{
 			if(contains($1.type,"typedef")){
@@ -637,7 +1013,7 @@ declaration
 			}
 			else{
 				if(ts.contains(std::string($1.type))){
-					if(!ts.hasPointer(std::string($1.type))){
+					if(!ts.hasConstAfterStar(std::string($1.type))){
 						if(!ts.isValidConstDeclaration(std::string($1.type))){
 							yyerror("duplicate \'const\'");
 						}
@@ -677,14 +1053,20 @@ declaration
 
 declaration_specifiers
 	: storage_class_specifier declaration_specifiers
-	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */
+	    {
 			char *combined = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
               sprintf(combined, "%s %s", $1.type, $2.type);
               $$.type = combined;
               currentType = $$.type;
               free($1.type);
               free($2.type);
-		   }
+
+				printf("\n\n%s\n\n",combined);
+
+			  if(ts.storagespecifercount(std::string($$.type))>=2){
+					yyerror("Multiple storage class specifiers not allowed");
+			  }
+		}
 	| storage_class_specifier{
 		$$.type = $1.type;
         currentType = $$.type;
@@ -697,6 +1079,7 @@ declaration_specifiers
               sprintf(combined, "%s %s", $1.type, $2.type);
               $$.type = combined;
               currentType = $$.type; /* Update the global currentType */
+
           }
 	| type_specifier 
 	      { 
@@ -735,11 +1118,111 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
-			printf("\n%s\n%s\n",$1.type,$3.type);
-		if(eq($1.type , $3.type) == false){
-			if(eq($1.type,"auto")){
-				st.lookup(std::string($1.name))->type = std::string($3.type);
-				if(contains($3.kind,"PROCEDURE")){
+			if(eq($1.type,"CONST auto")){
+				yyerror("type defaults to 'int'");
+			}
+			if(contains($3.kind,"PROCEDURE")){
+				if(!eq($3.kind,"PROCEDURE")){
+					yyerror("incompatible return type ");
+				}
+			}
+			std::string t = ts.removeStaticFromDeclaration(std::string($1.type));
+			char* temp = strdup(t.c_str());
+			t = ts.removeStaticFromDeclaration(std::string($3.type));
+			char* temp2 = strdup(t.c_str());
+			printf("\n%s\n%s\n",temp,temp2);
+			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
+			if(eq(temp2 , temp) == false){
+				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
+				if(eq($1.type,"auto")){
+					st.lookup(std::string($1.name))->type = std::string($3.type);
+					if(contains($3.kind,"PROCEDURE")){
+						if(eq($3.kind,"PROCEDURE")){
+
+						}
+						else{
+							yyerror("Cannot assign function to a variable");
+						}
+					}
+				} // CASE OF ENUM
+				else if(contains($1.type,"enum")){
+					printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+					// ENUM CAN BE INITIALIZED BY ENUM_CONST , IDENTIFIER , CONST 
+					if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+						// ONLY INT TYPE VALUES CAN BE ASSIGNED 
+
+						if(eq(temp2,"INT")){
+							// CHECKING IF IT IS A CONST ENUM
+							if(contains($1.type,"CONST")){
+								if(!ts.hasConstAfterStar(std::string($1.type))){
+									$$.type = $1.type;
+									$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+								}
+							}
+						}
+						else{
+							yyerror("incompatible types when assigning to type 'enum'");
+						}
+					}
+					else{
+						char* s1 = "incompatible type expression involved in";
+						s1 = concat(s1,$3.type);
+						s1 = concat(s1," : ");
+						check_type($1.type, $3.type,s1);
+					}
+				}
+				else if(contains($1.type,"CONST")){
+					
+					if(!ts.hasConstAfterStar(std::string($1.type))){
+						char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($1.type)).c_str());
+						if(!isConvertible(std::string(matchingType),std::string(temp2))){
+							char* s1 = "incompatible type expression involved in";
+							s1 = concat(s1,temp2);
+							s1 = concat(s1," : ");
+							check_type(matchingType, temp2,s1);
+						}
+						
+						
+						$$.type = $1.type;
+						$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+					}
+					else{
+
+					}
+				}
+				else if(contains($3.type,"CONST")){
+					
+					if(!ts.hasConstAfterStar(std::string($3.type))){
+						char* matchingType = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
+						if(!isConvertible(std::string($1.type),std::string(matchingType))){
+							char* s1 = "incompatible type expression involved in";
+							s1 = concat(s1,$1.type);
+							s1 = concat(s1," : ");
+							check_type(matchingType, $1.type,s1);
+						}
+						
+					}
+				}
+				else{
+					if(!isConvertible(std::string($1.type),std::string($3.type))){
+						char *err = "incompatible type declaration: ";
+						err = concat(err,$1.type);
+						err = concat(err, $3.type);
+						yyerror(err);
+					}
+					
+				}	
+			}
+			else{
+				
+				// IF THE TYPES ARE SAME NEED FOR CHEKCING IF FUNCTION IS ASSIGNED OR VALUE
+				printf("\n%s\n%s\n",$1.kind,$3.kind);
+				if($1.type == "PROCEDURE"){
+					std::string err = "cannot declare procedure with = ";
+					yyerror(err.c_str());
+				}
+				else if(contains($3.kind,"PROCEDURE")){
+					
 					if(eq($3.kind,"PROCEDURE")){
 
 					}
@@ -747,65 +1230,10 @@ init_declarator
 						yyerror("Cannot assign function to a variable");
 					}
 				}
-			}
-			else if(contains($1.type,"enum")){
-				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
-				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if(eq($3.type,"INT")){}
-					else{
-						yyerror("incompatible types when assigning to type 'enum'");
-					}
+				else if(contains($1.type,"CONST")){
+					$$.type = concat($$.type, "declared");
 				}
-				else{
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$3.type);
-					s1 = concat(s1," : ");
-					check_type($1.type, $3.type,s1);
-				}
-			}
-			else if(contains($1.type,"CONST")){
-				if(!ts.hasPointer(std::string($1.type))){
-					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($1.type)).c_str());
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$3.type);
-					s1 = concat(s1," : ");
-					check_type(matchingType, $3.type,s1);
-					$$.type = $1.type;
-					$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
-				}
-			}
-			else if(contains($3.type,"CONST")){
-				if(!ts.hasPointer(std::string($3.type))){
-					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($3.type)).c_str());
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$1.type);
-					s1 = concat(s1," : ");
-					check_type(matchingType, $1.type,s1);
-				}
-			}
-			else{
-				char *err = "incompatible type declaration: ";
-				err = concat(err,$1.type);
-				err = concat(err, $3.type);
-				yyerror(err);
 			}	
-		}
-		else{
-			printf("\n%s\n%s\n",$1.kind,$3.kind);
-			if($1.type == "PROCEDURE"){
-				std::string err = "cannot declare procedure with = ";
-				yyerror(err.c_str());
-			}
-			else if(contains($3.kind,"PROCEDURE")){
-				
-				if(eq($3.kind,"PROCEDURE")){
-
-				}
-				else{
-					yyerror("Cannot assign function to a variable");
-				}
-			}
-		}	
 	}
 	| declarator {
 		$$.name=$1.name;
@@ -995,8 +1423,13 @@ struct_declaration
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list
-	| type_specifier
+	: type_specifier specifier_qualifier_list {
+		$$.type = $1.type;
+		$$.type = concat($$.type,$2.type);
+	}
+	| type_specifier{
+		$$.type = $1.type;
+	}
 	| type_qualifier specifier_qualifier_list
 	| type_qualifier
 	;
@@ -1028,17 +1461,20 @@ enum_specifier
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
+		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
+		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
       }
     | ENUM IDENTIFIER { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
+		  ts.addEnum(std::string($2.type));
       }
     ;
 
@@ -1077,6 +1513,10 @@ declarator
 		  }
           $$.index = idx;
 		  $$.kind = $2.kind;
+		  // for now const after * not allowed
+		  if(ts.hasConstAfterStar(std::string($$.type))){
+				yyerror("const after * not allowed");
+		  }
       }
 	| direct_declarator {
 		 $$.index = $1.index;
@@ -1443,12 +1883,7 @@ iteration_statement
 
 jump_statement
 	: GOTO IDENTIFIER ';' {
-		if(st.lookup(std::string($2.type))==NULL){
-			char * message = "label";
-			message = concat(message,$2.type);
-			message = concat(message, "used but not defined");
-			yyerror(message);
-		}
+		st.pushlabel(std::string($2.type));
 	}
 	| CONTINUE ';'
 	| BREAK ';'  
@@ -1459,13 +1894,22 @@ jump_statement
 		}
 	}
 	| RETURN expression ';'{
+		if(contains($2.kind,"PROCEDURE")){
+			if(!eq($2.kind,"PROCEDURE")){
+				yyerror("incompatible return type");
+			}
+		}
 		std::string s = (st.lookup(currFunc)->type);
 		std::string typeExp = std::string($2.type);
 		s = ts.removeConstFromDeclaration(s);
+		s = ts.removeStaticFromDeclaration(s);
 		std::cout<<typeExp<<std::endl;
 		if(s==typeExp){}
 		else{
-			yyerror("The return expression has type different from the declared function");
+			if(!isConvertible(typeExp,s)){
+				yyerror("The return expression has type different from the declared function");
+			}
+			
 		}
 	}
 	;
@@ -1497,7 +1941,12 @@ function_definition
 			}
 		}
 	} 
-	compound_statement {st.pop_scope();}
+	compound_statement {
+		st.pop_scope();
+		if(!st.resolvelabels(std::string($2.name))){
+			yyerror("GOTO label used but not defined");
+		}
+	}
 	| declaration_specifiers   declarator  error { yyerrok; }
 	;
 
@@ -1536,7 +1985,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	st.print_token_table();
 	st.print_all_scopes();
 	//ts.printAllTypes();
-	ts.printTypedefs();
+	//ts.printTypedefs();
+	//ts.printStaticVariables();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

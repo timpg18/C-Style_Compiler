@@ -33,6 +33,7 @@ extern char* yytext;
 #include <list>
 #include <cstring>
 #include <sstream>
+#include <set>
 
 class SymbolTable {
 public:
@@ -79,6 +80,7 @@ public:
         scopes_.emplace_back(global_scope_);
         insert_symbol("printf","INT","PROCEDURE ( ARG DEPENDENT )");
         insert_symbol("scanf","INT","PROCEDURE ( ARG DEPENDENT )");
+        insert_symbol("malloc","INT*","PROCEDURE ( INT )");
     }
 
     void push_scope(const std::string& parent_symbol_name = "") {
@@ -215,17 +217,41 @@ public:
         std::cout << "--------------------------------------------------------\n";
     }
 
+
+
     // Declare struct variables in the scope
     void declare_struct_variables(const std::string& structName,const std::string& varList){
+        bool hasConst = false;
+        bool hasStatic = false;
+        std::string tmp = structName;
+        if(oneConst(structName)){
+            hasConst=1;
+            tmp = removeConstFromDeclaration(structName);
+        }
+        if(staticCount(tmp)==1){
+            hasStatic =true;
+            tmp = removeStaticFromDeclaration(tmp);
+        }
+
+        
         for(const auto &scope_ptr:scopes_){
-            if(scope_ptr->scope_name == structName){
+            if(scope_ptr->scope_name == tmp){
                 std::istringstream iss(varList);
                 std::string token;
                 while (iss >> token) {
                     for (const auto &member : scope_ptr->ordered_symbols) {
                         std::string newName = token + "." + member.name;
                         std::cout<< newName<<"\n";
-                        insert_symbol(newName, member.type, member.kind);
+                        if(hasConst && hasStatic){
+                            insert_symbol(newName, std::string("static ") + std::string("CONST ") + member.type, member.kind);
+                        }
+                        else if(hasConst){
+                            insert_symbol(newName,  "CONST " + member.type, member.kind);
+                        }
+                        else if(hasStatic){
+                            insert_symbol(newName, "static "  + member.type, member.kind);
+                        }
+                        else insert_symbol(newName, member.type, member.kind);
                     }
                     
                 }
@@ -234,6 +260,87 @@ public:
         }
         
         yyerror(("error:" + structName + " is not declared").c_str());
+    }
+
+    std::string removeStaticFromDeclaration(const std::string& typeDecl) const {
+        std::vector<std::string> tokens;
+        std::stringstream ss(typeDecl);
+        std::string token;
+        
+        while (ss >> token) {
+            if (token != "static") {
+                tokens.push_back(token);
+            }
+        }
+        
+        std::string result;
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            if (i > 0) result += " ";
+            result += tokens[i];
+        }
+        
+        return result;
+    }
+
+    int staticCount(const std::string& typeName) const {
+
+        // Count 'static' occurrences
+        size_t staticCount = 0;
+        
+        std::vector<std::string> tokens;
+        std::stringstream ss(typeName);
+        std::string token;
+
+        // Storage specifiers and qualifiers to remove
+        const std::set<std::string> FILTER = {
+            "static"  // Storage classes
+        };
+
+        while (ss >> token) {
+            if (FILTER.count(token)) {
+                staticCount++;
+            }
+        }
+
+        return staticCount;
+    }
+
+    // Check if the type has exactly one 'CONST'
+    bool oneConst(const std::string& typeName) const {
+
+        // Count 'CONST' occurrences
+        size_t constCount = 0;
+        std::stringstream ss(typeName);
+        std::string token;
+        
+        while (ss >> token) {
+            if (token == "CONST") {
+                constCount++;
+            }
+        }
+
+        // Return true only if less than one 'CONST' exists
+        return (constCount == 1);
+    }
+
+    std::string removeConstFromDeclaration(const std::string& typeDecl) const {
+        std::vector<std::string> tokens;
+        std::stringstream ss(typeDecl);
+        std::string token;
+        
+        while (ss >> token) {
+            if (token != "CONST") {
+                tokens.push_back(token);
+            }
+        }
+        
+        std::string result;
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            if (i > 0) result += " ";
+            result += tokens[i];
+        }
+        
+        return result;
     }
 
     // For printing names of all scopes (Debugging)
@@ -265,12 +372,40 @@ public:
             std::cout << "- " << child->scope_name << "\n";
         }
     }
+
+    // this portion for resolving the goto labels;
+    void pushlabel(std::string label){
+        goto_label.push_back(label);
+    }
+
+    bool resolvelabels(const std::string funcName){
+        
+        for(const auto &scope_ptr:scopes_){
+            if(scope_ptr->scope_name == funcName){
+                std::cout<<"hello"<<std::endl;
+                int size = goto_label.size();
+                std::cout<<size<<std::endl;
+                if(size==0)return true;
+                int count = 0 ;
+                for(const auto &label : goto_label){
+                    if(scope_ptr->symbol_map.find(label)!=scope_ptr->symbol_map.end()){
+                        auto it = scope_ptr->symbol_map.find(label);
+                        if(it->second->type =="LABEL")count++;
+                    }
+                }
+                goto_label.clear();
+                if(count==size)return true;
+                else return false;
+            }
+        }
+    }
     
 
 private:
     Scope* global_scope_;
     Scope* current_scope_;
     std::vector<std::unique_ptr<Scope>> scopes_;
+    std::vector<std::string> goto_label ; // labels to be resolved
 
     void print_scope(Scope* scope, int depth = 0) const {
         std::string indent(depth * 2, ' ');

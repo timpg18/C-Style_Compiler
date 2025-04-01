@@ -67,7 +67,7 @@ bool is_first_arg_STRING(const char *input) {
         return false;
     }
     
-    return strncmp(input, "STRING", 6) == 0;
+    return strncmp(input, "CHAR*", 5) == 0;
 }
 
 #endif

@@ -1,5 +1,4 @@
-typedef struct A{int a;} hello;
-
-int main(){
-    const int a=1;
+int main() {
+    int * u;
+    int  a = 9.0*7 +1 -8.234;
 }

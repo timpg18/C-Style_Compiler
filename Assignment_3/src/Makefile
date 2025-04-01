@@ -10,6 +10,7 @@ lex.yy.c: lexer.l
 	flex lexer.l
 
 run: parser
+	clear
 	./parser < test7.c
 
 clean:
