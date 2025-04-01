@@ -24,11 +24,23 @@ string IRGen::emit_add(const string& src1, const string& src2) {
     emit_raw(temp + " = " + src1 + " + " + src2);
     return temp;
 }
-string IRGen::emit_sub(const std::string& src1, const std::string& src2){
+std::string IRGen::emit_sub(const std::string& src1, const std::string& src2){
     string temp = new_temp();
     emit_raw(temp + " = " + src1 + " - " + src2);
     return temp;
 }
+
+std::string IRGen::emit_opn(const std::string& src1, const std::string& src2, const std::string& src3){
+    string temp = new_temp();
+    emit_raw(temp + " = " + src1 + src3 + src2);
+    return temp;
+}
+void IRGen::emit_opn_id(const std::string& src1, const std::string& src2, const std::string& src3, const std::string& src4){
+    
+    emit_raw(src1 + " = " + src2 + src3 + src4);
+
+}
+
 
 
 void IRGen::emit_assign(const std::string& dest, const std::string& src) {

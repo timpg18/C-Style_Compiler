@@ -97,6 +97,7 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
+		$$.ir.tmp = name;
 		}
 	}
 	| constant{
@@ -113,6 +114,7 @@ primary_expression
 	| '(' expression ')'{
 		$$.name = $2.name;
 		$$.type = $2.type; 
+		$$.ir.tmp = $2.ir.tmp;
 	}
 	| '(' expression error { yyerrok; }
 	;
@@ -276,10 +278,18 @@ postfix_expression
 	| postfix_expression INC_OP{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup(gen.new_temp().c_str());
+
+		//DO THIS IF LVALUE ON LEFT (IE IDENTIFIER ETC)
+		gen.emit_assign($$.ir.tmp , $1.name);
+		gen.emit_opn_id($1.name, $1.name, "+", "1");
 	}
 	| postfix_expression DEC_OP{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		//DO THIS IF LVALUE ON LEFT (IE IDENTIFIER ETC)
+		gen.emit_assign($$.ir.tmp , $1.name);
+		gen.emit_opn_id($1.name, $1.name, "-", "1");
 	}
 	;
 
@@ -303,12 +313,12 @@ unary_expression
 	| INC_OP unary_expression{
 		$$.type = $2.type;
 		$$.kind = $2.kind;
-		$$.ir.tmp = strdup(gen.emit_add(std::string($2.ir.tmp),std::string("1")).c_str());
+		$$.ir.tmp = strdup(gen.emit_opn(std::string($2.ir.tmp),"1","+").c_str());
 	}
 	| DEC_OP unary_expression{
 		$$.type = $2.type;
 		$$.kind = $2.kind;
-		$$.ir.tmp = strdup(gen.emit_sub(std::string($2.ir.tmp),std::string("1")).c_str());
+		$$.ir.tmp = strdup(gen.emit_opn(std::string($2.ir.tmp),"1","-").c_str());
 	}
 	| unary_operator cast_expression{
 		char *ptr = "*";
@@ -395,12 +405,21 @@ multiplicative_expression
 	}
 	| multiplicative_expression '*' cast_expression {
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		if(error_count == 0){
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"*").c_str());
+		}
 	}
 	| multiplicative_expression '/' cast_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		if(error_count == 0){
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"/").c_str());
+		}
 	}
 	| multiplicative_expression '%' cast_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in %: ");
+		if(error_count == 0){
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"%").c_str());
+		}
 	}
 	;
 
@@ -413,9 +432,15 @@ additive_expression
 	}
 	| additive_expression '+' multiplicative_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
+		if(error_count == 0){
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"+").c_str());
+		}
 	}
 	| additive_expression '-' multiplicative_expression{
 		check_type($1.type, $3.type,"incompatible type expression involved in - : ");
+		if(error_count == 0){
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"-").c_str());
+		}
 	}
 	;
 
@@ -435,6 +460,9 @@ shift_expression
         	err = concat(err,  $3.type);
         yyerror(err);
 		}
+		else{
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"<<").c_str());
+		}
 	}
 	| shift_expression RIGHT_OP additive_expression{
 		//NEWWW
@@ -443,6 +471,9 @@ shift_expression
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
         yyerror(err);
+		}
+		else{
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),">>").c_str());
 		}
 	}
 	;
@@ -455,6 +486,8 @@ relational_expression
 		$$.name = $1.name;
 	}
 	| relational_expression '<' shift_expression{
+		//FOR OTHERS, JUST GENERATE CODE SINCE NO STORAGE FOR THIS.
+		//ie t0 > t1 then ..
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 	}
 	| relational_expression '>' shift_expression{
@@ -476,6 +509,7 @@ equality_expression
 		$$.name = $1.name;
 	}
 	| equality_expression EQ_OP relational_expression{
+		//same logic, only gen code
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 	}
 	| equality_expression NE_OP relational_expression{
@@ -497,6 +531,9 @@ and_expression
         	err = concat(err, $3.type );
         yyerror(err);
 		}
+		else{
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"&").c_str());
+		}
 	}
 	;
 
@@ -514,6 +551,9 @@ exclusive_or_expression
         	err = concat(err, $3.type );
         yyerror(err);
 		}
+		else{
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"^").c_str());
+		}
 	}
 	;
 
@@ -530,6 +570,9 @@ inclusive_or_expression
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
         yyerror(err);
+		}
+		else{
+			$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),"|").c_str());
 		}
 	}
 	;
@@ -590,6 +633,9 @@ assignment_expression
         	err = concat(err, $3.type );
        	 yyerror(err);
 			}
+			else{
+				$$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),std::string($2.type)).c_str());
+			}
 		}
 		else{
 			if(contains($1.type,"enum")){
@@ -628,6 +674,10 @@ assignment_expression
 				s1 = concat(s1,$2.type);
 				s1 = concat(s1," : ");
 				check_type($1.type, $3.type,s1);
+				if(error_count == 0){
+					if(eq($2.type , "=")) gen.emit_assign(std::string($1.ir.tmp),std::string($3.ir.tmp));
+					else  $$.ir.tmp = strdup(gen.emit_opn(std::string($1.ir.tmp),std::string($3.ir.tmp),std::string($2.type)).c_str());
+				}
 			}
 			
 		}
@@ -635,7 +685,7 @@ assignment_expression
 	;
 
 assignment_operator
-	: '='
+	: '=' {$$.type = "=";}
 	| MUL_ASSIGN {$$.type = "*=";}
 	| DIV_ASSIGN {$$.type = "/=";}
 	| MOD_ASSIGN {$$.type = "%=";}
@@ -1411,6 +1461,7 @@ initializer
 		$$.type = $1.type;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	;
 

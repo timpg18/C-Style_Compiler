@@ -1,5 +1,5 @@
-
 int main(){
-    int a;
-    int b = a++;
+    int x = 0;
+    int z = x++ + (x++)*10;
+    
 }

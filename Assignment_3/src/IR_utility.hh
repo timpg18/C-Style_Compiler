@@ -26,8 +26,8 @@ public:
     // Arithmetic operations
     std::string emit_add(const std::string& src1, const std::string& src2);
     std::string emit_sub(const std::string& src1, const std::string& src2);
-
-
+    void emit_opn_id(const std::string& src1, const std::string& src2, const std::string& src3, const std::string& src4);
+    std::string emit_opn(const std::string& src1, const std::string& src2, const std::string& src3);
 
     void emit_assign(const std::string& dest, const std::string& src);
     void generate(const std::string& filename);
