@@ -475,7 +475,7 @@ Nonterminals, with rules where they appear
     enumeration_constant (99)
         on left: 10
         on right: 167 168
-    BOOLEAN (100)
+    BOOLEAN <atr> (100)
         on left: 11 12
         on right: 9
     string <atr> (101)

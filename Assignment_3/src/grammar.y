@@ -3,6 +3,9 @@
 #include "symbol.h"
 #include "Utility_func.h"
 #include "types.h"
+#include "IR_utility.hh"
+#include "IR_utility.cc"
+IRGen gen;
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
@@ -20,8 +23,14 @@ std::string currFunc = "";
     char* type;
     char* kind;
 	int index;
-	char* name;
+	char* name; 
+	typedef struct{
+		char* tmp;
+		char* code;
+	} ir_prop;
+	ir_prop ir;
 	} attribute_t;
+	
 	attribute_t atr;
 }
 
@@ -66,7 +75,7 @@ std::string currFunc = "";
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
-%type <atr> argument_expression_list  expression string labeled_statement
+%type <atr> argument_expression_list  expression string labeled_statement BOOLEAN
 
 
 /* currently removed for now 
@@ -77,7 +86,6 @@ ELLIPSIS COMPLEX IMAGINARY COMPLEX IMAGINARY
 
 primary_expression
 	: IDENTIFIER{
-		
 		char *name = strdup($1.type);
 		std::string tmp = name;
 
@@ -94,11 +102,13 @@ primary_expression
 	| constant{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| string {
 		$$.type = $1.type;
 		$$.name = $1.name;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| '(' expression ')'{
 		$$.name = $2.name;
@@ -111,10 +121,13 @@ constant
 	: I_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
+		
 	}		/* includes character_constant */
 	| F_CONSTANT{
 		$$.type = "FLOAT";
 		$$.kind = "CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| ENUMERATION_CONSTANT{
 		$$.type = "INT";
@@ -123,6 +136,7 @@ constant
 	| BOOLEAN{
 		$$.type = "BOOL";
 		$$.kind = "CONST";
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	;
 
@@ -133,17 +147,23 @@ enumeration_constant		/* before it has been defined as such */
 	;
 
 BOOLEAN
-	: TRUE 
-	| FALSE
+	: TRUE {
+		$$.ir.tmp = "true";
+	}
+	| FALSE{
+		$$.ir.tmp = "false";
+	}
 
 string
 	: STRING_LIT{
 		$$.type = "CHAR*";
 		$$.kind = "IDENTIFIER";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| CHAR_LIT {
 		$$.type = "CHAR";
 		$$.kind = "IDENTIFIER";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| FUNC_NAME {
 
@@ -156,6 +176,7 @@ postfix_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -277,14 +298,17 @@ unary_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| INC_OP unary_expression{
 		$$.type = $2.type;
 		$$.kind = $2.kind;
+		$$.ir.tmp = strdup(gen.emit_add(std::string($2.ir.tmp),std::string("1")).c_str());
 	}
 	| DEC_OP unary_expression{
 		$$.type = $2.type;
 		$$.kind = $2.kind;
+		$$.ir.tmp = strdup(gen.emit_sub(std::string($2.ir.tmp),std::string("1")).c_str());
 	}
 	| unary_operator cast_expression{
 		char *ptr = "*";
@@ -351,6 +375,7 @@ cast_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| '(' type_name ')' cast_expression{
 		//TYPECASTINGGGG
@@ -366,6 +391,7 @@ multiplicative_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| multiplicative_expression '*' cast_expression {
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
@@ -383,6 +409,7 @@ additive_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| additive_expression '+' multiplicative_expression{
 		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
@@ -396,6 +423,7 @@ shift_expression
 	: additive_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| shift_expression LEFT_OP additive_expression{
@@ -423,6 +451,7 @@ relational_expression
 	: shift_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| relational_expression '<' shift_expression{
@@ -443,6 +472,7 @@ equality_expression
 	: relational_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| equality_expression EQ_OP relational_expression{
@@ -457,6 +487,7 @@ and_expression
 	: equality_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| and_expression '&' equality_expression {
@@ -473,6 +504,7 @@ exclusive_or_expression
 	: and_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| exclusive_or_expression '^' and_expression{
@@ -488,6 +520,7 @@ exclusive_or_expression
 inclusive_or_expression
 	: exclusive_or_expression {
 		$$.type = $1.type;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
 	}
@@ -505,6 +538,7 @@ logical_and_expression
 	: inclusive_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
@@ -516,6 +550,7 @@ logical_or_expression
 	: logical_and_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| logical_or_expression OR_OP logical_and_expression{
@@ -527,6 +562,7 @@ conditional_expression
 	: logical_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
 	}
 	| logical_or_expression '?' expression ':' conditional_expression {
@@ -539,6 +575,7 @@ assignment_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = $1.ir.tmp;
 	}
 	| unary_expression assignment_operator assignment_expression {
 		if(contains($1.kind,"PROCEDURE")){
@@ -668,8 +705,6 @@ declaration
 				}
 			}
 		}
-		
-		
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -741,7 +776,7 @@ init_declarator
 				st.lookup(std::string($1.name))->type = std::string($3.type);
 				if(contains($3.kind,"PROCEDURE")){
 					if(eq($3.kind,"PROCEDURE")){
-
+						//int a = f();
 					}
 					else{
 						yyerror("Cannot assign function to a variable");
@@ -804,6 +839,9 @@ init_declarator
 				else{
 					yyerror("Cannot assign function to a variable");
 				}
+			}
+			else{
+				gen.emit_assign(std::string($1.ir.tmp), std::string($3.ir.tmp));
 			}
 		}	
 	}
@@ -1083,6 +1121,7 @@ declarator
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
 		 $$.name = $1.name;
+		 $$.ir.tmp = $1.ir.tmp;
 		  }
 	;
 
@@ -1107,7 +1146,7 @@ direct_declarator
 					proMem += " " + std::string($1.type);
 				}
 			}
-			
+		$$.ir.tmp = $1.type;
         $$.index = st.token_table_.size() - 1;
 		$$.type = currentType;
 		$$.kind = "IDENTIFIER";
@@ -1370,6 +1409,7 @@ initializer
 	}
 	| assignment_expression {
 		$$.type = $1.type;
+		$$.ir.tmp = $1.ir.tmp;
 		$$.kind = $1.kind;
 	}
 	;
@@ -1537,6 +1577,7 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	st.print_all_scopes();
 	//ts.printAllTypes();
 	ts.printTypedefs();
+	gen.generate("output.ir");
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

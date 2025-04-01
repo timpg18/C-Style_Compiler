@@ -1,5 +1,5 @@
-typedef struct A{int a;} hello;
 
 int main(){
-    const int a=1;
+    int a;
+    int b = a++;
 }
