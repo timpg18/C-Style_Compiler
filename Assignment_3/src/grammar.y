@@ -306,10 +306,24 @@ unary_expression
 		$$.name = $1.name;
 	}
 	| INC_OP unary_expression{
+		lvalueError($2.kind);
+		if(contains($2.type,"CONST")){
+			yyerror("Const value cannot be incremented");
+		}
+		if(contains($2.type,"struct") || contains($2.type,"union") || contains($2.type,"class") ){
+			yyerror("wrong type argument to increment");
+		}
 		$$.type = $2.type;
 		$$.kind = $2.kind;
 	}
 	| DEC_OP unary_expression{
+		lvalueError($2.kind);
+		if(contains($2.type,"CONST")){
+			yyerror("Const value cannot be decremented");
+		}
+		if(contains($2.type,"struct") || contains($2.type,"union") || contains($2.type,"class") ){
+			yyerror("wrong type argument to decrement");
+		}
 		$$.type = $2.type;
 		$$.kind = $2.kind;
 	}

@@ -16,6 +16,7 @@ int main() {
     const struct A j;
     const union AA he;
     union AA h;
+    ++h;
     // static auto a;
     enum  world i ;
     i++;
