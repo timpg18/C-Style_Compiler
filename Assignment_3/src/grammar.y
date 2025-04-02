@@ -866,10 +866,12 @@ declaration
 		char* tocheck2 = "class";
 		char* tocheck3 = "union";
 		char* tocheck4 = "enum";
+		// this one is for const that is declared(handling this case explicity)
 		if(contains($2.type,"declared")){
 			if(((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
+			// here we are changing the offset and size for declaration;
 			st.updateVariableTypes(std::string($2.name),std::string($2.type));
 		}
 		else{
@@ -877,18 +879,25 @@ declaration
 			if(contains($1.type,"typedef")){
 				ts.addTypedef(std::string($2.name),std::string($1.type));
 			}
+			// for non typedef that means declarations
 			else{
+				// checking if a valid type or not
 				if(ts.contains(std::string($1.type))){
+					// if valid then checking if a const variable
 					if(contains($1.type,"CONST")){
+						// for const pointer, struct ,enum,union can be Undeclared as well
 						// need to check if pointer, struct ,enum , union
 						if( (contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)) || (contains(($1.type),tocheck4)) ){}
 						else if((!ts.hasPointer(std::string($2.type)))){
+							// for for const otherwise
 							yyerror("uninitialized const variable");
 						}
 					}
+					// this one checks if struct,union,class is being declared then initialize its members as well;
 					if((!classDef)  && ((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 						st.declare_struct_variables(std::string($1.type),std::string($2.name));
 					}
+					// finally here also we we are updating the offset and size;
 					st.updateVariableTypes(std::string($2.name),std::string($2.type));
 				}
 				else{
@@ -1420,6 +1429,8 @@ direct_declarator
 			st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 			printf("\n\n%s\n\n%s\n\n",$$.type,$3.name);
+
+			// here we are updating the size and offset for array declaration (already made a check in updateVariableTypes so that its implementation doesn't clash )
 			st.update_array_dimensions(std::string($1.name),std::stoi(std::string($3.name)),std::string($$.type));
 			if (strstr(newType, "typedef") != NULL){
 				char *temp = new char[st.token_table_[idx].token.size()+1];
@@ -1455,6 +1466,10 @@ direct_declarator
 			yyerror("Specified function return type not allowed");
 		}
 		std::cout<<"\n\n"<<std::string($3.name)<<"\n\n";
+		// here we are having 3 important steps 
+		// 1. update the identifier kind to PARAMETER
+		// 2. update the PARAMETER sizes to 0 and change offset
+		// 3. update the size of procedure to 0 since it is called 
 		st.changeToParameter(std::string($3.name));
 		st.updateParameterSizes();
 		st.updateProcedureSize(std::string($$.name));
@@ -1473,6 +1488,7 @@ direct_declarator
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
 			yyerror("Specified function return type not allowed");
 		}
+		// since no parameter_list so directly updating procedure size to 0
 		st.updateProcedureSize(std::string($$.name));
 
 	   
