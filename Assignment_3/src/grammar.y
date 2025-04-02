@@ -169,9 +169,10 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')'{
-		if(!contains($1.kind,"(")){
-			yyerror("called function cannot be having another pair of calling set");
+		if(eq($1.kind,"CONST")){
+			yyerror("called object is not a function or function pointer");
 		}
+
 		if(eq($1.name,"printf")){
 			yyerror("too few arguments to function \'printf\'");
 		}
@@ -179,23 +180,27 @@ postfix_expression
 			yyerror("too few arguments to function \'scanf\'");
 		}
 		else{
-			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,"")==true){
-				
+			if(!eq($1.kind,"CONST")){
+				char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+				char* to_check = extract_between_parentheses(func_kind);
+				if(eq(to_check,"")==true){
+					
+				}
+				else{
+					yyerror("to few arguments passed");
+				}
 			}
-			else{
-				yyerror("to few arguments passed");
-			}
+			
 		}
-		$$.kind = "PROCEDURE";
+		$$.kind = "CONST";
 		$$.type = $1.type;
 		
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		if(!contains($1.kind,"(")){
-			yyerror("called function cannot be having another pair of calling set");
+		if(eq($1.kind,"CONST")){
+			yyerror("called object is not a function or function pointer");
 		}
+
 		if(eq($1.name,"printf")){
 			printf("\n\n%s\n\n",$3.type);
 			if(is_first_arg_STRING($3.type)==1){
@@ -214,15 +219,18 @@ postfix_expression
 			}
 		}
 		else{
-			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,$3.type)==true){
-			}
-			else{
-				yyerror("invalid function arguments");
+			if(!eq($1.kind,"CONST")){
+				char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+				char* to_check = extract_between_parentheses(func_kind);
+				if(eq(to_check,"")==true){
+					
+				}
+				else{
+					yyerror("to few arguments passed");
+				}
 			}
 		}
-		$$.kind = "PROCEDURE";
+		$$.kind = "CONST";
 		$$.type = $1.type;
 		
 	}
@@ -258,10 +266,24 @@ postfix_expression
 		//access ka do it like old
 	}
 	| postfix_expression INC_OP{
+		lvalueError($1.kind);
+		if(contains($1.type,"CONST")){
+			yyerror("Const value cannot be incremented");
+		}
+		if(contains($1.type,"struct") || contains($1.type,"union") || contains($1.type,"class") ){
+			yyerror("wrong type argument to increment");
+		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
 	| postfix_expression DEC_OP{
+		lvalueError($1.kind);
+		if(contains($1.type,"CONST")){
+			yyerror("Const value cannot be decremented");
+		}
+		if(contains($1.type,"struct") || contains($1.type,"union") || contains($1.type,"class") ){
+			yyerror("wrong type argument to decrement");
+		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 	}
@@ -581,7 +603,7 @@ relational_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	| relational_expression '>' shift_expression{
 		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
@@ -595,7 +617,7 @@ relational_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	| relational_expression LE_OP shift_expression{
 		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
@@ -609,7 +631,7 @@ relational_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	| relational_expression GE_OP shift_expression{
 		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
@@ -623,7 +645,7 @@ relational_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	;
 
@@ -645,7 +667,7 @@ equality_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	| equality_expression NE_OP relational_expression{
 		if(contains($1.kind,"PROCEDURE")){
@@ -659,7 +681,7 @@ equality_expression
 			}
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
-		$$.type = $1.type;
+		$$.type = "INT";
 	}
 	;
 
@@ -691,6 +713,7 @@ and_expression
         	err = concat(err, $3.type );
         	yyerror(err);
 		}
+		$$.type = "INT";
 	}
 	;
 
@@ -722,6 +745,7 @@ exclusive_or_expression
         	err = concat(err, $3.type );
         	yyerror(err);
 		}
+		$$.type = "INT";
 	}
 	;
 
@@ -753,6 +777,7 @@ inclusive_or_expression
         	err = concat(err, $3.type );
         	yyerror(err);
 		}
+		$$.type = "INT";
 	}
 	;
 
@@ -774,6 +799,7 @@ logical_and_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
+		$$.type = "INT";
 	}
 	;
 
@@ -795,6 +821,7 @@ logical_or_expression
 		$3.type = strdup(type2.c_str());
 
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
+		$$.type = "INT";
 	}
 	;
 
@@ -817,14 +844,7 @@ assignment_expression
 	}
 	| unary_expression assignment_operator assignment_expression {
 		// the left of the declarator muse be lvalue;
-		if(contains($1.kind,"PROCEDURE")){
-			yyerror("lvalue required as left operand of assignment");
-		}
-
-		if(contains($1.kind,"CONST")){
-			std::string err = "lvalue required as left operand of assignment";
-			yyerror(err.c_str());
-		}
+		lvalueError($1.kind);
 
 		// If a procedure then must be called procedure
 		if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
@@ -931,9 +951,11 @@ declaration
 		if(contains($1.type,"static")){
 			ts.addStaticVariable(currFunc,std::string($2.name));
 		}
+
 		char* tocheck1 = "struct";
 		char* tocheck2 = "class";
 		char* tocheck3 = "union";
+		char* tocheck4 = "enum";
 		if(contains($2.type,"declared")){
 			if(((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
@@ -948,7 +970,7 @@ declaration
 				if(ts.contains(std::string($1.type))){
 					if(contains($1.type,"CONST")){
 						// need to check if pointer, struct ,enum , union
-						if( (contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3))){}
+						if( (contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)) || (contains(($1.type),tocheck4)) ){}
 						else if((!ts.hasPointer(std::string($2.type)))){
 							yyerror("uninitialized const variable");
 						}
@@ -1044,14 +1066,7 @@ init_declarator_list
 init_declarator
 	: declarator '=' initializer {
 		// the left of the declarator muse be lvalue;
-			if(contains($1.kind,"PROCEDURE")){
-				std::string err = "lvalue required as left operand of assignment";
-				yyerror(err.c_str());
-			}
-			if(contains($1.kind,"CONST")){
-				std::string err = "lvalue required as left operand of assignment";
-				yyerror(err.c_str());
-			}
+			lvalueError($1.kind);
 
 			// If a procedure then must be called procedure
 			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}

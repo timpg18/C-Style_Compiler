@@ -1,16 +1,23 @@
-struct A{
-    int h;
-};
+int f(){return 0;}
 
-int f(){
-    return 0;
-}
+struct A {
+    int e;
+};
+union AA{
+    int i;
+};
+enum world{r,t,jj,};
 
 int main() {
-    int * b;
-    int const * a = b;
-    const struct A d;
-    int c;
-    a = &c;
-    (*a) = 1;
+    int a;
+    a++;
+    struct A hello;
+    hello.e++;
+    const struct A j;
+    const union AA he;
+    union AA h;
+    // static auto a;
+    enum  world i ;
+    i++;
+    return 0;
 }
