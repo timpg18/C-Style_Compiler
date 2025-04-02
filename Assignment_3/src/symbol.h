@@ -804,6 +804,72 @@ public:
         current_scope_->total_size -= totalSizeReduction;
     }
 
+    // to change symbol size to a different value
+    void update_symbol_sizes(const std::string& names, int newSize) {
+        std::istringstream nameStream(names);
+        std::string name;
+        
+        // Process each name in the space-separated list
+        while (nameStream >> name) {
+            // Find the symbol in the current scope or parent scopes
+            Scope* scope = current_scope_;
+            std::list<Symbol>::iterator symbolIt;
+            bool found = false;
+            
+            // Look up the symbol
+            while (scope && !found) {
+                auto it = scope->symbol_map.find(name);
+                if (it != scope->symbol_map.end()) {
+                    symbolIt = it->second;
+                    found = true;
+                    break;
+                }
+                scope = scope->parent_scope;
+            }
+            
+            if (!found) {
+                std::string err = "Identifier '" + name + "' not found for size update";
+                yyerror(err.c_str());
+                continue; // Skip to next name
+            }
+            
+            // Calculate the size difference
+            int originalSize = symbolIt->size;
+            int sizeDelta = newSize - originalSize;
+            
+            // Update the symbol size
+            symbolIt->size = newSize;
+            
+            // Update the token table entry
+            for (auto& entry : token_table_) {
+                if (entry.token == name && entry.scope_level == scope->scope_level) {
+                    entry.size = newSize;
+                }
+            }
+            
+            // Adjust offsets for all subsequent symbols in the same scope
+            bool adjustOffsets = false;
+            for (auto& sym : scope->ordered_symbols) {
+                if (adjustOffsets) {
+                    sym.offset += sizeDelta;
+                    
+                    // Update token table entry for this symbol too
+                    for (auto& entry : token_table_) {
+                        if (entry.token == sym.name && entry.scope_level == scope->scope_level) {
+                            entry.offset = sym.offset;
+                        }
+                    }
+                } else if (&sym == &(*symbolIt)) {
+                    // Start adjusting offsets after the current symbol
+                    adjustOffsets = true;
+                }
+            }
+            
+            // Update the scope's total size
+            scope->total_size += sizeDelta;
+        }
+    }
+
     
 
 private:
@@ -811,6 +877,51 @@ private:
     Scope* current_scope_;
     std::vector<std::unique_ptr<Scope>> scopes_;
     std::vector<std::string> goto_label ; // labels to be resolved
+    // Handle basic types
+    std::unordered_map<std::string, int> type_sizes = {
+        {"void", 0},
+        {"bool", 1},
+        {"char", 1},
+        {"signed char", 1},
+        {"unsigned char", 1},
+        {"short", 2},
+        {"short int", 2},
+        {"signed short", 2},
+        {"signed short int", 2},
+        {"unsigned short", 2},
+        {"unsigned short int", 2},
+        {"int", 4},
+        {"signed", 4},
+        {"signed int", 4},
+        {"unsigned", 4},
+        {"unsigned int", 4},
+        {"long", sizeof(long)},
+        {"long int", sizeof(long)},
+        {"signed long", sizeof(long)},
+        {"signed long int", sizeof(long)},
+        {"unsigned long", sizeof(unsigned long)},
+        {"unsigned long int", sizeof(unsigned long)},
+        {"long long", sizeof(long long)},
+        {"long long int", sizeof(long long)},
+        {"signed long long", sizeof(long long)},
+        {"signed long long int", sizeof(long long)},
+        {"unsigned long long", sizeof(unsigned long long)},
+        {"unsigned long long int", sizeof(unsigned long long)},
+        {"float", 4},
+        {"double", 8},
+        {"long double", sizeof(long double)},
+        {"size_t", sizeof(size_t)},
+        {"ssize_t", sizeof(ssize_t)},
+        {"int8_t", 1},
+        {"uint8_t", 1},
+        {"int16_t", 2},
+        {"uint16_t", 2},
+        {"int32_t", 4},
+        {"uint32_t", 4},
+        {"int64_t", 8},
+        {"uint64_t", 8},
+        {"label",0}
+    };
 
     std::vector<std::string> splitString(const std::string& str) {
         std::vector<std::string> tokens;
@@ -852,52 +963,6 @@ private:
             
             return elementSize * totalElements;
         }
-    
-        // Handle basic types
-        static const std::unordered_map<std::string, int> type_sizes = {
-            {"void", 0},
-            {"bool", 1},
-            {"char", 1},
-            {"signed char", 1},
-            {"unsigned char", 1},
-            {"short", 2},
-            {"short int", 2},
-            {"signed short", 2},
-            {"signed short int", 2},
-            {"unsigned short", 2},
-            {"unsigned short int", 2},
-            {"int", 4},
-            {"signed", 4},
-            {"signed int", 4},
-            {"unsigned", 4},
-            {"unsigned int", 4},
-            {"long", sizeof(long)},
-            {"long int", sizeof(long)},
-            {"signed long", sizeof(long)},
-            {"signed long int", sizeof(long)},
-            {"unsigned long", sizeof(unsigned long)},
-            {"unsigned long int", sizeof(unsigned long)},
-            {"long long", sizeof(long long)},
-            {"long long int", sizeof(long long)},
-            {"signed long long", sizeof(long long)},
-            {"signed long long int", sizeof(long long)},
-            {"unsigned long long", sizeof(unsigned long long)},
-            {"unsigned long long int", sizeof(unsigned long long)},
-            {"float", 4},
-            {"double", 8},
-            {"long double", sizeof(long double)},
-            {"size_t", sizeof(size_t)},
-            {"ssize_t", sizeof(ssize_t)},
-            {"int8_t", 1},
-            {"uint8_t", 1},
-            {"int16_t", 2},
-            {"uint16_t", 2},
-            {"int32_t", 4},
-            {"uint32_t", 4},
-            {"int64_t", 8},
-            {"uint64_t", 8},
-            {"label",0}
-        };
     
         // Look up basic types
         std::string lowercaseType = lowercase(baseType);
@@ -945,38 +1010,86 @@ private:
         return result;
     }
 
-    void print_scope(Scope* scope, int depth = 0) const {
-        std::string indent(depth * 2, ' ');
-        std::cout << indent << "╠═ " << scope->scope_name 
-                 << " (level: " << scope->scope_level
-                 << ", size: " << scope->total_size << " bytes)\n";
-    
-        for (const auto& sym : scope->ordered_symbols) {
-            std::cout << indent << "║  ├─ " << std::left 
-                 << std::setw(18) << sym.name 
-                 << " : " << std::setw(10) << sym.type
-                 << " [" << std::setw(15) << sym.kind << "]"
-                 << " Size: " << std::setw(4) << sym.size
-                 << " Offset: " << sym.offset;
+    void print_scope(Scope* scope, int depth = 0, bool is_last_child = false) const {
+        if (!scope) return;
         
-            // Print dimensions if present
+        std::string indent(depth * 2, ' ');
+        std::string branch = is_last_child ? "└─" : "├─";
+        std::string vertical = is_last_child ? "  " : "│ ";
+        
+        // Print scope header with better formatting
+        std::cout << indent << branch << "─ " << scope->scope_name 
+                 << " (level: " << scope->scope_level
+                 << ", size: " << format_size(scope->total_size) << ")\n";
+        
+        // Get iterator for the list
+        auto it = scope->ordered_symbols.begin();
+        auto end = scope->ordered_symbols.end();
+        
+        // Count to determine if we're at the last element
+        size_t remaining = scope->ordered_symbols.size();
+        
+        // Iterate through the list instead of using indexing
+        while (it != end) {
+            const auto& sym = *it;
+            remaining--;
+            bool is_last_symbol = (remaining == 0);
+            
+            // Print symbol with updated tree characters
+            std::cout << indent << vertical << " " << (is_last_symbol ? "└─" : "├─") << " "
+                     << std::left << std::setw(18) << sym.name 
+                     << " : " << std::setw(10) << sym.type
+                     << " [" << std::setw(15) << sym.kind << "]";
+            
+            // Align and format size and offset
+            std::cout << " Size: " << std::setw(8) << format_size(sym.size)
+                     << " Offset: " << std::setw(8) << sym.offset;
+            
+            // Print dimensions with better formatting
             if (!sym.dimensions.empty()) {
                 std::cout << " Dims: [";
-                for (size_t i = 0; i < sym.dimensions.size(); ++i) {
-                    if (i > 0) std::cout << "][";
-                    std::cout << sym.dimensions[i];
+                for (size_t d = 0; d < sym.dimensions.size(); ++d) {
+                    if (d > 0) std::cout << "][";
+                    std::cout << sym.dimensions[d];
                 }
                 std::cout << "]";
             }
             
             std::cout << "\n";
+            
+            // Print child table if present
             if (sym.child_table) {
                 sym.child_table->print_scope(
                     sym.child_table->current_scope_,
-                    depth + 2
+                    depth + 2,
+                    is_last_symbol
                 );
             }
+            
+            ++it; // Move to next element
         }
+    }
+    
+    // Helper function to format sizes in human-readable form
+    std::string format_size(size_t size_in_bytes) const {
+        const char* units[] = {"B", "KB", "MB", "GB"};
+        double size = static_cast<double>(size_in_bytes);
+        int unit_index = 0;
+        
+        while (size >= 1024.0 && unit_index < 3) {
+            size /= 1024.0;
+            unit_index++;
+        }
+        
+        std::ostringstream formatted;
+        if (unit_index == 0) {
+            formatted << size_in_bytes << " " << units[unit_index];
+        } else {
+            formatted << std::fixed << std::setprecision(2) << size << " " << units[unit_index]
+                     << " (" << size_in_bytes << " B)";
+        }
+        
+        return formatted.str();
     }
 };
 
