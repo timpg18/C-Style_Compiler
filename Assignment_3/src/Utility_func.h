@@ -76,7 +76,7 @@ bool isPROCEDURE(const char *input){
 
 // error where there must be lvalue
 void lvalueError(const char* s1){
-    if(contains(s1,"PROCEDURE") || contains(s1,"CONST")){
+    if(contains(s1,"PROCEDURE") || contains(s1,"CONST") || contains(s1,"GOTO LABEL")){
         yyerror("lvalue required as left operand of assignment");
     }
 }

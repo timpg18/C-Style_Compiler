@@ -4,13 +4,26 @@
 #include "Utility_func.h"
 #include "types.h"
 #include "typeconversion.h"
+
+// MACRO for expression checking
+// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
+// and Removing const and static
+#define CHECK_PROCEDURE_AND_CLEAN_TYPE(node1, node2) \
+    do { \
+        if (isPROCEDURE((node1).kind)) { yyerror("incompatible return type "); } \
+        if (isPROCEDURE((node2).kind)) { yyerror("incompatible return type "); } \
+        type1 = ts.prepareString(std::string((node1).type)); \
+        type2 = ts.prepareString(std::string((node2).type)); \
+        (node1).type = strdup(type1.c_str()); \
+        (node2).type = strdup(type2.c_str()); \
+    } while(0)
+
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
 int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
-
 %}
 
 %debug
@@ -415,13 +428,9 @@ multiplicative_expression
 		$$.name = $1.name;
 	}
 	| multiplicative_expression '*' cast_expression {
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+		
 		// Checking for pointer as '*' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
@@ -431,15 +440,9 @@ multiplicative_expression
 		
 	}
 	| multiplicative_expression '/' cast_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
 		// Checking for pointer as '/' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
@@ -447,15 +450,8 @@ multiplicative_expression
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 	}
 	| multiplicative_expression '%' cast_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// Checking for pointer as '/' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
@@ -478,15 +474,8 @@ additive_expression
 		$$.name = $1.name;
 	}
 	| additive_expression '+' multiplicative_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// In case of '+' one pointer and other int is allowed
 		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
@@ -516,15 +505,8 @@ additive_expression
 
 	}
 	| additive_expression '-' multiplicative_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// In case of '+' one pointer and other int is allowed
 		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
@@ -560,15 +542,8 @@ shift_expression
 		$$.name = $1.name;
 	}
 	| shift_expression LEFT_OP additive_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
@@ -579,15 +554,8 @@ shift_expression
 		$$.type = "INT";
 	}
 	| shift_expression RIGHT_OP additive_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
@@ -606,57 +574,29 @@ relational_expression
 		$$.name = $1.name;
 	}
 	| relational_expression '<' shift_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 		$$.type = "INT";
 	}
 	| relational_expression '>' shift_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
 		$$.type = "INT";
 	}
 	| relational_expression LE_OP shift_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
 		$$.type = "INT";
 	}
 	| relational_expression GE_OP shift_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
 		$$.type = "INT";
@@ -670,30 +610,16 @@ equality_expression
 		$$.name = $1.name;
 	}
 	| equality_expression EQ_OP relational_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 		$$.type = "INT";
 	}
 	| equality_expression NE_OP relational_expression{
-		if(contains($1.kind,"PROCEDURE")){
-			if(!eq($3.kind,"PROCEDURE")){
-				yyerror("incompatible return type ");
-			}
-		}
-		if(contains($3.kind,"PROCEDURE")){
-			if(!eq($3.kind,"PROCEDURE")){
-				yyerror("incompatible return type ");
-			}
-		}
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
 		$$.type = "INT";
 	}
@@ -706,15 +632,8 @@ and_expression
 		$$.name = $1.name;
 	}
 	| and_expression '&' equality_expression {
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// Checking for pointer as '&' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
@@ -738,15 +657,8 @@ exclusive_or_expression
 		$$.name = $1.name;
 	}
 	| exclusive_or_expression '^' and_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// Checking for pointer as '^' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
@@ -770,15 +682,8 @@ inclusive_or_expression
 		$$.name = $1.name;
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		// Checking for pointer as '|' in pointers not valid 
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
@@ -802,15 +707,8 @@ logical_and_expression
 		$$.name = $1.name;
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
 		$$.type = "INT";
@@ -824,15 +722,8 @@ logical_or_expression
 		$$.name = $1.name;
 	}
 	| logical_or_expression OR_OP logical_and_expression{
-		// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
-		if(isPROCEDURE($1.kind)){yyerror("incompatible return type ");}
-		if(isPROCEDURE($3.kind)){yyerror("incompatible return type ");}
-
-		// Removing const and static
-		std::string type1 = ts.prepareString(std::string($1.type));
-		std::string type2 = ts.prepareString(std::string($3.type));
-		$1.type = strdup(type1.c_str());
-		$3.type = strdup(type2.c_str());
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
 		$$.type = "INT";
