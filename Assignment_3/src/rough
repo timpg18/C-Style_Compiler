@@ -1,0 +1,99 @@
+// the left of the declarator muse be lvalue;
+			if(contains($1.kind,"PROCEDURE")){
+				std::string err = "lvalue required as left operand of assignment";
+				yyerror(err.c_str());
+			}
+			if(contains($1.kind,"CONST")){
+				std::string err = "lvalue required as left operand of assignment";
+				yyerror(err.c_str());
+			}
+
+			// If a procedure then must be called procedure
+			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
+
+			//remove static
+			std::string t = ts.removeStaticFromDeclaration(std::string($1.type));
+			char* temp = strdup(t.c_str());
+
+			// remove static and const
+			t = ts.removeStaticFromDeclaration(std::string($3.type));
+			char* temp2 = strdup(t.c_str());
+
+			printf("\n%s\n%s\n",temp,temp2);
+
+
+			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
+			if(eq(temp2 , temp) == false){
+				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
+				if(eq($1.type,"auto")){
+					st.lookup(std::string($1.name))->type = std::string($3.type);
+					$$.type = $3.type;
+				} 
+				// CASE OF ENUM
+				else if(contains(temp,"enum")){
+					$$.type = $1.type;
+
+					printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+					// ENUM CAN BE INITIALIZED BY ENUM_CONST , IDENTIFIER , CONST 
+					if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+						// ONLY INT TYPE VALUES CAN BE ASSIGNED 
+						std::string tmp = ts.removeConstFromDeclaration(std::string(temp));
+						temp = strdup(tmp.c_str());
+						if(eq(temp2,"INT")){
+							// CHECKING IF IT IS A CONST ENUM
+							if(contains(temp,"CONST")){
+								$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+							}
+						}
+						else{
+							yyerror("incompatible types when assigning to type 'enum'");
+						}
+					}
+					else{
+						yyerror("enum must be initialized with INT");
+					}
+				}
+				// Case if declarator has const
+				else if(contains(temp,"CONST")){
+					$$.type = $1.type;
+					char* matchingType1 = strdup(ts.removeConstFromDeclaration(std::string(temp)).c_str());
+					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
+					printf("\n%s\n%s\n",matchingType1,matchingType2);
+					if(ts.hasPointer(std::string(matchingType1)) || ts.hasPointer(std::string(matchingType2))){
+						check_type(matchingType1, matchingType2, "incompatible type involved : ");
+					}
+					else if(isConvertible(std::string(matchingType1),std::string(matchingType2))){
+						$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+					}
+					else {
+						yyerror("invalid assignment");
+					}
+					
+				}
+				// all other cases
+				else{
+					char* matchingType1 = strdup(ts.removeConstFromDeclaration(std::string(temp)).c_str());
+					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
+					if(!isConvertible(matchingType1,matchingType2)){
+						char *err = "incompatible type declaration: ";
+						err = concat(err,$1.type);
+						err = concat(err, $3.type);
+						yyerror(err);
+					}
+					$$.type = $1.type;
+				}	
+			}
+			else{
+				
+				// IF THE TYPES ARE SAME
+				printf("\n%s\n%s\n",$1.kind,$3.kind);
+				$$.type = $1.type;
+
+				// If a porcedure then must be called procedure
+				if(isPROCEDURE($3.kind)){
+					yyerror("Cannot assign function to a variable");
+				}
+				else if(contains($1.type,"CONST")){
+					$$.type = concat($$.type, "declared");
+				}
+			}

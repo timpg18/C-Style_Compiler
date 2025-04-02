@@ -70,4 +70,8 @@ bool is_first_arg_STRING(const char *input) {
     return strncmp(input, "CHAR*", 5) == 0;
 }
 
+bool isPROCEDURE(const char *input){
+    return contains(input,"PROCEDURE") && (!eq(input,"PROCEDURE"));
+}
+
 #endif

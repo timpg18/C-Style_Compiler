@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <map>
+#include <regex>
 
 class TypeSet {
 private:
@@ -113,62 +114,68 @@ public:
 
     // Check if the type has less than one 'CONST'
     bool isValidConstDeclaration(const std::string& typeName) const {
-
-        // Count 'CONST' occurrences
-        size_t constCount = 0;
-        std::stringstream ss(typeName);
-        std::string token;
-        
-        while (ss >> token) {
-            if (token == "CONST") {
-                constCount++;
-            }
-        }
-
-        // Return true only if less than one 'CONST' exists
+        // Define a regex pattern that matches "CONST" anywhere in the string
+        std::regex constPattern("CONST");
+    
+        // Use std::sregex_iterator to count occurrences
+        auto begin = std::sregex_iterator(typeName.begin(), typeName.end(), constPattern);
+        auto end = std::sregex_iterator();
+    
+        size_t constCount = std::distance(begin, end);
+    
+        // Return true only if there is at most one occurrence of "CONST"
         return (constCount <= 1);
     }
 
     // Check if the type has exactly one 'CONST'
     bool oneConst(const std::string& typeName) const {
-
-        // Count 'CONST' occurrences
-        size_t constCount = 0;
-        std::stringstream ss(typeName);
-        std::string token;
-        
-        while (ss >> token) {
-            if (token == "CONST") {
-                constCount++;
-            }
-        }
-
-        // Return true only if less than one 'CONST' exists
+        // Define a regex pattern that matches "CONST" anywhere in the string
+        std::regex constPattern("CONST");
+    
+        // Iterator to find all occurrences
+        auto begin = std::sregex_iterator(typeName.begin(), typeName.end(), constPattern);
+        auto end = std::sregex_iterator();
+    
+        size_t constCount = std::distance(begin, end);
+    
+        // Return true if exactly one "CONST" exists (in any form)
         return (constCount == 1);
     }
 
     // To remove CONST from the declaration
     std::string removeConstFromDeclaration(const std::string& typeDecl) const {
+        // Step 1: Remove all occurrences of "CONST" (case-insensitive)
+        std::string modified = std::regex_replace(
+            typeDecl,
+            std::regex("\\bCONST\\b", std::regex::icase),
+            ""
+        );
+    
+        // Step 2: Split into tokens (including handling multiple spaces)
         std::vector<std::string> tokens;
-        std::stringstream ss(typeDecl);
+        std::stringstream ss(modified);
         std::string token;
-        
         while (ss >> token) {
-            if (token != "CONST") {
-                tokens.push_back(token);
-            }
+            tokens.push_back(token);
         }
-        
+    
+        // Step 3: Merge tokens, avoiding spaces around '*' and between pointer stars
         std::string result;
         for (size_t i = 0; i < tokens.size(); ++i) {
-            if (i > 0 ){
-                if(tokens[i]!="*"){
+            if (tokens[i] == "*") {
+                // Merge consecutive '*' without spaces
+                while (i < tokens.size() && tokens[i] == "*") {
+                    result += "*";
+                    ++i;
+                }
+                --i; // Adjust index after loop
+            } else {
+                if (!result.empty() && result.back() != ' ') {
                     result += " ";
                 }
-            } 
-            result += tokens[i];
+                result += tokens[i];
+            }
         }
-        
         return result;
     }
 
@@ -186,9 +193,7 @@ public:
         std::string result;
         for (size_t i = 0; i < tokens.size(); ++i) {
             if (i > 0 ){
-                if(tokens[i]!="*"){
                     result += " ";
-                }
             } 
             result += tokens[i];
         }
@@ -219,7 +224,30 @@ public:
         return staticCount;
     }
 
-    
+    int constCount(const std::string& typeName) const {
+
+        // Count 'CONST' occurrences
+        size_t count = 0;
+        
+        std::vector<std::string> tokens;
+        std::stringstream ss(typeName);
+        std::string token;
+
+        // Storage specifiers and qualifiers to remove
+        const std::set<std::string> FILTER = {
+            "CONST"   // Storage classes
+        };
+
+        while (ss >> token) {
+            if (FILTER.count(token)) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    // not needed for now
     bool hasConstAfterStar(const std::string& typeDecl) {
         // Convert to uppercase for case-insensitive comparison
         std::string upperDecl;
@@ -254,6 +282,13 @@ public:
         }
         
         return false;
+    }
+
+    // TO give a string where const and static is removed
+    std::string prepareString(const std::string& type){
+        std::string tmp = removeStaticFromDeclaration(type);
+        tmp = removeConstFromDeclaration(tmp);
+        return tmp;
     }
 
     // Functions to handle storing of static variable names;

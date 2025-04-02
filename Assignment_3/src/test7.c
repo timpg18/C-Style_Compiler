@@ -1,4 +1,16 @@
+struct A{
+    int h;
+};
+
+int f(){
+    return 0;
+}
+
 int main() {
-    int * u;
-    int  a = 9.0*7 +1 -8.234;
+    int * b;
+    int const * a = b;
+    const struct A d;
+    int c;
+    a = &c;
+    (*a) = 1;
 }
