@@ -29,7 +29,6 @@ std::string currFunc = "";
 %debug
 %union{
 	char *id;
-    int index;
 	typedef struct {
     char* type;
     char* kind;
@@ -40,7 +39,7 @@ std::string currFunc = "";
 }
 
 %token <atr> IDENTIFIER STRING_LIT CHAR_LIT
-%token I_CONSTANT F_CONSTANT TRUE FALSE
+%token <atr> I_CONSTANT F_CONSTANT TRUE FALSE
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -103,11 +102,13 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
+		printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
 	}
 	| constant{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.name = $1.name;
 	}
 	| string {
 		$$.type = $1.type;
@@ -123,10 +124,12 @@ primary_expression
 
 constant
 	: I_CONSTANT{
+		$$.name = $1.type;
 		$$.type = "INT";
 		$$.kind = "CONST";
 	}		/* includes character_constant */
 	| F_CONSTANT{
+		$$.name = $1.type;
 		$$.type = "FLOAT";
 		$$.kind = "CONST";
 	}
@@ -173,6 +176,7 @@ postfix_expression
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
+		std::cout<<s<<"\n";
 		if(s.back() == '*'){
 			s.pop_back();
 			$$.type = strdup(s.c_str());
@@ -850,7 +854,8 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
-		printf("\n\n%s\n\n",$2.type);
+		printf("\n\n%s\n\n",$2.name);
+		std::cout<<"HELL"<<std::endl;
 		
 		// saving the static varibles in a map in TypeSet ts
 		if(contains($1.type,"static")){
@@ -865,6 +870,7 @@ declaration
 			if(((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
+			st.updateVariableTypes(std::string($2.name),std::string($2.type));
 		}
 		else{
 			// adding typedef to the TypeSet ts
@@ -883,6 +889,7 @@ declaration
 					if((!classDef)  && ((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 						st.declare_struct_variables(std::string($1.type),std::string($2.name));
 					}
+					st.updateVariableTypes(std::string($2.name),std::string($2.type));
 				}
 				else{
 					yyerror("Specified type declaration not allowed");
@@ -960,11 +967,11 @@ declaration_specifiers
 init_declarator_list
 	: init_declarator {
 		$$.name = $1.name;
-		$$.type=$1.type;
+		$$.type = $1.type;
 	}
 	| init_declarator_list ',' init_declarator {
 		$$.name = concat($1.name,$3.name);
-		$$.type=$1.type;
+		$$.type = $1.type;
 	}
 	;
 
@@ -1064,8 +1071,8 @@ init_declarator
 			}	
 	}
 	| declarator {
-		$$.name=$1.name;
-		$$.type=$1.type;
+		$$.name = $1.name;
+		$$.type = $1.type;
 	}
 	;
 
@@ -1073,7 +1080,7 @@ storage_class_specifier
 	: TYPEDEF	{ $$.type = strdup("typedef"); }/* identifiers must be flagged as TYPEDEF_NAME */
 	| EXTERN { $$.type = strdup("extern"); }
 	| STATIC { $$.type = strdup("static"); }
-	| AUTO { $$.type = strdup("auto"); }
+	| AUTO { $$.type = strdup("auto"); yyerror("auto is not allowed"); }
 	| REGISTER { $$.type = strdup("register"); }
 	;
 
@@ -1331,8 +1338,8 @@ declarator
 		  st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
-		  
 		  st.lookup(std::string($2.name))->type = st.token_table_[idx].token_type;
+		  std::cout<<"HELLO"<<std::endl;
 		  $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newtype, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
@@ -1406,19 +1413,20 @@ direct_declarator
 	| direct_declarator '[' assignment_expression ']'{
 			if($3.type == "INT" && $3.kind == "CONST"){
 				 int idx = $1.index;
-          char newType[256];
-          sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
-		  $$.name = $1.name;
-          
-         st.token_table_[idx].token_type += "*";
-		 st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		 $$.type = strdup(st.token_table_[idx].token_type.c_str());
-		  if (strstr(newType, "typedef") != NULL){
-			char *temp = new char[st.token_table_[idx].token.size()+1];
-            std::strcpy(temp,st.token_table_[idx].token.c_str());
-			update_symtab(temp);
-		  }
-          $$.index = idx;
+          	char newType[256];
+          	sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
+		  	$$.name = $1.name;
+			st.token_table_[idx].token_type += "*";
+			st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+			$$.type = strdup(st.token_table_[idx].token_type.c_str());
+			printf("\n\n%s\n\n%s\n\n",$$.type,$3.name);
+			st.update_array_dimensions(std::string($1.name),std::stoi(std::string($3.name)),std::string($$.type));
+			if (strstr(newType, "typedef") != NULL){
+				char *temp = new char[st.token_table_[idx].token.size()+1];
+				std::strcpy(temp,st.token_table_[idx].token.c_str());
+				update_symtab(temp);
+			}
+			$$.index = idx;
 		}
 		else{
 			std::string err = "declaration must have only integer constants inside: ";
@@ -1446,6 +1454,10 @@ direct_declarator
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
 			yyerror("Specified function return type not allowed");
 		}
+		std::cout<<"\n\n"<<std::string($3.name)<<"\n\n";
+		st.changeToParameter(std::string($3.name));
+		st.updateParameterSizes();
+		st.updateProcedureSize(std::string($$.name));
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
@@ -1461,6 +1473,7 @@ direct_declarator
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
 			yyerror("Specified function return type not allowed");
 		}
+		st.updateProcedureSize(std::string($$.name));
 
 	   
     }
@@ -1522,16 +1535,20 @@ type_qualifier_list
 parameter_type_list
 	: parameter_list{  //Progation of type
 		$$.type = $1.type;
+		$$.name = $1.name;
 	}
 	;
 
 parameter_list
 	: parameter_declaration{ //Progation of type
 		$$.type = $1.type;
+		$$.name = $1.name;
 	}
 	| parameter_list ',' parameter_declaration { // Concatenate the types
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
+		char* newname = concat($1.name,$3.name);
+		$$.name = newname;
 	}
 	;
 
@@ -1541,6 +1558,7 @@ parameter_declaration
 			yyerror("parameter type not allowed");
 		}
 		$$.type = $2.type;
+		$$.name = $2.name;
 	}
 	;
 
@@ -1810,8 +1828,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	
 	st.print_hierarchy();
-	st.print_token_table();
-	st.print_all_scopes();
+	//st.print_token_table();
+	//st.print_all_scopes();
 	//ts.printAllTypes();
 	//ts.printTypedefs();
 	//ts.printStaticVariables();

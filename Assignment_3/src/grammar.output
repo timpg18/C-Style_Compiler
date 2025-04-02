@@ -394,10 +394,10 @@ Terminals, with rules where they appear
     IDENTIFIER <atr> (258) 1 10 20 21 125 126 137 143 144 162 163 164 173 191 192 219 242
     STRING_LIT <atr> (259) 13
     CHAR_LIT <atr> (260) 14
-    I_CONSTANT (261) 6
-    F_CONSTANT (262) 7
-    TRUE (263) 11
-    FALSE (264) 12
+    I_CONSTANT <atr> (261) 6
+    F_CONSTANT <atr> (262) 7
+    TRUE <atr> (263) 11
+    FALSE <atr> (264) 12
     PTR_OP (265) 21
     INC_OP (266) 22 27
     DEC_OP (267) 23 28

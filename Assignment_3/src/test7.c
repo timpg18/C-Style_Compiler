@@ -1,6 +1,5 @@
-int f();
-
 int main() {
-    
-    return 0;
+    long double b;
+    long double a[8][9];
+    int n;
 }
