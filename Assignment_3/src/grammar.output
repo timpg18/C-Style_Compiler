@@ -475,7 +475,7 @@ Nonterminals, with rules where they appear
     enumeration_constant (99)
         on left: 10
         on right: 167 168
-    BOOLEAN (100)
+    BOOLEAN <atr> (100)
         on left: 11 12
         on right: 9
     string <atr> (101)
@@ -541,7 +541,7 @@ Nonterminals, with rules where they appear
     constant_expression <atr> (121)
         on left: 86
         on right: 157 158 167 220
-    declaration (122)
+    declaration <atr> (122)
         on left: 87 88 89 90
         on right: 227 240 241 251 257 258
     declaration_specifiers <atr> (123)
@@ -703,16 +703,16 @@ Nonterminals, with rules where they appear
     jump_statement (175)
         on left: 242 243 244 245 246
         on right: 217
-    Global (176)
+    Global <atr> (176)
         on left: 247
         on right: 0
-    translation_unit (177)
+    translation_unit <atr> (177)
         on left: 248 249
         on right: 129 247 249
-    external_declaration (178)
+    external_declaration <atr> (178)
         on left: 250 251
         on right: 248 249
-    function_definition (179)
+    function_definition <atr> (179)
         on left: 253 255 256
         on right: 250
     $@8 (180)
@@ -721,7 +721,7 @@ Nonterminals, with rules where they appear
     $@9 (181)
         on left: 254
         on right: 255
-    declaration_list (182)
+    declaration_list <atr> (182)
         on left: 257 258
         on right: 253 258
     PushScope (183)

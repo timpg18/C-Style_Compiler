@@ -4,7 +4,8 @@
 #include "Utility_func.h"
 #include "types.h"
 #include "typeconversion.h"
-
+#include "IR_utility.cc"
+IRGen irgen;
 // MACRO for expression checking
 // THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
 // and Removing const and static
@@ -35,7 +36,15 @@ std::string currFunc = "";
     char* kind;
 	int index;
 	char* name;
+	typedef struct{
+		char* code;
+		char* tmp;
+	} irg;
+	irg ir;
 	} attribute_t;
+	
+
+	
 	attribute_t atr;
 }
 
@@ -80,8 +89,8 @@ std::string currFunc = "";
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
-%type <atr> argument_expression_list  expression string labeled_statement
-
+%type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
+%type <atr> declaration declaration_list function_definition
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -103,20 +112,28 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
+		$$.ir.tmp = strdup(name);
+		$$.ir.code = "";
 		}
 	}
 	| constant{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = "";
 	}
 	| string {
 		$$.type = $1.type;
 		$$.name = $1.name;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = "";
 	}
 	| '(' expression ')'{
 		$$.name = $2.name;
 		$$.type = $2.type; 
+		$$.ir.tmp = $2.ir.tmp;
+		$$.ir.code = strdup($2.ir.code);
 	}
 	| '(' expression error { yyerrok; }
 	;
@@ -125,18 +142,22 @@ constant
 	: I_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}		/* includes character_constant */
 	| F_CONSTANT{
 		$$.type = "FLOAT";
 		$$.kind = "CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| ENUMERATION_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "ENUM_CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}	/* after it has been defined as such */
 	| BOOLEAN{
 		$$.type = "BOOL";
 		$$.kind = "CONST";
+		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	;
 
@@ -147,17 +168,23 @@ enumeration_constant		/* before it has been defined as such */
 	;
 
 BOOLEAN
-	: TRUE 
-	| FALSE
+	: TRUE {
+		$$.ir.tmp  = "true";
+	}
+	| FALSE{
+		$$.ir.tmp = "false";
+	}
 
 string
 	: STRING_LIT{
 		$$.type = "CHAR*";
 		$$.kind = "IDENTIFIER";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| CHAR_LIT {
 		$$.type = "CHAR";
 		$$.kind = "IDENTIFIER";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| FUNC_NAME {
 
@@ -170,6 +197,8 @@ postfix_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -180,6 +209,7 @@ postfix_expression
 		else{
 			yyerror("dereferencing by [ ] invalid");
 		}
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '(' ')'{
 		if(eq($1.kind,"CONST")){
@@ -207,7 +237,7 @@ postfix_expression
 		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '(' argument_expression_list ')'{
 		if(eq($1.kind,"CONST")){
@@ -245,7 +275,7 @@ postfix_expression
 		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
@@ -272,11 +302,12 @@ postfix_expression
 		else{
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
 		}
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
 		//access ka do it like old
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression INC_OP{
 		lvalueError($1.kind);
@@ -288,6 +319,14 @@ postfix_expression
 		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		//a++
+		std::string temp = irgen.new_temp();
+		
+		string s = irgen.assign(temp, $1.ir.tmp);
+		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "+" , "1");
+		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		$$.ir.tmp = strdup(temp.c_str());
+		
 	}
 	| postfix_expression DEC_OP{
 		lvalueError($1.kind);
@@ -299,6 +338,11 @@ postfix_expression
 		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		std::string temp = irgen.new_temp();
+		string s = irgen.assign(temp, $1.ir.tmp);
+		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "-" , "1");
+		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		$$.ir.tmp = strdup(temp.c_str());
 	}
 	;
 
@@ -317,6 +361,8 @@ unary_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| INC_OP unary_expression{
 		lvalueError($2.kind);
@@ -327,7 +373,12 @@ unary_expression
 			yyerror("wrong type argument to increment");
 		}
 		$$.type = $2.type;
-		$$.kind = $2.kind;
+		$$.kind = $2.kind;	
+		string s = irgen.new_temp();
+		string g = irgen.add_op(s,std::string($2.ir.tmp), "+" , "1");
+		//t' = t0 + 1
+		$$.ir.tmp = strdup(s.c_str());
+		$$.ir.code = strdup(g.c_str());
 	}
 	| DEC_OP unary_expression{
 		lvalueError($2.kind);
@@ -339,8 +390,16 @@ unary_expression
 		}
 		$$.type = $2.type;
 		$$.kind = $2.kind;
+		string s = irgen.new_temp();
+		string g = irgen.add_op(s,std::string($2.ir.tmp), "-" , "1");
+		//t' = t0 + 1
+		$$.ir.tmp = strdup(s.c_str());
+		$$.ir.code = strdup(g.c_str());
 	}
 	| unary_operator cast_expression{
+		//deref.
+
+
 		char *ptr = "*";
 		if(eq($1.type, ptr) == true){
 			//we have to dereference
@@ -365,6 +424,17 @@ unary_expression
 			$$.type = $2.type;
 		}
 		}
+		
+		if(eq($1.type,"+") == true){
+			$$.ir.code = strdup($2.ir.code);
+			$$.ir.tmp = strdup($2.ir.tmp);
+		}
+		else{
+			$$.ir.tmp = strdup(irgen.new_temp().c_str());
+			string s = irgen.add_unary(string($$.ir.tmp), string($1.type),string($2.ir.tmp));
+			string fin = irgen.concatenate($2.ir.code , s);
+			$$.ir.code = strdup(fin.c_str());
+		}
 		$$.name = $2.name;
 		$$.kind = $2.kind;
 
@@ -372,6 +442,7 @@ unary_expression
 	| SIZEOF unary_expression{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		
 	}
 	| SIZEOF '(' type_name ')'{
 		$$.type = "INT";
@@ -405,9 +476,12 @@ cast_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
+		
 	}
 	| '(' type_name ')' cast_expression{
-
+		//explicit typecast
 		if(!ts.contains(std::string($2.type))){
 			yyerror("the following type is not a valid type");
 		}
@@ -426,6 +500,8 @@ multiplicative_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| multiplicative_expression '*' cast_expression {
 		std::string type1,type2 ;
@@ -436,7 +512,11 @@ multiplicative_expression
 			yyerror("invalid operator to pointers");
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		
 	}
 	| multiplicative_expression '/' cast_expression{
@@ -472,6 +552,8 @@ additive_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| additive_expression '+' multiplicative_expression{
 		std::string type1,type2 ;
@@ -540,6 +622,8 @@ shift_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
+		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	| shift_expression LEFT_OP additive_expression{
 		std::string type1,type2 ;
@@ -572,6 +656,8 @@ relational_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| relational_expression '<' shift_expression{
 		std::string type1,type2 ;
@@ -607,7 +693,9 @@ equality_expression
 	: relational_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| equality_expression EQ_OP relational_expression{
 		std::string type1,type2 ;
@@ -630,6 +718,8 @@ and_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| and_expression '&' equality_expression {
 		std::string type1,type2 ;
@@ -655,6 +745,8 @@ exclusive_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| exclusive_or_expression '^' and_expression{
 		std::string type1,type2 ;
@@ -680,6 +772,8 @@ inclusive_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
 		std::string type1,type2 ;
@@ -705,6 +799,8 @@ logical_and_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
 		std::string type1,type2 ;
@@ -720,6 +816,8 @@ logical_or_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_or_expression OR_OP logical_and_expression{
 		std::string type1,type2 ;
@@ -734,7 +832,9 @@ conditional_expression
 	: logical_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_or_expression '?' expression ':' conditional_expression {
 		//DO WE NEED TYPE CHECKING HERE? I DOUBT IT
@@ -746,6 +846,8 @@ assignment_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| unary_expression assignment_operator assignment_expression {
 		// the left of the declarator muse be lvalue;
@@ -817,6 +919,15 @@ assignment_expression
 			}
 			
 		}
+
+		if(eq($1.type,"=") == true){
+			$$.ir.code = strdup(irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp)).c_str());
+		}
+		else{
+			std::string s = $2.type;
+			s.pop_back();
+			$$.ir.code = strdup(irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)).c_str());
+		}
 		$$.type = original ;
 	}
 	;
@@ -839,6 +950,8 @@ expression
 	: assignment_expression {
 		$$.type=$1.type;
 		$$.name=$1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+
 	}
 	| expression ',' assignment_expression
 	;
@@ -850,18 +963,21 @@ constant_expression
 declaration
 	: declaration_specifiers ';'
 	| declaration_specifiers init_declarator_list ';'{
-		printf("\n\n%s\n\n",$2.type);
 		
+		printf("\n\n%s\n\n",$2.type);
+			
 		// saving the static varibles in a map in TypeSet ts
 		if(contains($1.type,"static")){
 			ts.addStaticVariable(currFunc,std::string($2.name));
 		}
-
+		
 		char* tocheck1 = "struct";
 		char* tocheck2 = "class";
 		char* tocheck3 = "union";
 		char* tocheck4 = "enum";
+	
 		if(contains($2.type,"declared")){
+			
 			if(((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
@@ -872,24 +988,30 @@ declaration
 				ts.addTypedef(std::string($2.name),std::string($1.type));
 			}
 			else{
+				
 				if(ts.contains(std::string($1.type))){
+					
 					if(contains($1.type,"CONST")){
 						// need to check if pointer, struct ,enum , union
 						if( (contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)) || (contains(($1.type),tocheck4)) ){}
 						else if((!ts.hasPointer(std::string($2.type)))){
 							yyerror("uninitialized const variable");
 						}
+						
 					}
 					if((!classDef)  && ((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
+						
+						
 						st.declare_struct_variables(std::string($1.type),std::string($2.name));
 					}
+				
 				}
 				else{
 					yyerror("Specified type declaration not allowed");
 				}
 			}
 		}
-		
+		$$.ir.code = strdup($2.ir.code);
 		
 	}
 	| declaration_specifiers error { yyerrok; }
@@ -961,10 +1083,14 @@ init_declarator_list
 	: init_declarator {
 		$$.name = $1.name;
 		$$.type=$1.type;
+		$$.ir.code = strdup($1.ir.code);
+		
+		
 	}
 	| init_declarator_list ',' init_declarator {
 		$$.name = concat($1.name,$3.name);
 		$$.type=$1.type;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -1045,6 +1171,7 @@ init_declarator
 						err = concat(err, $3.type);
 						yyerror(err);
 					}
+					
 					$$.type = $1.type;
 				}	
 			}
@@ -1053,7 +1180,10 @@ init_declarator
 				// IF THE TYPES ARE SAME
 				printf("\n%s\n%s\n",$1.kind,$3.kind);
 				$$.type = $1.type;
-
+				
+				
+				
+				
 				// If a porcedure then must be called procedure
 				if(isPROCEDURE($3.kind)){
 					yyerror("Cannot assign function to a variable");
@@ -1062,6 +1192,12 @@ init_declarator
 					$$.type = concat($$.type, "declared");
 				}
 			}	
+			//IR GEN
+
+				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
+				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
+				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
+			
 	}
 	| declarator {
 		$$.name=$1.name;
@@ -1351,6 +1487,7 @@ declarator
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
 		 $$.name = $1.name;
+		 $$.ir.tmp = strdup($1.ir.tmp);
 		  }
 	;
 
@@ -1363,6 +1500,10 @@ direct_declarator
 			yyerror(err.c_str());
 		}
 		else{
+			$$.index = st.token_table_.size() - 1;
+		$$.type = currentType;
+		$$.kind = "IDENTIFIER";
+		$$.name = $1.type;
 			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
 			if(classDef==1){
 				if(isPri==1){
@@ -1375,11 +1516,11 @@ direct_declarator
 					proMem += " " + std::string($1.type);
 				}
 			}
-			
-        $$.index = st.token_table_.size() - 1;
-		$$.type = currentType;
-		$$.kind = "IDENTIFIER";
-		$$.name = $1.type;
+			else{
+				$$.ir.tmp = strdup($$.name);
+				
+			}
+        
 		}
         
     }
@@ -1639,6 +1780,7 @@ initializer
 	| assignment_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	;
 
@@ -1743,17 +1885,29 @@ jump_statement
 	;
 
 Global
-	:  translation_unit 
+	:  translation_unit{
+		if(error_count == 0)irgen.generate(std::string($1.ir.code));
+	}
 
 translation_unit
-	: external_declaration
-	| translation_unit external_declaration
+	: external_declaration{
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| translation_unit external_declaration {
+		std::string s = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		$$.ir.code = strdup(s.c_str());
+	}
 	;
 
 
 external_declaration
-	: function_definition
-	| declaration
+	: function_definition {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| declaration{
+		$$.ir.code = strdup($1.ir.code);
+		
+	}
 	;
 
 function_definition
@@ -1779,8 +1933,13 @@ function_definition
 	;
 
 declaration_list
-	: declaration
-	| declaration_list declaration
+	: declaration{
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| declaration_list declaration {
+		std::string s = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		$$.ir.code = strdup(s.c_str());
+	}
 	;
 
 PushScope
