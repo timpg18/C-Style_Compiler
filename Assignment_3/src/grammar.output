@@ -691,7 +691,7 @@ Nonterminals, with rules where they appear
     block_item <atr> (171)
         on left: 227 228
         on right: 225 226
-    expression_statement (172)
+    expression_statement <atr> (172)
         on left: 229 230 231
         on right: 214 238 239 240 241
     selection_statement (173)

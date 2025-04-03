@@ -1,3 +1,4 @@
-double* k(int kk , bool g){
-    
+int f(){
+    int a = 1;
+    a++;
 }

@@ -89,7 +89,7 @@ std::string currFunc = "";
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
 %type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
-%type <atr> declaration declaration_list function_definition  block_item compound_statement block_item_list statement
+%type <atr> declaration declaration_list function_definition  block_item compound_statement block_item_list statement expression_statement
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -1953,7 +1953,7 @@ statement
 		
 		}
 	| expression_statement{
-		$$.ir.code = "";
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| selection_statement{
 		$$.ir.code = "";
@@ -2005,7 +2005,9 @@ block_item
 
 expression_statement
 	: ';'
-	| expression ';'
+	| expression ';' {
+		$$.ir.code = strdup($1.ir.code);
+	}
 	| expression error {yyerrok;}
 	;
 

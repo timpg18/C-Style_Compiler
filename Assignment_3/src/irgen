@@ -1,3 +1,4 @@
 LABEL L0:
-PARAM kk
-PARAM g
+a = 1
+t0 = a
+a = a + 1
