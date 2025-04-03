@@ -28,6 +28,10 @@ std::string IRGen::add_op(std::string tmp, std::string s1,std::string op, std::s
     res = tmp + " = " + s1 + " " + op + " " + s2;
     return res;
 }
+std::string IRGen::emit_sub(const std::string& src1, const std::string& src2){
+    string temp = new_temp();
+    emit_raw(temp + " = " + src1 + " - " + src2);
+    return temp;
 
 std::string IRGen::assign(std::string tmp , std::string s1){
     std::string res;
@@ -40,6 +44,18 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
     res = tmp + " = " + op + s1;
     return res;
 }
+
+std::string IRGen::emit_opn(const std::string& src1, const std::string& src2, const std::string& src3){
+    string temp = new_temp();
+    emit_raw(temp + " = " + src1 + src3 + src2);
+    return temp;
+}
+void IRGen::emit_opn_id(const std::string& src1, const std::string& src2, const std::string& src3, const std::string& src4){
+    
+    emit_raw(src1 + " = " + src2 + src3 + src4);
+
+}
+
 
 
 

@@ -1028,6 +1028,7 @@ assignment_expression
 
 assignment_operator
 	: '=' {$$.type = "=";}
+	: '=' {$$.type = "=";}
 	| MUL_ASSIGN {$$.type = "*=";}
 	| DIV_ASSIGN {$$.type = "/=";}
 	| MOD_ASSIGN {$$.type = "%=";}

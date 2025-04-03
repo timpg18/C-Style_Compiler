@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 int main() {
     int x = 2;
    
@@ -11,3 +12,10 @@ int main() {
             x--;
     
 }
+=======
+int main(){
+    int x = 0;
+    int z = x++ + (x++)*10;
+    
+}
+>>>>>>> origin/main
