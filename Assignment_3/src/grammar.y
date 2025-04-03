@@ -89,7 +89,7 @@ std::string currFunc = "";
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
 %type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
-%type <atr> declaration declaration_list function_definition
+%type <atr> declaration declaration_list function_definition  block_item compound_statement block_item_list statement
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -1583,7 +1583,7 @@ declarator
 				yyerror("const after * not allowed");
 		  }
 		  $$.ir.tmp = strdup($2.ir.tmp);
-		  $$.ir.code = "";
+		  $$.ir.code = strdup($2.ir.code);
       }
 	| direct_declarator {
 		 $$.index = $1.index;
@@ -1591,7 +1591,7 @@ declarator
 		 $$.kind = $1.kind;
 		 $$.name = $1.name;
 		 $$.ir.tmp = strdup($1.ir.tmp);
-		 $$.ir.code = "";
+		 $$.ir.code = strdup($1.ir.code);
 		  }
 	;
 
@@ -1801,6 +1801,7 @@ parameter_type_list
 	: parameter_list{  //Progation of type
 		$$.type = $1.type;
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -1808,12 +1809,14 @@ parameter_list
 	: parameter_declaration{ //Progation of type
 		$$.type = $1.type;
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| parameter_list ',' parameter_declaration { // Concatenate the types
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
 		char* newname = concat($1.name,$3.name);
 		$$.name = newname;
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 	}
 	;
 
@@ -1824,6 +1827,8 @@ parameter_declaration
 		}
 		$$.type = $2.type;
 		$$.name = $2.name;
+		string cd = irgen.add_par(string($$.name));
+		$$.ir.code = strdup(cd.c_str());
 	}
 	;
 
@@ -1939,12 +1944,26 @@ initializer_list
 	;
 
 statement
-	: labeled_statement
-	|  {st.push_scope();} compound_statement {st.pop_scope();}
-	| expression_statement
-	| selection_statement
-	| iteration_statement
-	| jump_statement
+	: labeled_statement {
+		$$.ir.code = "";
+	}
+	|  {st.push_scope();} compound_statement {
+		st.pop_scope();
+		$$.ir.code = "";
+		
+		}
+	| expression_statement{
+		$$.ir.code = "";
+	}
+	| selection_statement{
+		$$.ir.code = "";
+	}
+	| iteration_statement{
+		$$.ir.code = "";
+	}
+	| jump_statement{
+		$$.ir.code = "";
+	}
 	;
 
 labeled_statement
@@ -1956,20 +1975,32 @@ labeled_statement
 	;
 
 compound_statement
-	: '{'   '}' 
-	| '{'  block_item_list '}' 
+	: '{'   '}' {
+		$$.ir.code = "";
+	}
+	| '{'  block_item_list '}' {
+		$$.ir.code = strdup($2.ir.code);
+	}
 	| '{'   block_item_list error {  
      yyerrok;}
 	;
 
 block_item_list
-	: block_item
-	| block_item_list block_item
+	: block_item {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| block_item_list block_item{
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), string($2.ir.code)).c_str());
+	}
 	;
 
 block_item
-	: declaration
-	| statement
+	: declaration {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| statement{
+		$$.ir.code = strdup($1.ir.code);
+	}
 	;
 
 expression_statement
@@ -2060,6 +2091,11 @@ function_definition
 	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
 		st.pop_scope();
 		yyerror("Declaration before {} is not allowed");
+		string temp;
+		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,string($3.ir.code));
+		temp = irgen.concatenate(temp,string($5.ir.code));
+		$$.ir.code = strdup(temp.c_str());
 		}
 	| declaration_specifiers  declarator {
 		st.push_scope(std::string(strdup($2.name)));
@@ -2068,12 +2104,17 @@ function_definition
 				yyerror("main must have return type int");
 			}
 		}
+		
 	} 
 	compound_statement {
 		st.pop_scope();
 		if(!st.resolvelabels(std::string($2.name))){
 			yyerror("GOTO label used but not defined");
 		}
+		string temp;
+		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,string($4.ir.code));
+		$$.ir.code = strdup(temp.c_str());
 	}
 	| declaration_specifiers   declarator  error { yyerrok; }
 	;

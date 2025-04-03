@@ -670,7 +670,7 @@ Nonterminals, with rules where they appear
     initializer_list <atr> (164)
         on left: 209 210
         on right: 207 210
-    statement (165)
+    statement <atr> (165)
         on left: 211 213 214 215 216 217
         on right: 219 220 221 228 232 233 234 235 236 237 238 239 240 241
     $@6 (166)
@@ -682,13 +682,13 @@ Nonterminals, with rules where they appear
     $@7 (168)
         on left: 218
         on right: 219
-    compound_statement (169)
+    compound_statement <atr> (169)
         on left: 222 223 224
         on right: 213 253 255
-    block_item_list (170)
+    block_item_list <atr> (170)
         on left: 225 226
         on right: 223 224 226
-    block_item (171)
+    block_item <atr> (171)
         on left: 227 228
         on right: 225 226
     expression_statement (172)

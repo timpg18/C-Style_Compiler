@@ -47,6 +47,11 @@ std::string IRGen::func_def(std::string f){
     return res;
 }
 
+std::string IRGen::add_par(std::string par){
+    std::string res;
+    res = "PARAM " + par;
+    return res;
+}
 
 void IRGen::generate(const char* s){
     IRGen::write_to_file("irgen",s);
