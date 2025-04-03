@@ -37,6 +37,17 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
     return res;
 }
 
+
+
+//Function definition stuff
+
+std::string IRGen::func_def(std::string f){
+    std::string res;
+    res = "LABEL " + f + ":";
+    return res;
+}
+
+
 void IRGen::generate(const char* s){
     IRGen::write_to_file("irgen",s);
 }

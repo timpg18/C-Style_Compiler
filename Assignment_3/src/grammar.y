@@ -518,11 +518,12 @@ multiplicative_expression
 			yyerror("invalid operator to pointers");
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
-		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		
 		
 	}
 	| multiplicative_expression '/' cast_expression{
@@ -533,10 +534,12 @@ multiplicative_expression
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
 		}
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		
 	}
 	| multiplicative_expression '%' cast_expression{
 		std::string type1,type2 ;
@@ -553,6 +556,10 @@ multiplicative_expression
         	yyerror(err);
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -592,7 +599,10 @@ additive_expression
 			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
 			$$.type = $1.type; 
 		}
-		
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 
 	}
 	| additive_expression '-' multiplicative_expression{
@@ -623,6 +633,10 @@ additive_expression
 			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
 			$$.type = $1.type; 
 		}
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -645,6 +659,10 @@ shift_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<<"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| shift_expression RIGHT_OP additive_expression{
 		std::string type1,type2 ;
@@ -657,6 +675,10 @@ shift_expression
         yyerror(err);
 		}
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">>"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -674,6 +696,10 @@ relational_expression
 
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression '>' shift_expression{
 		std::string type1,type2 ;
@@ -681,6 +707,10 @@ relational_expression
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression LE_OP shift_expression{
 		std::string type1,type2 ;
@@ -688,6 +718,10 @@ relational_expression
 
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression GE_OP shift_expression{
 		std::string type1,type2 ;
@@ -695,6 +729,10 @@ relational_expression
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -712,6 +750,10 @@ equality_expression
 
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("=="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| equality_expression NE_OP relational_expression{
 		std::string type1,type2 ;
@@ -719,6 +761,10 @@ equality_expression
 
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("!="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -746,6 +792,10 @@ and_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -773,6 +823,10 @@ exclusive_or_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("^"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -800,6 +854,10 @@ inclusive_or_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("|"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -817,6 +875,10 @@ logical_and_expression
 
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&&"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -834,6 +896,10 @@ logical_or_expression
 
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
 		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("||"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -1036,7 +1102,7 @@ declaration
 				}
 			}
 		}
-		$$.ir.code = strdup($2.ir.code);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($2.ir.code)).c_str());
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -1106,7 +1172,9 @@ declaration_specifiers
 		  $$.ir.code = "";
 		  }
 	| declaration_specifiers '&'{
+
 		$$.ir.code = "";
+	
 	}
 	;
 
@@ -1514,6 +1582,8 @@ declarator
 		  if(ts.hasConstAfterStar(std::string($$.type))){
 				yyerror("const after * not allowed");
 		  }
+		  $$.ir.tmp = strdup($2.ir.tmp);
+		  $$.ir.code = "";
       }
 	| direct_declarator {
 		 $$.index = $1.index;
@@ -1521,6 +1591,7 @@ declarator
 		 $$.kind = $1.kind;
 		 $$.name = $1.name;
 		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = "";
 		  }
 	;
 
@@ -1533,7 +1604,7 @@ direct_declarator
 			yyerror(err.c_str());
 		}
 		else{
-			$$.index = st.token_table_.size() - 1;
+			$$.index = st.token_table_.size() ;
 		$$.type = currentType;
 		$$.kind = "IDENTIFIER";
 		$$.name = $1.type;
@@ -1550,12 +1621,13 @@ direct_declarator
 				}
 			}
 			else{
-				$$.ir.tmp = strdup($$.name);
+				
 				
 			}
-        
 		}
-        $$.ir.tmp = strdup(tmp.c_str());
+		
+		
+        $$.ir.tmp = strdup($$.name);
 		$$.ir.code = "";
     }
 	| '(' declarator ')' {
@@ -1612,7 +1684,7 @@ direct_declarator
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
        int idx = $1.index;  // $1 is now of type int (the token index)
-
+		
 	   	st.token_table_[idx].kind = strdup("PROCEDURE ");
 		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
 		newkind = concat(newkind,$3.type);
@@ -1637,6 +1709,12 @@ direct_declarator
 		st.changeToParameter(std::string($3.name));
 		st.updateParameterSizes();
 		st.updateProcedureSize(std::string($$.name));
+		
+		string label = irgen.new_label();
+		string cd = irgen.func_def(label);
+		$$.ir.code = strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
+		$$.ir.tmp = strdup($1.ir.tmp);
+
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
@@ -1647,6 +1725,7 @@ direct_declarator
 		$$.kind = strdup("PROCEDURE ( )");
 		$$.index = idx;
 		$$.name = $1.name;
+		
 	   	currFunc = std::string($$.name);
 		std::cout<<"\n\n"<<currFunc<<"\n\n";
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
@@ -1654,11 +1733,14 @@ direct_declarator
 		}
 		// since no parameter_list so directly updating procedure size to 0
 		st.updateProcedureSize(std::string($$.name));
-
-	   
+		
+		string lb = irgen.new_label();
+		string cd = irgen.func_def(lb);
+		$$.ir.code = strdup(cd.c_str());
+	   $$.ir.tmp  =strdup($1.ir.tmp);
     }
 	| direct_declarator '('  identifier_list ')'{
-
+		//NOW GIVES ERROR
 		//K&R style function, can remove it
        	int idx = $1.index;
     	st.token_table_[idx].token_type = strdup(currentType);
@@ -1669,6 +1751,9 @@ direct_declarator
 	   	$$.kind = strdup("PROCEDURE");
        	$$.index = idx;
 	   	$$.name = $1.name;
+		$$.ir.code ="";
+		$$.ir.tmp = $1.ir.tmp;
+		yyerror("K&R Style function definition not allowed");
     }
 	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 
@@ -1928,14 +2013,17 @@ jump_statement
 			}
 		}
 		std::string s = (st.lookup(currFunc)->type);
-		std::string typeExp = std::string($2.type);
+		
 		s = ts.removeConstFromDeclaration(s);
 		s = ts.removeStaticFromDeclaration(s);
-		std::cout<<typeExp<<std::endl;
-		if(s==typeExp){}
+		std::string err = std::string($2.type);
+		if(s==err){}
 		else{
-			if(!isConvertible(typeExp,s)){
-				yyerror("The return expression has type different from the declared function");
+			if(!isConvertible(err,s)){
+				err += " ";
+				err += s;
+				err += " The return expression has type different from the declared function";
+				yyerror(strdup(err.c_str()));
 			}
 			
 		}

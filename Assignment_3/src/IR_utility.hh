@@ -34,6 +34,9 @@ class IRGen{
     std::string assign(std::string tmp , std::string s1);
     std::string add_unary(std::string tmp , std::string op, std::string s1);
 
+
+    //func def
+    std::string func_def(std::string f);
     void generate(const char* s);
     void print(std::string s);
 
