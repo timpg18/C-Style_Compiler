@@ -36,7 +36,7 @@ class IRGen{
 
 
     //func def
-    std::string func_def(std::string f);
+    std::string add_label(std::string f);
     std::string add_par(std::string par);
 
 
