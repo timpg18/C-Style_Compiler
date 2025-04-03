@@ -311,10 +311,14 @@ postfix_expression
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
 		//access ka do it like old
+		yyerror("-> ooperator not allowed");
 		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression INC_OP{
 		lvalueError($1.kind);
+		if(st.is_array($1.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
 		if(contains($1.type,"CONST")){
 			yyerror("Const value cannot be incremented");
 		}
@@ -334,6 +338,9 @@ postfix_expression
 	}
 	| postfix_expression DEC_OP{
 		lvalueError($1.kind);
+		if(st.is_array($1.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
 		if(contains($1.type,"CONST")){
 			yyerror("Const value cannot be decremented");
 		}
@@ -370,6 +377,9 @@ unary_expression
 	}
 	| INC_OP unary_expression{
 		lvalueError($2.kind);
+		if(st.is_array($2.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
 		if(contains($2.type,"CONST")){
 			yyerror("Const value cannot be incremented");
 		}
@@ -386,6 +396,9 @@ unary_expression
 	}
 	| DEC_OP unary_expression{
 		lvalueError($2.kind);
+		if(st.is_array($2.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
 		if(contains($2.type,"CONST")){
 			yyerror("Const value cannot be decremented");
 		}
@@ -1637,22 +1650,23 @@ direct_declarator
 		$$.ir.code = strdup($2.ir.code);
 	 }
 	| direct_declarator '[' ']'{
-          int idx = $1.index;
-          char newType[256];
-          sprintf(newType, "%s*",st.token_table_[idx].token_type);
-           st.token_table_[idx].token_type += "*";
-		   $$.name = $1.name;
-		   st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-			$$.type = strdup(st.token_table_[idx].token_type.c_str());
-		  if (strstr(newType, "typedef") != NULL){
-            char *temp = new char[st.token_table_[idx].token.size()+1];
-            std::strcpy(temp,st.token_table_[idx].token.c_str());
-			update_symtab(temp);
-			
-		  }
-          $$.index = idx;
-		  $$.ir.code = strdup($1.ir.code);
-		  $$.ir.tmp = strdup($1.ir.tmp);
+		int idx = $1.index;
+		char newType[256];
+		sprintf(newType, "%s*",st.token_table_[idx].token_type);
+		st.token_table_[idx].token_type += "*";
+		$$.name = $1.name;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		$$.type = strdup(st.token_table_[idx].token_type.c_str());
+		st.update_array_dimensions(std::string($1.name),0,std::string($$.type));
+		if (strstr(newType, "typedef") != NULL){
+		char *temp = new char[st.token_table_[idx].token.size()+1];
+		std::strcpy(temp,st.token_table_[idx].token.c_str());
+		update_symtab(temp);
+		
+		}
+		$$.index = idx;
+		$$.ir.code = strdup($1.ir.code);
+		$$.ir.tmp = strdup($1.ir.tmp);
       }
 	| direct_declarator '[' assignment_expression ']'{
 			if($3.type == "INT" && $3.kind == "CONST"){

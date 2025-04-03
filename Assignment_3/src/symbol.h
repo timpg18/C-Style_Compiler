@@ -162,7 +162,27 @@ public:
         }
     }
 
-    void update_array_dimensions(const std::string& name, int dimension, const std::string& baseType) {
+    bool is_array(const std::string& name) {
+        // Find the symbol in the current scope or parent scopes
+        Scope* scope = current_scope_;
+        
+        // Look up the symbol
+        while (scope) {
+            auto it = scope->symbol_map.find(name);
+            if (it != scope->symbol_map.end()) {
+                // Check if the symbol has dimensions
+                return !it->second->dimensions.empty();
+            }
+            scope = scope->parent_scope;
+        }
+        
+        // Symbol not found
+        std::string err = "Identifier '" + name + "' not found when checking if it's an array";
+        yyerror(err.c_str());
+        return false;
+    }
+
+    void update_dimension_sizes(const std::string& name){
         // Find the symbol in the current scope or parent scopes
         Scope* scope = current_scope_;
         std::list<Symbol>::iterator symbolIt;
@@ -184,14 +204,7 @@ public:
             yyerror(err.c_str());
             return;
         }
-        
-        // If dimensions vector doesn't exist yet, initialize it
-        if (!symbolIt->dimensions.empty()) {
-
-            symbolIt->dimensions.push_back(dimension);
-        } else {
-            symbolIt->dimensions = {dimension};
-        }
+        std::string& baseType = symbolIt->type;
         
         std::cout<<(symbolIt->dimensions.size())<<"\n\n";
         // Remove appropriate number of pointer stars from the type
@@ -202,6 +215,9 @@ public:
             actualBaseType.pop_back();
             totalElements*=(symbolIt->dimensions[i]);
 
+        }
+        if (totalElements==0){
+            yyerror("This array declaration is not allowed");
         }
         
         // Calculate the size of a single element
@@ -244,6 +260,43 @@ public:
         
         // Update the scope's total size
         scope->total_size += sizeDelta;
+    }
+
+    void update_array_dimensions(const std::string& name, int dimension, const std::string& baseType) {
+        Scope* scope = current_scope_;
+        std::list<Symbol>::iterator symbolIt;
+        bool found = false;
+        
+        // Look up the symbol
+        while (scope && !found) {
+            auto it = scope->symbol_map.find(name);
+            if (it != scope->symbol_map.end()) {
+                symbolIt = it->second;
+                found = true;
+                break;
+            }
+            scope = scope->parent_scope;
+        }
+        
+        if (!found) {
+            std::string err = "Identifier '" + name + "' not found for dimension update";
+            yyerror(err.c_str());
+            return;
+        }
+        
+        // If dimensions vector doesn't exist yet, initialize it
+        if (!symbolIt->dimensions.empty()) {
+
+            symbolIt->dimensions.push_back(dimension);
+        } else {
+            symbolIt->dimensions = {dimension};
+        }
+
+        for (auto& entry : token_table_) {
+            if (entry.token == name && entry.scope_level == scope->scope_level) {
+                entry.dimensions = symbolIt->dimensions;
+            }
+        }
     }
 
     // To change the IDENTIFEIR to PARAMETER for function
@@ -638,6 +691,7 @@ public:
 
             Symbol& sym = *it->second;
             if(!sym.dimensions.empty()){
+                update_dimension_sizes(varName);
                 return ;
             }
             if (baseOffset == -1) {
@@ -939,29 +993,6 @@ private:
         if (baseType.find('*') != std::string::npos) {
             // Return pointer size (4 for 32-bit, 8 for 64-bit)
             return sizeof(void*);
-        }
-    
-        // Handle arrays
-        size_t arrayStart = baseType.find('[');
-        if (arrayStart != std::string::npos) {
-            std::string elementType = baseType.substr(0, arrayStart);
-            int elementSize = getTypeSize(elementType);
-            
-            // Parse array dimensions
-            int totalElements = 1;
-            size_t pos = arrayStart;
-            while (pos != std::string::npos) {
-                size_t end = baseType.find(']', pos);
-                if (end == std::string::npos) break;
-                
-                std::string dimStr = baseType.substr(pos+1, end-pos-1);
-                if (!dimStr.empty()) {
-                    totalElements *= std::stoi(dimStr);
-                }
-                pos = baseType.find('[', end);
-            }
-            
-            return elementSize * totalElements;
         }
     
         // Look up basic types

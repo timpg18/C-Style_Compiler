@@ -1,4 +1,8 @@
+union A{
+    int i;
+    long double j;
+};
+
 int f(){
-    int a = 1;
-    a++;
+    union A h;
 }
