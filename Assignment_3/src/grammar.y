@@ -967,7 +967,7 @@ assignment_expression
 		else{
 			// case if enum 
 			if(contains($1.type,"enum")){
-				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+				
 				if(contains($1.type,"CONST")){
 					yyerror("const variable cannot be re-changed");
 				}
@@ -1006,15 +1006,19 @@ assignment_expression
 			}
 			
 		}
-
-		if(eq($1.type,"=") == true){
-			$$.ir.code = strdup(irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		string tem;
+		if(eq($2.type,"=") == true){
+			tem = irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp));
+			
 		}
 		else{
 			std::string s = $2.type;
 			s.pop_back();
-			$$.ir.code = strdup(irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)).c_str());
+			tem = (irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)));
 		}
+		
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
 		$$.type = original ;
 	}
 	;

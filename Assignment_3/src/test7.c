@@ -1,5 +1,5 @@
-enum A{hello,jo,jel};
+int x = 9;
 
 int f(){
-    enum A l;
+   x = -x;
 }
