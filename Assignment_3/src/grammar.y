@@ -1754,7 +1754,7 @@ direct_declarator
 		st.updateProcedureSize(std::string($$.name));
 		
 		string label = irgen.new_label();
-		string cd = irgen.func_def(label);
+		string cd = irgen.add_label(label);
 		$$.ir.code = strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
 		$$.ir.tmp = strdup($1.ir.tmp);
 
@@ -1778,7 +1778,7 @@ direct_declarator
 		st.updateProcedureSize(std::string($$.name));
 		
 		string lb = irgen.new_label();
-		string cd = irgen.func_def(lb);
+		string cd = irgen.add_label(lb);
 		$$.ir.code = strdup(cd.c_str());
 	   $$.ir.tmp  =strdup($1.ir.tmp);
     }
@@ -1988,12 +1988,12 @@ initializer_list
 
 statement
 	: labeled_statement {
-		$$.ir.code = "";
+		//doubts in this prodn.
+		$$.ir.code = strdup($1.ir.code);
 	}
 	|  {st.push_scope();} compound_statement {
 		st.pop_scope();
-		$$.ir.code = "";
-		
+		$$.ir.code = strdup($2.ir.code);
 		}
 	| expression_statement{
 		$$.ir.code = strdup($1.ir.code);
@@ -2009,14 +2009,35 @@ statement
 	}
 	;
 
+
 labeled_statement
 	: IDENTIFIER ':'{
+		
 		st.insert_symbol($1.type,"LABEL" , "GOTO LABEL");
-	} statement 
-	| CASE constant_expression ':' statement
-	| DEFAULT ':' statement
-	;
+	} statement {
+		string lb = irgen.new_label();
+		string cd = irgen.add_label(lb);
+		$$.ir.code =strdup(irgen.concatenate(cd,string($4.ir.code)).c_str());
+	}
+	| CASE constant_expression ':' statement {
+		//DOUBT
 
+
+		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
+		//WILL BE USED IN IRGEN FOR SWITCH CASE, ON WHAT CASES TO JUMP TO
+		$$.ir.code = "";
+		
+		//not sure, since  expression is evaluated before any cases
+	}
+	| DEFAULT ':' statement {
+		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
+		//WILL BE USED IN IRGEN FOR SWITCH
+		string lb = irgen.new_label();
+		string cd = irgen.add_label(lb);
+		cd += " DEFAULT CASE";
+		$$.ir.code =strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
+	}
+	;
 compound_statement
 	: '{'   '}' {
 		$$.ir.code = "";

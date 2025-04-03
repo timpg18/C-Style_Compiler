@@ -10,6 +10,7 @@ string IRGen::new_label() {
     return "L" + to_string(label_counter++);
 }
 
+//concatenate codes
 std::string IRGen::concatenate(std::string s1, std::string  s2){
     if(s1 == "")return s2;
     if(s2 == "")return s1;
@@ -19,6 +20,9 @@ std::string IRGen::concatenate(std::string s1, std::string  s2){
 
     return result; // Caller must free this
 }
+
+
+//assignment operators
 std::string IRGen::add_op(std::string tmp, std::string s1,std::string op, std::string s2){
     std::string res;
     res = tmp + " = " + s1 + " " + op + " " + s2;
@@ -41,7 +45,7 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
 
 //Function definition stuff
 
-std::string IRGen::func_def(std::string f){
+std::string IRGen::add_label(std::string f){
     std::string res;
     res = "LABEL " + f + ":";
     return res;

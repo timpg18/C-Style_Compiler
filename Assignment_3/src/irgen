@@ -1,1 +1,5 @@
 LABEL L0:
+x = 2
+LABEL L1: DEFAULT CASE
+t2 = x
+x = x - 1
