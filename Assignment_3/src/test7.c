@@ -1,8 +1,5 @@
-union A{
-    int i;
-    long double j;
-};
+enum A{hello,jo,jel};
 
 int f(){
-    union A h;
+    enum A l;
 }

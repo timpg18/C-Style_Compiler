@@ -607,16 +607,16 @@ Nonterminals, with rules where they appear
     struct_declaration_list (143)
         on left: 147 148
         on right: 141 143 148
-    struct_declaration (144)
+    struct_declaration <atr> (144)
         on left: 149 150
         on right: 147 148
     specifier_qualifier_list <atr> (145)
         on left: 151 152 153 154
         on right: 149 150 151 153 193 194
-    struct_declarator_list (146)
+    struct_declarator_list <atr> (146)
         on left: 155 156
         on right: 150 156
-    struct_declarator (147)
+    struct_declarator <atr> (147)
         on left: 157 158 159
         on right: 155 156
     enum_specifier <atr> (148)

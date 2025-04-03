@@ -506,6 +506,7 @@ public:
                             insert_symbol(newName, "static "  + member.type, member.kind);
                         }
                         else insert_symbol(newName, member.type, member.kind);
+                        update_symbol_sizes(newName,0);
                     }
                     
                 }
@@ -703,6 +704,7 @@ public:
             int oldSize = sym.size;
             sym.type = newType;
             sym.size = getTypeSize(newType);
+            std::cout<<"HELLO WORLD"<<"   "<<sym.size<<std::endl;
             accumulatedDelta += (sym.size - oldSize);
         }
 
@@ -924,6 +926,143 @@ public:
         }
     }
 
+    void addTypeSize(const std::string& type_name, size_t size) {
+        type_sizes[type_name] = size;
+    }
+
+    // Function to calculate the size of a struct and update it in the scope
+    int calculateStructSize(const std::string& structName) {
+        // Find the struct's scope in scopes_
+        for (const auto& scope_ptr : scopes_) {
+            if (scope_ptr->scope_name == structName) {
+                // Struct found, calculate its size
+                size_t totalSize = 0;
+                size_t maxAlignment = 1;  // Track the maximum alignment requirement
+                
+                // First pass: determine max alignment needed
+                for (const auto& symbol : scope_ptr->ordered_symbols) {
+                    // Crude alignment estimation based on size
+                    // In practice, this would depend on the platform's ABI rules
+                    size_t alignment = 1;
+                    if (symbol.size == 2) alignment = 2;
+                    else if (symbol.size == 4) alignment = 4;
+                    else if (symbol.size >= 8) alignment = 8;
+                    
+                    maxAlignment = std::max(maxAlignment, alignment);
+                }
+                
+                // Second pass: calculate actual size with padding
+                for (const auto& symbol : scope_ptr->ordered_symbols) {
+                    // Add padding for alignment if needed
+                    if (totalSize % symbol.size != 0) {
+                        size_t padding = symbol.size - (totalSize % symbol.size);
+                        totalSize += padding;
+                    }
+                    
+                    // Add this member's size
+                    totalSize += symbol.size;
+                }
+                
+                // Final struct size should be a multiple of its alignment
+                if (totalSize % maxAlignment != 0) {
+                    totalSize += maxAlignment - (totalSize % maxAlignment);
+                }
+                
+                // Update the scope's total size
+                scope_ptr->total_size = totalSize;
+                
+                std::cout << "Struct '" << structName << "' size calculated: " << totalSize << " bytes\n";
+                return totalSize;
+            }
+        }
+        
+        // If we get here, the struct wasn't found
+        std::string err = "Struct '" + structName + "' not found";
+        yyerror(err.c_str());
+    }
+
+    int calculateUnionSize(const std::string& unionName) {
+        // Find the union's scope in scopes_
+        for (const auto& scope_ptr : scopes_) {
+            if (scope_ptr->scope_name == unionName) {
+                // Union found, calculate its size
+                size_t maxSize = 0;
+                
+                // Iterate through all symbols in this union scope
+                for (const auto& symbol : scope_ptr->ordered_symbols) {
+                    // Find the maximum size among all members
+                    if (symbol.size > maxSize) {
+                        maxSize = symbol.size;
+                    }
+                }
+                
+                // Update the scope's total size to match the largest member
+                scope_ptr->total_size = maxSize;
+                
+                std::cout << "Union '" << unionName << "' size calculated: " << maxSize << " bytes\n";
+                return maxSize;
+            }
+        }
+        
+        // If we get here, the union wasn't found
+        std::string err = "Union '" + unionName + "' not found";
+        yyerror(err.c_str());
+    }
+
+    // Function to print all entries in the type_sizes map
+    void printTypeSizes() const {
+        // Calculate maximum column widths
+        size_t max_type_len = 4;   // "Type"
+        size_t max_size_len = 4;   // "Size"
+        
+        for (const auto& entry : type_sizes) {
+            max_type_len = std::max(max_type_len, entry.first.length());
+            std::string size_str = std::to_string(entry.second);
+            max_size_len = std::max(max_size_len, size_str.length());
+        }
+        
+        // Add padding
+        const size_t padding = 2;
+        max_type_len += padding;
+        max_size_len += padding;
+        
+        // Calculate total width
+        const size_t total_width = max_type_len + max_size_len + 3;
+        
+        // Print header
+        std::cout << "\n+" << std::string(total_width - 2, '-') << "+\n";
+        std::cout << "|" << std::string((total_width - 10)/2, ' ') 
+                << "TYPE SIZES" 
+                << std::string((total_width - 10)/2, ' ') << "|\n";
+        std::cout << "+" << std::string(max_type_len, '-') << "+"
+                << std::string(max_size_len, '-') << "+\n";
+        
+        // Column headers
+        std::cout << "| " << std::left << std::setw(max_type_len) << "Type" << "| "
+                << std::setw(max_size_len) << "Size" << "|\n";
+        
+        // Separator
+        std::cout << "+" << std::string(max_type_len, '-') << "+"
+                << std::string(max_size_len, '-') << "+\n";
+        
+        // Sort entries alphabetically for better readability
+        std::vector<std::pair<std::string, size_t>> sorted_entries(
+            type_sizes.begin(), type_sizes.end()
+        );
+        std::sort(sorted_entries.begin(), sorted_entries.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+        
+        // Data rows
+        for (const auto& entry : sorted_entries) {
+            std::cout << "| " << std::left << std::setw(max_type_len) << entry.first << "| "
+                    << std::right << std::setw(max_size_len) << entry.second << "|\n";
+        }
+        
+        // Footer
+        std::cout << "+" << std::string(max_type_len, '-') << "+"
+                << std::string(max_size_len, '-') << "+\n";
+        std::cout << "Total types: " << type_sizes.size() << "\n\n";
+    }
     
 
 private:
@@ -933,48 +1072,38 @@ private:
     std::vector<std::string> goto_label ; // labels to be resolved
     // Handle basic types
     std::unordered_map<std::string, int> type_sizes = {
-        {"void", 0},
-        {"bool", 1},
-        {"char", 1},
-        {"signed char", 1},
-        {"unsigned char", 1},
-        {"short", 2},
-        {"short int", 2},
-        {"signed short", 2},
-        {"signed short int", 2},
-        {"unsigned short", 2},
-        {"unsigned short int", 2},
-        {"int", 4},
-        {"signed", 4},
-        {"signed int", 4},
-        {"unsigned", 4},
-        {"unsigned int", 4},
-        {"long", sizeof(long)},
-        {"long int", sizeof(long)},
-        {"signed long", sizeof(long)},
-        {"signed long int", sizeof(long)},
-        {"unsigned long", sizeof(unsigned long)},
-        {"unsigned long int", sizeof(unsigned long)},
-        {"long long", sizeof(long long)},
-        {"long long int", sizeof(long long)},
-        {"signed long long", sizeof(long long)},
-        {"signed long long int", sizeof(long long)},
-        {"unsigned long long", sizeof(unsigned long long)},
-        {"unsigned long long int", sizeof(unsigned long long)},
-        {"float", 4},
-        {"double", 8},
-        {"long double", sizeof(long double)},
-        {"size_t", sizeof(size_t)},
-        {"ssize_t", sizeof(ssize_t)},
-        {"int8_t", 1},
-        {"uint8_t", 1},
-        {"int16_t", 2},
-        {"uint16_t", 2},
-        {"int32_t", 4},
-        {"uint32_t", 4},
-        {"int64_t", 8},
-        {"uint64_t", 8},
-        {"label",0}
+        {"VOID", 0},
+        {"BOOL", 1},
+        {"CHAR", 1},
+        {"SIGNED CHAR", 1},
+        {"UNSIGNED CHAR", 1},
+        {"SHORT", 2},
+        {"SHORT INT", 2},
+        {"SIGNED SHORT", 2},
+        {"SIGNED SHORT INT", 2},
+        {"UNSIGNED SHORT", 2},
+        {"UNSIGNED SHORT INT", 2},
+        {"INT", 4},
+        {"SIGNED", 4},
+        {"SIGNED INT", 4},
+        {"UNSIGNED", 4},
+        {"UNSIGNED INT", 4},
+        {"LONG", sizeof(long)},
+        {"LONG INT", sizeof(long)},
+        {"SIGNED LONG", sizeof(long)},
+        {"SIGNED LONG INT", sizeof(long)},
+        {"UNSIGNED LONG", sizeof(unsigned long)},
+        {"UNSIGNED LONG INT", sizeof(unsigned long)},
+        {"LONG LONG", sizeof(long long)},
+        {"LONG LONG INT", sizeof(long long)},
+        {"SIGNED LONG LONG", sizeof(long long)},
+        {"SIGNED LONG LONG INT", sizeof(long long)},
+        {"UNSIGNED LONG LONG", sizeof(unsigned long long)},
+        {"UNSIGNED LONG LONG INT", sizeof(unsigned long long)},
+        {"FLOAT", 4},
+        {"DOUBLE", 8},
+        {"LONG DOUBLE", sizeof(long double)},
+        {"LABEL",0}
     };
 
     std::vector<std::string> splitString(const std::string& str) {
@@ -987,27 +1116,18 @@ private:
 
     int getTypeSize(const std::string& type) {
         // Remove qualifiers (const, volatile, static, etc.)
-        std::string baseType = removeQualifiers(lowercase(type));
+        std::string baseType = removeQualifiers((type));
         
         // Handle pointers (all pointers have same size)
         if (baseType.find('*') != std::string::npos) {
             // Return pointer size (4 for 32-bit, 8 for 64-bit)
             return sizeof(void*);
         }
-    
+            
         // Look up basic types
-        std::string lowercaseType = lowercase(baseType);
-        auto it = type_sizes.find(lowercaseType);
+        auto it = type_sizes.find(baseType);
         if (it != type_sizes.end()) {
             return it->second;
-        }
-    
-        // Handle structs/unions (would need integration with your symbol table)
-        if (baseType.find("struct ") == 0 || baseType.find("union ") == 0) {
-            // Look up in symbol table and calculate total size
-            // This would need access to your symbol table to get member sizes
-            // For now return 0 (unknown size)
-            return 0;
         }
     
         // Default to 4 bytes for unknown types
@@ -1016,7 +1136,7 @@ private:
     
     std::string removeQualifiers(const std::string& type) {
         static const std::set<std::string> qualifiers = {
-            "const", "volatile", "static", "register", 
+            "CONST", "VOLATILE", "static", "register", 
             "extern", "auto", "restrict", "inline",
             "declared" // in our implementation declared can be present
         };
@@ -1032,12 +1152,6 @@ private:
             }
         }
         
-        return result;
-    }
-
-    std::string lowercase(const std::string& s) const {
-        std::string result;
-        for(char c : s) result += tolower(c);
         return result;
     }
 
