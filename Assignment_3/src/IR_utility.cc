@@ -30,13 +30,14 @@ std::string IRGen::assign(std::string tmp , std::string s1){
     res = tmp +  " = " + s1;
     return res;
 }
+
 std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
     std::string res;
     res = tmp + " = " + op + s1;
     return res;
 }
 
-void IRGen::generate(std::string s){
+void IRGen::generate(const char* s){
     IRGen::write_to_file("irgen",s);
 }
 void IRGen::print(std::string s){

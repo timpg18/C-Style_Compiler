@@ -495,6 +495,8 @@ cast_expression
 		printf("\n\n%s\n\n",$2.type);
 		$$.type = $2.type;
 		$$.kind = $4.kind;
+		$$.ir.tmp = strdup($4.ir.tmp);
+		$$.ir.code = strdup($4.ir.code);
 	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
@@ -532,6 +534,9 @@ multiplicative_expression
 			yyerror("invalid operator to pointers");
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| multiplicative_expression '%' cast_expression{
 		std::string type1,type2 ;
@@ -955,9 +960,11 @@ expression
 		$$.type=$1.type;
 		$$.name=$1.name;
 		$$.ir.tmp = strdup($1.ir.tmp);
-
+		$$.ir.code = strdup($1.ir.code);
 	}
-	| expression ',' assignment_expression
+	| expression ',' assignment_expression {
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+	}
 	;
 
 constant_expression
@@ -965,7 +972,9 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'
+	: declaration_specifiers ';'{
+		$$.ir.code = strdup($1.ir.code);
+	}
 	| declaration_specifiers init_declarator_list ';'{
 		printf("\n\n%s\n\n",$2.name);
 		std::cout<<"HELL"<<std::endl;
@@ -1028,7 +1037,6 @@ declaration
 			}
 		}
 		$$.ir.code = strdup($2.ir.code);
-		
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -1049,10 +1057,13 @@ declaration_specifiers
 			  if(ts.storagespecifercount(std::string($$.type))>=2){
 					yyerror("Multiple storage class specifiers not allowed");
 			  }
+			  $$.ir.code = "";
+
 		}
 	| storage_class_specifier{
 		$$.type = $1.type;
         currentType = $$.type;
+		$$.ir.code = "";
 	}
 	| type_specifier declaration_specifiers
 	      {
@@ -1062,11 +1073,12 @@ declaration_specifiers
               sprintf(combined, "%s %s", $1.type, $2.type);
               $$.type = combined;
               currentType = $$.type; /* Update the global currentType */
-
+			$$.ir.code = "";
           }
 	| type_specifier 
 	      { 
               $$.type = $1.type; 
+			  $$.ir.code = "";
               currentType = $$.type; 
           }
 	| type_qualifier declaration_specifiers
@@ -1086,12 +1098,16 @@ declaration_specifiers
 			if(eq(combined,"CONST auto")){
 				yyerror("type defaults to 'int'");
 			}
+			$$.ir.code = "";
 		}
 	| type_qualifier
 	      { $$.type = $1.type; 
 		  currentType = $$.type;
+		  $$.ir.code = "";
 		  }
-	| declaration_specifiers '&'
+	| declaration_specifiers '&'{
+		$$.ir.code = "";
+	}
 	;
 
 
@@ -1106,7 +1122,7 @@ init_declarator_list
 	| init_declarator_list ',' init_declarator {
 		$$.name = concat($1.name,$3.name);
 		$$.type = $1.type;
-		$$.ir.code = strdup($1.ir.code);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 	}
 	;
 
@@ -1218,6 +1234,7 @@ init_declarator
 	| declarator {
 		$$.name = $1.name;
 		$$.type = $1.type;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -1538,11 +1555,14 @@ direct_declarator
 			}
         
 		}
-        
+        $$.ir.tmp = strdup(tmp.c_str());
+		$$.ir.code = "";
     }
 	| '(' declarator ')' {
 		 $$.index = $2.index;
 		$$.name = $2.name;
+		$$.ir.tmp = strdup($2.ir.tmp);
+		$$.ir.code = strdup($2.ir.code);
 	 }
 	| direct_declarator '[' ']'{
           int idx = $1.index;
@@ -1559,6 +1579,8 @@ direct_declarator
 			
 		  }
           $$.index = idx;
+		  $$.ir.code = strdup($1.ir.code);
+		  $$.ir.tmp = strdup($1.ir.tmp);
       }
 	| direct_declarator '[' assignment_expression ']'{
 			if($3.type == "INT" && $3.kind == "CONST"){
@@ -1584,7 +1606,8 @@ direct_declarator
 			std::string err = "declaration must have only integer constants inside: ";
 			yyerror(err.c_str());
 		}
-	
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
       }
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
@@ -1815,6 +1838,7 @@ initializer
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -1920,7 +1944,7 @@ jump_statement
 
 Global
 	:  translation_unit{
-		if(error_count == 0)irgen.generate(std::string($1.ir.code));
+		if(error_count == 0)irgen.generate($1.ir.code);
 	}
 
 translation_unit
