@@ -3,39 +3,52 @@
 #include "symbol.h"
 #include "Utility_func.h"
 #include "types.h"
-#include "IR_utility.hh"
+#include "typeconversion.h"
 #include "IR_utility.cc"
-IRGen gen;
+IRGen irgen;
+// MACRO for expression checking
+// THIS MUST BE ADDED TO CHECK IF ITS A PROCEDURE THEN IT MUST BE CALLED
+// and Removing const and static
+#define CHECK_PROCEDURE_AND_CLEAN_TYPE(node1, node2) \
+    do { \
+        if (isPROCEDURE((node1).kind)) { yyerror("incompatible return type "); } \
+        if (isPROCEDURE((node2).kind)) { yyerror("incompatible return type "); } \
+        type1 = ts.prepareString(std::string((node1).type)); \
+        type2 = ts.prepareString(std::string((node2).type)); \
+        (node1).type = strdup(type1.c_str()); \
+        (node2).type = strdup(type2.c_str()); \
+    } while(0)
+
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
 int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
-
 %}
 
 %debug
 %union{
 	char *id;
-    int index;
 	typedef struct {
     char* type;
     char* kind;
 	int index;
-	char* name; 
+	char* name;
 	typedef struct{
-		char* tmp;
 		char* code;
-	} ir_prop;
-	ir_prop ir;
+		char* tmp;
+	} irg;
+	irg ir;
 	} attribute_t;
+	
+
 	
 	attribute_t atr;
 }
 
 %token <atr> IDENTIFIER STRING_LIT CHAR_LIT
-%token I_CONSTANT F_CONSTANT TRUE FALSE
+%token <atr> I_CONSTANT F_CONSTANT TRUE FALSE
 %token PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -75,8 +88,8 @@ std::string currFunc = "";
 %type <atr> parameter_type_list parameter_list parameter_declaration abstract_declarator direct_abstract_declarator initializer_list
 %type <atr> specifier_qualifier_list type_name
 %type <atr> init_declarator_list
-%type <atr> argument_expression_list  expression string labeled_statement BOOLEAN
-
+%type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
+%type <atr> declaration declaration_list function_definition  block_item compound_statement block_item_list statement expression_statement
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -97,34 +110,43 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
+		$$.ir.tmp = strdup(name);
+		$$.ir.code = "";
+		printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
 	}
 	| constant{
 		$$.type = $1.type;
 		$$.kind = $1.kind;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = "";
+		$$.name = $1.name;
 	}
 	| string {
 		$$.type = $1.type;
 		$$.name = $1.name;
 		$$.kind = $1.kind;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = "";
 	}
 	| '(' expression ')'{
 		$$.name = $2.name;
 		$$.type = $2.type; 
+		$$.ir.tmp = $2.ir.tmp;
+		$$.ir.code = strdup($2.ir.code);
 	}
 	| '(' expression error { yyerrok; }
 	;
 
 constant
 	: I_CONSTANT{
+		$$.name = $1.type;
 		$$.type = "INT";
 		$$.kind = "CONST";
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
-		
 	}		/* includes character_constant */
 	| F_CONSTANT{
+		$$.name = $1.type;
 		$$.type = "FLOAT";
 		$$.kind = "CONST";
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
@@ -132,11 +154,12 @@ constant
 	| ENUMERATION_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "ENUM_CONST";
+		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}	/* after it has been defined as such */
 	| BOOLEAN{
 		$$.type = "BOOL";
 		$$.kind = "CONST";
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	;
 
@@ -148,7 +171,7 @@ enumeration_constant		/* before it has been defined as such */
 
 BOOLEAN
 	: TRUE {
-		$$.ir.tmp = "true";
+		$$.ir.tmp  = "true";
 	}
 	| FALSE{
 		$$.ir.tmp = "false";
@@ -176,10 +199,12 @@ postfix_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
+		std::cout<<s<<"\n";
 		if(s.back() == '*'){
 			s.pop_back();
 			$$.type = strdup(s.c_str());
@@ -187,11 +212,13 @@ postfix_expression
 		else{
 			yyerror("dereferencing by [ ] invalid");
 		}
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '(' ')'{
-		if(!contains($1.kind,"(")){
-			yyerror("called function cannot be having another pair of calling set");
+		if(eq($1.kind,"CONST")){
+			yyerror("called object is not a function or function pointer");
 		}
+
 		if(eq($1.name,"printf")){
 			yyerror("too few arguments to function \'printf\'");
 		}
@@ -199,23 +226,27 @@ postfix_expression
 			yyerror("too few arguments to function \'scanf\'");
 		}
 		else{
-			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,"")==true){
-				
+			if(!eq($1.kind,"CONST")){
+				char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+				char* to_check = extract_between_parentheses(func_kind);
+				if(eq(to_check,"")==true){
+					
+				}
+				else{
+					yyerror("to few arguments passed");
+				}
 			}
-			else{
-				yyerror("to few arguments passed");
-			}
+			
 		}
-		$$.kind = "PROCEDURE";
+		$$.kind = "CONST";
 		$$.type = $1.type;
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '(' argument_expression_list ')'{
-		if(!contains($1.kind,"(")){
-			yyerror("called function cannot be having another pair of calling set");
+		if(eq($1.kind,"CONST")){
+			yyerror("called object is not a function or function pointer");
 		}
+
 		if(eq($1.name,"printf")){
 			printf("\n\n%s\n\n",$3.type);
 			if(is_first_arg_STRING($3.type)==1){
@@ -234,22 +265,26 @@ postfix_expression
 			}
 		}
 		else{
-			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
-			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,$3.type)==true){
-			}
-			else{
-				yyerror("invalid function arguments");
+			if(!eq($1.kind,"CONST")){
+				char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
+				char* to_check = extract_between_parentheses(func_kind);
+				if(eq(to_check,"")==true){
+					
+				}
+				else{
+					yyerror("to few arguments passed");
+				}
 			}
 		}
-		$$.kind = "PROCEDURE";
+		$$.kind = "CONST";
 		$$.type = $1.type;
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		printf("\n\n%s\n\n",$1.type);
+		std::cout<<s<<"\n";
 		if(st.lookup(s) != nullptr){
 			if(contains(strdup(st.lookup(s)->kind.c_str()),"PRIVATE")){
 				yyerror("Cannot access the private member of the class");
@@ -260,6 +295,9 @@ postfix_expression
 			if(contains($1.type,"*")){
 				yyerror("Pointers dont have members");
 			}
+			if(!ts.hasPointer(std::string($1.type))){
+
+			}
 			$$.type = strdup(st.lookup(s)->type.c_str());
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
 			$$.name = strdup(s.c_str());
@@ -267,19 +305,54 @@ postfix_expression
 		else{
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
 		}
-		
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
 		//access ka do it like old
+		yyerror("-> ooperator not allowed");
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| postfix_expression INC_OP{
+		lvalueError($1.kind);
+		if(st.is_array($1.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
+		if(contains($1.type,"CONST")){
+			yyerror("Const value cannot be incremented");
+		}
+		if(contains($1.type,"struct") || contains($1.type,"union") || contains($1.type,"class") ){
+			yyerror("wrong type argument to increment");
+		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		//a++
+		std::string temp = irgen.new_temp();
+		
+		string s = irgen.assign(temp, $1.ir.tmp);
+		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "+" , "1");
+		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		$$.ir.tmp = strdup(temp.c_str());
+		
 	}
 	| postfix_expression DEC_OP{
+		lvalueError($1.kind);
+		if(st.is_array($1.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
+		if(contains($1.type,"CONST")){
+			yyerror("Const value cannot be decremented");
+		}
+		if(contains($1.type,"struct") || contains($1.type,"union") || contains($1.type,"class") ){
+			yyerror("wrong type argument to decrement");
+		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		std::string temp = irgen.new_temp();
+		string s = irgen.assign(temp, $1.ir.tmp);
+		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "-" , "1");
+		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		$$.ir.tmp = strdup(temp.c_str());
 	}
 	;
 
@@ -298,19 +371,51 @@ unary_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| INC_OP unary_expression{
+		lvalueError($2.kind);
+		if(st.is_array($2.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
+		if(contains($2.type,"CONST")){
+			yyerror("Const value cannot be incremented");
+		}
+		if(contains($2.type,"struct") || contains($2.type,"union") || contains($2.type,"class") ){
+			yyerror("wrong type argument to increment");
+		}
 		$$.type = $2.type;
-		$$.kind = $2.kind;
-		$$.ir.tmp = strdup(gen.emit_add(std::string($2.ir.tmp),std::string("1")).c_str());
+		$$.kind = $2.kind;	
+		string s = irgen.new_temp();
+		string g = irgen.add_op(s,std::string($2.ir.tmp), "+" , "1");
+		//t' = t0 + 1
+		$$.ir.tmp = strdup(s.c_str());
+		$$.ir.code = strdup(g.c_str());
 	}
 	| DEC_OP unary_expression{
+		lvalueError($2.kind);
+		if(st.is_array($2.name)){
+			yyerror("expression must be a modifiable lvalue");
+		}
+		if(contains($2.type,"CONST")){
+			yyerror("Const value cannot be decremented");
+		}
+		if(contains($2.type,"struct") || contains($2.type,"union") || contains($2.type,"class") ){
+			yyerror("wrong type argument to decrement");
+		}
 		$$.type = $2.type;
 		$$.kind = $2.kind;
-		$$.ir.tmp = strdup(gen.emit_sub(std::string($2.ir.tmp),std::string("1")).c_str());
+		string s = irgen.new_temp();
+		string g = irgen.add_op(s,std::string($2.ir.tmp), "-" , "1");
+		//t' = t0 + 1
+		$$.ir.tmp = strdup(s.c_str());
+		$$.ir.code = strdup(g.c_str());
 	}
 	| unary_operator cast_expression{
+		//deref.
+
+
 		char *ptr = "*";
 		if(eq($1.type, ptr) == true){
 			//we have to dereference
@@ -335,6 +440,17 @@ unary_expression
 			$$.type = $2.type;
 		}
 		}
+		
+		if(eq($1.type,"+") == true){
+			$$.ir.code = strdup($2.ir.code);
+			$$.ir.tmp = strdup($2.ir.tmp);
+		}
+		else{
+			$$.ir.tmp = strdup(irgen.new_temp().c_str());
+			string s = irgen.add_unary(string($$.ir.tmp), string($1.type),string($2.ir.tmp));
+			string fin = irgen.concatenate($2.ir.code , s);
+			$$.ir.code = strdup(fin.c_str());
+		}
 		$$.name = $2.name;
 		$$.kind = $2.kind;
 
@@ -342,6 +458,7 @@ unary_expression
 	| SIZEOF unary_expression{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		
 	}
 	| SIZEOF '(' type_name ')'{
 		$$.type = "INT";
@@ -375,13 +492,23 @@ cast_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
+		
 	}
 	| '(' type_name ')' cast_expression{
-		//TYPECASTINGGGG
-		//ABSTRACT HOJAYE TOH YE BHI DONEEEE
+		//explicit typecast
+		if(!ts.contains(std::string($2.type))){
+			yyerror("the following type is not a valid type");
+		}
+		else if(contains($2.type,"enum") || contains($2.type,"class") || contains($2.type,"struct") || contains($2.type,"union")){
+			yyerror("the following type is not a valid type");
+		}
+		printf("\n\n%s\n\n",$2.type);
 		$$.type = $2.type;
 		$$.kind = $4.kind;
+		$$.ir.tmp = strdup($4.ir.tmp);
+		$$.ir.code = strdup($4.ir.code);
 	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
@@ -391,16 +518,60 @@ multiplicative_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| multiplicative_expression '*' cast_expression {
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+		
+		// Checking for pointer as '*' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		
+		
 	}
 	| multiplicative_expression '/' cast_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// Checking for pointer as '/' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		
 	}
 	| multiplicative_expression '%' cast_expression{
-		check_type($1.type, $3.type, "incompatible type expression involved in %: ");
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// Checking for pointer as '/' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
+			char *err = "both operands must be int, int but are ";
+        	err = concat(err,$1.type);
+        	err = concat(err,  $3.type);
+        	yyerror(err);
+		}
+		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -409,13 +580,75 @@ additive_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| additive_expression '+' multiplicative_expression{
-		check_type($1.type, $3.type, "incompatible type expression involved in + : ");
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// In case of '+' one pointer and other int is allowed
+		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		else if(ts.hasPointer(type1)){
+			if(!(type2=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type1.c_str());
+			}
+		}
+		else if(ts.hasPointer(type2)){
+			if(!(type1=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type2.c_str());
+			}
+		}
+		else{
+			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
+			$$.type = $1.type; 
+		}
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+
 	}
 	| additive_expression '-' multiplicative_expression{
-		check_type($1.type, $3.type,"incompatible type expression involved in - : ");
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// In case of '+' one pointer and other int is allowed
+		if(ts.hasPointer(type1) && ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+		else if(ts.hasPointer(type1)){
+			if(!(type2=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type1.c_str());
+			}
+		}
+		else if(ts.hasPointer(type2)){
+			if(!(type1=="INT")){
+				yyerror("invalid operands to binary");
+			}
+			else{
+				$$.type = strdup(type2.c_str());
+			}
+		}
+		else{
+			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
+			$$.type = $1.type; 
+		}
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -425,25 +658,40 @@ shift_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
+		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	| shift_expression LEFT_OP additive_expression{
-		//NEWWWW
-		
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err,  $3.type);
-        yyerror(err);
+        	yyerror(err);
 		}
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<<"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| shift_expression RIGHT_OP additive_expression{
-		//NEWWW
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
         yyerror(err);
 		}
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">>"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -453,18 +701,52 @@ relational_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| relational_expression '<' shift_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression '>' shift_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression LE_OP shift_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| relational_expression GE_OP shift_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -472,14 +754,31 @@ equality_expression
 	: relational_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| equality_expression EQ_OP relational_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("=="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| equality_expression NE_OP relational_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("!="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -489,14 +788,29 @@ and_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| and_expression '&' equality_expression {
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// Checking for pointer as '&' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in & must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -506,14 +820,29 @@ exclusive_or_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| exclusive_or_expression '^' and_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// Checking for pointer as '^' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in ^ must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("^"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -523,14 +852,29 @@ inclusive_or_expression
 		$$.ir.tmp = $1.ir.tmp;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
+		// Checking for pointer as '|' in pointers not valid 
+		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
+			yyerror("invalid operator to pointers");
+		}
+
 		if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 			char *err = "both operands in | must be int, int but are ";
         	err = concat(err,$1.type);
         	err = concat(err, $3.type );
-        yyerror(err);
+        	yyerror(err);
 		}
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("|"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -540,9 +884,19 @@ logical_and_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_and_expression AND_OP inclusive_or_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&&"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -552,9 +906,19 @@ logical_or_expression
 		$$.kind = $1.kind;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.name = $1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_or_expression OR_OP logical_and_expression{
+		std::string type1,type2 ;
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+
 		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
+		$$.type = "INT";
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("||"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	;
 
@@ -562,8 +926,9 @@ conditional_expression
 	: logical_or_expression {
 		$$.type = $1.type;
 		$$.kind = $1.kind;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| logical_or_expression '?' expression ':' conditional_expression {
 		//DO WE NEED TYPE CHECKING HERE? I DOUBT IT
@@ -575,67 +940,94 @@ assignment_expression
 		$$.type = $1.type;
 		$$.kind = $1.kind;
 		$$.name = $1.name;
-		$$.ir.tmp = $1.ir.tmp;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| unary_expression assignment_operator assignment_expression {
-		if(contains($1.kind,"PROCEDURE")){
-			yyerror("Cannot assign to a function type ( )");
-		}
+		// the left of the declarator muse be lvalue;
+		lvalueError($1.kind);
+
+		// If a procedure then must be called procedure
+		if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
+
+		// Removing const and static
+		std::string type2 = ts.prepareString(std::string($3.type));
+		$3.type = strdup(type2.c_str());
+		// Removing static
+		char* original = $1.type;
+		std::string s = ts.removeStaticFromDeclaration(std::string($1.type));
+		$1.type = strdup(s.c_str());
+
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
-			char *err = "both operands must be int, int in ";
-			err = concat(err, $2.type);
-			err = concat(err, "but are: ");
-        	err = concat(err,$1.type);
-        	err = concat(err, $3.type );
-       	 yyerror(err);
+				char *err = "both operands must be int, int in ";
+				err = concat(err, $2.type);
+				err = concat(err, "but are: ");
+				err = concat(err,$1.type);
+				err = concat(err, $3.type );
+				yyerror(err);
+			}
+			else if(contains($1.type,"CONST")){
+				yyerror("const variable cannot be re-assigned");
 			}
 		}
 		else{
+			// case if enum 
 			if(contains($1.type,"enum")){
 				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+				if(contains($1.type,"CONST")){
+					yyerror("const variable cannot be re-changed");
+				}
+				// ONLY INT TYPE VALUES CAN BE ASSIGNED 
 				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if(eq($3.type,"INT")){}
-					else{
-						yyerror("incompatible types when assigning to type 'enum'");
+					if(!eq($3.type,"INT")){
+						yyerror("incompatible types when assigning to type \'enum\'");
 					}
 				}
 				else{
+					yyerror("invalid assignment in enum");
+				}
+			}
+			else if(eq($1.type,"auto")){
+				st.lookup(std::string($1.name))->type = std::string($3.type);
+				original = $3.type;
+			}
+			else if(contains($1.type,"CONST")){
+				if(ts.hasPointer($1.type)){
+					if(!eq($2.type,"=")){
+						yyerror("invalid pointer operation");
+					}
+				}
+				else{
+					yyerror("const variable cannot be re-assigned");
+				}
+			}
+			else{
+				if(!isConvertible(std::string($1.type),std::string($3.type))){
 					char* s1 = "incompatible type expression involved in";
 					s1 = concat(s1,$2.type);
 					s1 = concat(s1," : ");
 					check_type($1.type, $3.type,s1);
 				}
-			}
-			else if(eq($1.type,"auto")){
-				st.lookup(std::string($1.name))->type = std::string($3.type);
-				if(contains($3.kind,"PROCEDURE")){
-					if(eq($3.kind,"PROCEDURE")){
-
-					}
-					else{
-						yyerror("Cannot assign function to a variable");
-					}
-				}
-			}
-			else if(contains($1.type,"CONST")){
-				if(!ts.hasPointer(std::string($1.type))){
-					yyerror("const variable cannot be re-changed");
-				}
-			}
-			else{
-				char* s1 = "incompatible type expression involved in";
-				s1 = concat(s1,$2.type);
-				s1 = concat(s1," : ");
-				check_type($1.type, $3.type,s1);
+				
 			}
 			
 		}
+
+		if(eq($1.type,"=") == true){
+			$$.ir.code = strdup(irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp)).c_str());
+		}
+		else{
+			std::string s = $2.type;
+			s.pop_back();
+			$$.ir.code = strdup(irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)).c_str());
+		}
+		$$.type = original ;
 	}
 	;
 
 assignment_operator
-	: '='
+	: '=' {$$.type = "=";}
 	| MUL_ASSIGN {$$.type = "*=";}
 	| DIV_ASSIGN {$$.type = "/=";}
 	| MOD_ASSIGN {$$.type = "%=";}
@@ -652,8 +1044,12 @@ expression
 	: assignment_expression {
 		$$.type=$1.type;
 		$$.name=$1.name;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
-	| expression ',' assignment_expression
+	| expression ',' assignment_expression {
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+	}
 	;
 
 constant_expression
@@ -661,50 +1057,71 @@ constant_expression
 	;
 
 declaration
-	: declaration_specifiers ';'
+	: declaration_specifiers ';'{
+		$$.ir.code = strdup($1.ir.code);
+	}
 	| declaration_specifiers init_declarator_list ';'{
+		printf("\n\n%s\n\n",$2.name);
+		std::cout<<"HELL"<<std::endl;
 		printf("\n\n%s\n\n",$2.type);
-		// this one is for checking for declaration of const
+		// saving the static varibles in a map in TypeSet ts
+		if(contains($1.type,"static")){
+			ts.addStaticVariable(currFunc,std::string($2.name));
+		}
+		
+		char* tocheck1 = "struct";
+		char* tocheck2 = "class";
+		char* tocheck3 = "union";
+		char* tocheck4 = "enum";
+	
+		// this one is for const that is declared(handling this case explicity)
 		if(contains($2.type,"declared")){
-
+			
+			if(((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
+				st.declare_struct_variables(std::string($1.type),std::string($2.name));
+			}
+			// here we are changing the offset and size for declaration;
+			st.updateVariableTypes(std::string($2.name),std::string($2.type));
 		}
 		else{
+			// adding typedef to the TypeSet ts
 			if(contains($1.type,"typedef")){
 				ts.addTypedef(std::string($2.name),std::string($1.type));
+				st.update_symbol_sizes(std::string($2.name),0);
 			}
+			// for non typedef that means declarations
 			else{
+				
+				// checking if a valid type or not
 				if(ts.contains(std::string($1.type))){
-					if(!ts.hasPointer(std::string($1.type))){
-						if(!ts.isValidConstDeclaration(std::string($1.type))){
-							yyerror("duplicate \'const\'");
-						}
-						else if (ts.oneConst(std::string($1.type))){
+					
+					// if valid then checking if a const variable
+					if(contains($1.type,"CONST")){
+						// for const pointer, struct ,enum,union can be Undeclared as well
+						// need to check if pointer, struct ,enum , union
+						if( (contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)) || (contains(($1.type),tocheck4)) ){}
+						else if((!ts.hasPointer(std::string($2.type)))){
+							// for for const otherwise
 							yyerror("uninitialized const variable");
 						}
+						
 					}
-					if(classDef){
-
+					// this one checks if struct,union,class is being declared then initialize its members as well;
+					if((!classDef)  && ((contains(($1.type),tocheck1)) || (contains(($1.type),tocheck2)) || (contains(($1.type),tocheck3)))){
+						
+						
+						st.declare_struct_variables(std::string($1.type),std::string($2.name));
 					}
-					else{
-						char* tocheck = "struct";
-						if(contains(($1.type),tocheck)){
-							st.declare_struct_variables(std::string($1.type),std::string($2.name));
-						}
-						tocheck = "class";
-						if(contains(($2.type),tocheck)){
-							st.declare_struct_variables(std::string($1.type),std::string($2.name));
-						}
-						tocheck = "union";
-						if(contains(($1.type),tocheck)){
-							st.declare_struct_variables(std::string($1.type),std::string($2.name));
-						}
-					}
+				
+					// finally here also we we are updating the offset and size;
+					st.updateVariableTypes(std::string($2.name),std::string($2.type));
 				}
 				else{
 					yyerror("Specified type declaration not allowed");
 				}
 			}
 		}
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($2.ir.code)).c_str());
 	}
 	| declaration_specifiers error { yyerrok; }
     | declaration_specifiers init_declarator_list error {yyerrok;}
@@ -712,17 +1129,26 @@ declaration
 
 declaration_specifiers
 	: storage_class_specifier declaration_specifiers
-	      { /* You may choose to ignore storage class in the complete type, or handle it separately. */
+	    {
 			char *combined = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
               sprintf(combined, "%s %s", $1.type, $2.type);
               $$.type = combined;
               currentType = $$.type;
               free($1.type);
               free($2.type);
-		   }
+
+				printf("\n\n%s\n\n",combined);
+
+			  if(ts.storagespecifercount(std::string($$.type))>=2){
+					yyerror("Multiple storage class specifiers not allowed");
+			  }
+			  $$.ir.code = "";
+
+		}
 	| storage_class_specifier{
 		$$.type = $1.type;
         currentType = $$.type;
+		$$.ir.code = "";
 	}
 	| type_specifier declaration_specifiers
 	      {
@@ -732,10 +1158,12 @@ declaration_specifiers
               sprintf(combined, "%s %s", $1.type, $2.type);
               $$.type = combined;
               currentType = $$.type; /* Update the global currentType */
+			$$.ir.code = "";
           }
 	| type_specifier 
 	      { 
               $$.type = $1.type; 
+			  $$.ir.code = "";
               currentType = $$.type; 
           }
 	| type_qualifier declaration_specifiers
@@ -748,106 +1176,152 @@ declaration_specifiers
 			*/
 			$$.type = combined;
 			currentType = $$.type; 
+			if((ts.constCount(std::string(combined)) > 1)){
+				yyerror("duplicate \'const\'");
+			}
+			// const auto is an invalid type
+			if(eq(combined,"CONST auto")){
+				yyerror("type defaults to 'int'");
+			}
+			$$.ir.code = "";
 		}
 	| type_qualifier
 	      { $$.type = $1.type; 
 		  currentType = $$.type;
+		  $$.ir.code = "";
 		  }
-	| declaration_specifiers '&'
+	| declaration_specifiers '&'{
+
+		$$.ir.code = "";
+	
+	}
 	;
 
 
 init_declarator_list
 	: init_declarator {
 		$$.name = $1.name;
-		$$.type=$1.type;
+		$$.type = $1.type;
+		$$.ir.code = strdup($1.ir.code);
+		
+		
 	}
 	| init_declarator_list ',' init_declarator {
 		$$.name = concat($1.name,$3.name);
-		$$.type=$1.type;
+		$$.type = $1.type;
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 	}
 	;
 
 init_declarator
 	: declarator '=' initializer {
-			printf("\n%s\n%s\n",$1.type,$3.type);
-		if(eq($1.type , $3.type) == false){
-			if(eq($1.type,"auto")){
-				st.lookup(std::string($1.name))->type = std::string($3.type);
-				if(contains($3.kind,"PROCEDURE")){
-					if(eq($3.kind,"PROCEDURE")){
-						//int a = f();
-					}
-					else{
-						yyerror("Cannot assign function to a variable");
-					}
-				}
-			}
-			else if(contains($1.type,"enum")){
-				printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
-				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if(eq($3.type,"INT")){}
-					else{
-						yyerror("incompatible types when assigning to type 'enum'");
-					}
-				}
-				else{
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$3.type);
-					s1 = concat(s1," : ");
-					check_type($1.type, $3.type,s1);
-				}
-			}
-			else if(contains($1.type,"CONST")){
-				if(!ts.hasPointer(std::string($1.type))){
-					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($1.type)).c_str());
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$3.type);
-					s1 = concat(s1," : ");
-					check_type(matchingType, $3.type,s1);
+		// the left of the declarator muse be lvalue;
+			lvalueError($1.kind);
+
+			// If a procedure then must be called procedure
+			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
+
+			//remove static
+			std::string t = ts.removeStaticFromDeclaration(std::string($1.type));
+			char* temp = strdup(t.c_str());
+
+			// remove static and const
+			t = ts.removeStaticFromDeclaration(std::string($3.type));
+			char* temp2 = strdup(t.c_str());
+
+			printf("\n%s\n%s\n",temp,temp2);
+
+
+			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
+			if(eq(temp2 , temp) == false){
+				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
+				if(eq($1.type,"auto")){
+					st.lookup(std::string($1.name))->type = std::string($3.type);
+					$$.type = $3.type;
+				} 
+				// CASE OF ENUM
+				else if(contains(temp,"enum")){
 					$$.type = $1.type;
-					$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+
+					printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
+					// ENUM CAN BE INITIALIZED BY ENUM_CONST , IDENTIFIER , CONST 
+					if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+						// ONLY INT TYPE VALUES CAN BE ASSIGNED 
+						std::string tmp = ts.removeConstFromDeclaration(std::string(temp));
+						temp = strdup(tmp.c_str());
+						if(eq(temp2,"INT")){
+							// CHECKING IF IT IS A CONST ENUM
+							if(contains(temp,"CONST")){
+								$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+							}
+						}
+						else{
+							yyerror("incompatible types when assigning to type 'enum'");
+						}
+					}
+					else{
+						yyerror("enum must be initialized with INT");
+					}
 				}
-			}
-			else if(contains($3.type,"CONST")){
-				if(!ts.hasPointer(std::string($3.type))){
-					char* matchingType = strdup(ts.removeConstFromDeclaration(std::string($3.type)).c_str());
-					char* s1 = "incompatible type expression involved in";
-					s1 = concat(s1,$1.type);
-					s1 = concat(s1," : ");
-					check_type(matchingType, $1.type,s1);
+				// Case if declarator has const
+				else if(contains(temp,"CONST")){
+					$$.type = $1.type;
+					char* matchingType1 = strdup(ts.removeConstFromDeclaration(std::string(temp)).c_str());
+					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
+					printf("\n%s\n%s\n",matchingType1,matchingType2);
+					if(ts.hasPointer(std::string(matchingType1)) || ts.hasPointer(std::string(matchingType2))){
+						check_type(matchingType1, matchingType2, "incompatible type involved : ");
+					}
+					else if(isConvertible(std::string(matchingType1),std::string(matchingType2))){
+						$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+					}
+					else {
+						yyerror("invalid assignment");
+					}
+					
 				}
+				// all other cases
+				else{
+					char* matchingType1 = strdup(ts.removeConstFromDeclaration(std::string(temp)).c_str());
+					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
+					if(!isConvertible(matchingType1,matchingType2)){
+						char *err = "incompatible type declaration: ";
+						err = concat(err,$1.type);
+						err = concat(err, $3.type);
+						yyerror(err);
+					}
+					
+					$$.type = $1.type;
+				}	
 			}
 			else{
-				char *err = "incompatible type declaration: ";
-				err = concat(err,$1.type);
-				err = concat(err, $3.type);
-				yyerror(err);
-			}	
-		}
-		else{
-			printf("\n%s\n%s\n",$1.kind,$3.kind);
-			if($1.type == "PROCEDURE"){
-				std::string err = "cannot declare procedure with = ";
-				yyerror(err.c_str());
-			}
-			else if(contains($3.kind,"PROCEDURE")){
 				
-				if(eq($3.kind,"PROCEDURE")){
-
-				}
-				else{
+				// IF THE TYPES ARE SAME
+				printf("\n%s\n%s\n",$1.kind,$3.kind);
+				$$.type = $1.type;
+				
+				
+				
+				
+				// If a porcedure then must be called procedure
+				if(isPROCEDURE($3.kind)){
 					yyerror("Cannot assign function to a variable");
 				}
-			}
-			else{
-				gen.emit_assign(std::string($1.ir.tmp), std::string($3.ir.tmp));
-			}
-		}	
+				else if(contains($1.type,"CONST")){
+					$$.type = concat($$.type, "declared");
+				}
+			}	
+			//IR GEN
+
+				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
+				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
+				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
+			
 	}
 	| declarator {
-		$$.name=$1.name;
-		$$.type=$1.type;
+		$$.name = $1.name;
+		$$.type = $1.type;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -855,7 +1329,7 @@ storage_class_specifier
 	: TYPEDEF	{ $$.type = strdup("typedef"); }/* identifiers must be flagged as TYPEDEF_NAME */
 	| EXTERN { $$.type = strdup("extern"); }
 	| STATIC { $$.type = strdup("static"); }
-	| AUTO { $$.type = strdup("auto"); }
+	| AUTO { $$.type = strdup("auto"); yyerror("auto is not allowed"); }
 	| REGISTER { $$.type = strdup("register"); }
 	;
 
@@ -1033,8 +1507,13 @@ struct_declaration
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list
-	| type_specifier
+	: type_specifier specifier_qualifier_list {
+		$$.type = $1.type;
+		$$.type = concat($$.type,$2.type);
+	}
+	| type_specifier{
+		$$.type = $1.type;
+	}
 	| type_qualifier specifier_qualifier_list
 	| type_qualifier
 	;
@@ -1066,17 +1545,20 @@ enum_specifier
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
+		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
+		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
       }
     | ENUM IDENTIFIER { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
           sprintf(tmp, "enum %s", $2.type);
           $$.type = tmp;
+		  ts.addEnum(std::string($2.type));
       }
     ;
 
@@ -1105,8 +1587,8 @@ declarator
 		  st.token_table_[idx].token_type += std::string($1.type);
 		  //$2.name is name of id
 		  $$.name = $2.name;
-		  
 		  st.lookup(std::string($2.name))->type = st.token_table_[idx].token_type;
+		  std::cout<<"HELLO"<<std::endl;
 		  $$.type = strdup(st.token_table_[idx].token_type.c_str());
 		  if (strstr(newtype, "typedef") != NULL){
             char *temp = new char[st.token_table_[idx].token.size()+1];
@@ -1115,13 +1597,20 @@ declarator
 		  }
           $$.index = idx;
 		  $$.kind = $2.kind;
+		  // for now const after * not allowed
+		  if(ts.hasConstAfterStar(std::string($$.type))){
+				yyerror("const after * not allowed");
+		  }
+		  $$.ir.tmp = strdup($2.ir.tmp);
+		  $$.ir.code = strdup($2.ir.code);
       }
 	| direct_declarator {
 		 $$.index = $1.index;
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
 		 $$.name = $1.name;
-		 $$.ir.tmp = $1.ir.tmp;
+		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = strdup($1.ir.code);
 		  }
 	;
 
@@ -1134,6 +1623,10 @@ direct_declarator
 			yyerror(err.c_str());
 		}
 		else{
+			$$.index = st.token_table_.size() ;
+		$$.type = currentType;
+		$$.kind = "IDENTIFIER";
+		$$.name = $1.type;
 			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
 			if(classDef==1){
 				if(isPri==1){
@@ -1146,61 +1639,72 @@ direct_declarator
 					proMem += " " + std::string($1.type);
 				}
 			}
-		$$.ir.tmp = $1.type;
-        $$.index = st.token_table_.size() - 1;
-		$$.type = currentType;
-		$$.kind = "IDENTIFIER";
-		$$.name = $1.type;
+			else{
+				
+				
+			}
 		}
-        
+		
+		
+        $$.ir.tmp = strdup($$.name);
+		$$.ir.code = "";
     }
 	| '(' declarator ')' {
 		 $$.index = $2.index;
 		$$.name = $2.name;
+		$$.ir.tmp = strdup($2.ir.tmp);
+		$$.ir.code = strdup($2.ir.code);
 	 }
 	| direct_declarator '[' ']'{
-          int idx = $1.index;
-          char newType[256];
-          sprintf(newType, "%s*",st.token_table_[idx].token_type);
-           st.token_table_[idx].token_type += "*";
-		   $$.name = $1.name;
-		   st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-			$$.type = strdup(st.token_table_[idx].token_type.c_str());
-		  if (strstr(newType, "typedef") != NULL){
-            char *temp = new char[st.token_table_[idx].token.size()+1];
-            std::strcpy(temp,st.token_table_[idx].token.c_str());
-			update_symtab(temp);
-			
-		  }
-          $$.index = idx;
+		int idx = $1.index;
+		char newType[256];
+		sprintf(newType, "%s*",st.token_table_[idx].token_type);
+		st.token_table_[idx].token_type += "*";
+		$$.name = $1.name;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		$$.type = strdup(st.token_table_[idx].token_type.c_str());
+		st.update_array_dimensions(std::string($1.name),0,std::string($$.type));
+		if (strstr(newType, "typedef") != NULL){
+		char *temp = new char[st.token_table_[idx].token.size()+1];
+		std::strcpy(temp,st.token_table_[idx].token.c_str());
+		update_symtab(temp);
+		
+		}
+		$$.index = idx;
+		$$.ir.code = strdup($1.ir.code);
+		$$.ir.tmp = strdup($1.ir.tmp);
       }
 	| direct_declarator '[' assignment_expression ']'{
 			if($3.type == "INT" && $3.kind == "CONST"){
 				 int idx = $1.index;
-          char newType[256];
-          sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
-		  $$.name = $1.name;
-          
-         st.token_table_[idx].token_type += "*";
-		 st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		 $$.type = strdup(st.token_table_[idx].token_type.c_str());
-		  if (strstr(newType, "typedef") != NULL){
-			char *temp = new char[st.token_table_[idx].token.size()+1];
-            std::strcpy(temp,st.token_table_[idx].token.c_str());
-			update_symtab(temp);
-		  }
-          $$.index = idx;
+          	char newType[256];
+          	sprintf(newType, "%s*", st.token_table_[idx].token_type, $3.type);
+		  	$$.name = $1.name;
+			st.token_table_[idx].token_type += "*";
+			st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+			$$.type = strdup(st.token_table_[idx].token_type.c_str());
+			printf("\n\n%s\n\n%s\n\n",$$.type,$3.name);
+
+			// here we are updating the size and offset for array declaration (already made a check in updateVariableTypes so that its implementation doesn't clash )
+			st.update_array_dimensions(std::string($1.name),std::stoi(std::string($3.name)),std::string($$.type));
+			if (strstr(newType, "typedef") != NULL){
+				char *temp = new char[st.token_table_[idx].token.size()+1];
+				std::strcpy(temp,st.token_table_[idx].token.c_str());
+				update_symtab(temp);
+			}
+			$$.index = idx;
 		}
 		else{
 			std::string err = "declaration must have only integer constants inside: ";
 			yyerror(err.c_str());
 		}
-	
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
       }
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
        int idx = $1.index;  // $1 is now of type int (the token index)
-
+		
 	   	st.token_table_[idx].kind = strdup("PROCEDURE ");
 		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
 		newkind = concat(newkind,$3.type);
@@ -1217,6 +1721,20 @@ direct_declarator
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
 			yyerror("Specified function return type not allowed");
 		}
+		std::cout<<"\n\n"<<std::string($3.name)<<"\n\n";
+		// here we are having 3 important steps 
+		// 1. update the identifier kind to PARAMETER
+		// 2. update the PARAMETER sizes to 0 and change offset
+		// 3. update the size of procedure to 0 since it is called 
+		st.changeToParameter(std::string($3.name));
+		st.updateParameterSizes();
+		st.updateProcedureSize(std::string($$.name));
+		
+		string label = irgen.new_label();
+		string cd = irgen.add_label(label);
+		$$.ir.code = strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
+		$$.ir.tmp = strdup($1.ir.tmp);
+
     }
 	| direct_declarator '('   ')'  {
        int idx = $1.index;
@@ -1227,16 +1745,22 @@ direct_declarator
 		$$.kind = strdup("PROCEDURE ( )");
 		$$.index = idx;
 		$$.name = $1.name;
+		
 	   	currFunc = std::string($$.name);
 		std::cout<<"\n\n"<<currFunc<<"\n\n";
 		if(!ts.contains(st.lookup(std::string($1.name))->type)){
 			yyerror("Specified function return type not allowed");
 		}
-
-	   
+		// since no parameter_list so directly updating procedure size to 0
+		st.updateProcedureSize(std::string($$.name));
+		
+		string lb = irgen.new_label();
+		string cd = irgen.add_label(lb);
+		$$.ir.code = strdup(cd.c_str());
+	   $$.ir.tmp  =strdup($1.ir.tmp);
     }
 	| direct_declarator '('  identifier_list ')'{
-
+		//NOW GIVES ERROR
 		//K&R style function, can remove it
        	int idx = $1.index;
     	st.token_table_[idx].token_type = strdup(currentType);
@@ -1247,6 +1771,9 @@ direct_declarator
 	   	$$.kind = strdup("PROCEDURE");
        	$$.index = idx;
 	   	$$.name = $1.name;
+		$$.ir.code ="";
+		$$.ir.tmp = $1.ir.tmp;
+		yyerror("K&R Style function definition not allowed");
     }
 	| direct_declarator '[' assignment_expression error {
           /* Catch an invalid array declaration (missing ']'). 
@@ -1293,16 +1820,23 @@ type_qualifier_list
 parameter_type_list
 	: parameter_list{  //Progation of type
 		$$.type = $1.type;
+		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
 parameter_list
 	: parameter_declaration{ //Progation of type
 		$$.type = $1.type;
+		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
 	}
 	| parameter_list ',' parameter_declaration { // Concatenate the types
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
+		char* newname = concat($1.name,$3.name);
+		$$.name = newname;
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 	}
 	;
 
@@ -1312,6 +1846,9 @@ parameter_declaration
 			yyerror("parameter type not allowed");
 		}
 		$$.type = $2.type;
+		$$.name = $2.name;
+		string cd = irgen.add_par(string($$.name));
+		$$.ir.code = strdup(cd.c_str());
 	}
 	;
 
@@ -1411,6 +1948,8 @@ initializer
 		$$.type = $1.type;
 		$$.ir.tmp = $1.ir.tmp;
 		$$.kind = $1.kind;
+		$$.ir.tmp = strdup($1.ir.tmp);
+		$$.ir.code = strdup($1.ir.code);
 	}
 	;
 
@@ -1426,42 +1965,91 @@ initializer_list
 	;
 
 statement
-	: labeled_statement
-	|  {st.push_scope();} compound_statement {st.pop_scope();}
-	| expression_statement
-	| selection_statement
-	| iteration_statement
-	| jump_statement
+	: labeled_statement {
+		//doubts in this prodn.
+		$$.ir.code = strdup($1.ir.code);
+	}
+	|  {st.push_scope();} compound_statement {
+		st.pop_scope();
+		$$.ir.code = strdup($2.ir.code);
+		}
+	| expression_statement{
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| selection_statement{
+		$$.ir.code = "";
+	}
+	| iteration_statement{
+		$$.ir.code = "";
+	}
+	| jump_statement{
+		$$.ir.code = "";
+	}
 	;
+
 
 labeled_statement
 	: IDENTIFIER ':'{
+		
 		st.insert_symbol($1.type,"LABEL" , "GOTO LABEL");
-	} statement 
-	| CASE constant_expression ':' statement
-	| DEFAULT ':' statement
-	;
+	} statement {
+		string lb = irgen.new_label();
+		string cd = irgen.add_label(lb);
+		$$.ir.code =strdup(irgen.concatenate(cd,string($4.ir.code)).c_str());
+	}
+	| CASE constant_expression ':' statement {
+		//DOUBT
 
+
+		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
+		//WILL BE USED IN IRGEN FOR SWITCH CASE, ON WHAT CASES TO JUMP TO
+		$$.ir.code = "";
+		
+		//not sure, since  expression is evaluated before any cases
+	}
+	| DEFAULT ':' statement {
+		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
+		//WILL BE USED IN IRGEN FOR SWITCH
+		string lb = irgen.new_label();
+		string cd = irgen.add_label(lb);
+		cd += " DEFAULT CASE";
+		$$.ir.code =strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
+	}
+	;
 compound_statement
-	: '{'   '}' 
-	| '{'  block_item_list '}' 
+	: '{'   '}' {
+		$$.ir.code = "";
+	}
+	| '{'  block_item_list '}' {
+		$$.ir.code = strdup($2.ir.code);
+	}
 	| '{'   block_item_list error {  
      yyerrok;}
 	;
 
 block_item_list
-	: block_item
-	| block_item_list block_item
+	: block_item {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| block_item_list block_item{
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), string($2.ir.code)).c_str());
+	}
 	;
 
 block_item
-	: declaration
-	| statement
+	: declaration {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| statement{
+		$$.ir.code = strdup($1.ir.code);
+	}
 	;
 
 expression_statement
 	: ';'
-	| expression ';'
+	| expression ';' {
+		$$.ir.code = strdup($1.ir.code);
+	}
 	| expression error {yyerrok;}
 	;
 
@@ -1483,12 +2071,7 @@ iteration_statement
 
 jump_statement
 	: GOTO IDENTIFIER ';' {
-		if(st.lookup(std::string($2.type))==NULL){
-			char * message = "label";
-			message = concat(message,$2.type);
-			message = concat(message, "used but not defined");
-			yyerror(message);
-		}
+		st.pushlabel(std::string($2.type));
 	}
 	| CONTINUE ';'
 	| BREAK ';'  
@@ -1499,35 +2082,64 @@ jump_statement
 		}
 	}
 	| RETURN expression ';'{
+		if(contains($2.kind,"PROCEDURE")){
+			if(!eq($2.kind,"PROCEDURE")){
+				yyerror("incompatible return type");
+			}
+		}
 		std::string s = (st.lookup(currFunc)->type);
-		std::string typeExp = std::string($2.type);
+		
 		s = ts.removeConstFromDeclaration(s);
-		std::cout<<typeExp<<std::endl;
-		if(s==typeExp){}
+		s = ts.removeStaticFromDeclaration(s);
+		std::string err = std::string($2.type);
+		if(s==err){}
 		else{
-			yyerror("The return expression has type different from the declared function");
+			if(!isConvertible(err,s)){
+				err += " ";
+				err += s;
+				err += " The return expression has type different from the declared function";
+				yyerror(strdup(err.c_str()));
+			}
+			
 		}
 	}
 	;
 
 Global
-	:  translation_unit 
+	:  translation_unit{
+		if(error_count == 0)irgen.generate($1.ir.code);
+	}
 
 translation_unit
-	: external_declaration
-	| translation_unit external_declaration
+	: external_declaration{
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| translation_unit external_declaration {
+		std::string s = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		$$.ir.code = strdup(s.c_str());
+	}
 	;
 
 
 external_declaration
-	: function_definition
-	| declaration
+	: function_definition {
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| declaration{
+		$$.ir.code = strdup($1.ir.code);
+		
+	}
 	;
 
 function_definition
 	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
 		st.pop_scope();
 		yyerror("Declaration before {} is not allowed");
+		string temp;
+		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,string($3.ir.code));
+		temp = irgen.concatenate(temp,string($5.ir.code));
+		$$.ir.code = strdup(temp.c_str());
 		}
 	| declaration_specifiers  declarator {
 		st.push_scope(std::string(strdup($2.name)));
@@ -1536,14 +2148,29 @@ function_definition
 				yyerror("main must have return type int");
 			}
 		}
+		
 	} 
-	compound_statement {st.pop_scope();}
+	compound_statement {
+		st.pop_scope();
+		if(!st.resolvelabels(std::string($2.name))){
+			yyerror("GOTO label used but not defined");
+		}
+		string temp;
+		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,string($4.ir.code));
+		$$.ir.code = strdup(temp.c_str());
+	}
 	| declaration_specifiers   declarator  error { yyerrok; }
 	;
 
 declaration_list
-	: declaration
-	| declaration_list declaration
+	: declaration{
+		$$.ir.code = strdup($1.ir.code);
+	}
+	| declaration_list declaration {
+		std::string s = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		$$.ir.code = strdup(s.c_str());
+	}
 	;
 
 PushScope
@@ -1573,11 +2200,11 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	
 	st.print_hierarchy();
-	st.print_token_table();
-	st.print_all_scopes();
+	//st.print_token_table();
+	//st.print_all_scopes();
 	//ts.printAllTypes();
-	ts.printTypedefs();
-	gen.generate("output.ir");
+	//ts.printTypedefs();
+	//ts.printStaticVariables();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");

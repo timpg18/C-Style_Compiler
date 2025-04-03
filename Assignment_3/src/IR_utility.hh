@@ -3,34 +3,44 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <unordered_map>
 
-class IRGen {
-    std::vector<std::string> ir_code;
+
+
+class IRGen{
     int temp_counter = 0;
     int label_counter = 0;
-    std::string current_label;
-    
-    struct ArrayInfo {
-        int size;
-        std::string base_name;
-    };
-    
-    std::unordered_map<std::string, ArrayInfo> array_table;
-    
-public:
-    // Temporary and label generation
+    void write_to_file(const std::string& filename, const char* content) {
+        if (content == nullptr) {  // Handle uninitialized or null pointers
+           std::cout <<"\n\nNULL string exists \n\n";
+            return;
+        }
+
+        std::ofstream out(filename); // Opens in "overwrite" mode (truncates file)
+        if (out.is_open()) {
+            out << content;
+        }
+    }
+
+    public:
+    //temporaries and label generation.
     std::string new_temp();
     std::string new_label();
-    
-    // Arithmetic operations
-    std::string emit_add(const std::string& src1, const std::string& src2);
-    std::string emit_sub(const std::string& src1, const std::string& src2);
+    std::string concatenate(std::string s1, std::string s2);
+
+    //Assignment
+    std::string add_op(std::string tmp, std::string s1, std::string op,std::string s2);
+    std::string assign(std::string tmp , std::string s1);
+    std::string add_unary(std::string tmp , std::string op, std::string s1);
 
 
+    //func def
+    std::string add_label(std::string f);
+    std::string add_par(std::string par);
 
-    void emit_assign(const std::string& dest, const std::string& src);
-    void generate(const std::string& filename);
-private:
-    void emit_raw(const std::string& code);
+
+    void generate(const char* s);
+    void print(std::string s);
+
 };

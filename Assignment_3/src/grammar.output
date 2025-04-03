@@ -394,10 +394,10 @@ Terminals, with rules where they appear
     IDENTIFIER <atr> (258) 1 10 20 21 125 126 137 143 144 162 163 164 173 191 192 219 242
     STRING_LIT <atr> (259) 13
     CHAR_LIT <atr> (260) 14
-    I_CONSTANT (261) 6
-    F_CONSTANT (262) 7
-    TRUE (263) 11
-    FALSE (264) 12
+    I_CONSTANT <atr> (261) 6
+    F_CONSTANT <atr> (262) 7
+    TRUE <atr> (263) 11
+    FALSE <atr> (264) 12
     PTR_OP (265) 21
     INC_OP (266) 22 27
     DEC_OP (267) 23 28
@@ -541,7 +541,7 @@ Nonterminals, with rules where they appear
     constant_expression <atr> (121)
         on left: 86
         on right: 157 158 167 220
-    declaration (122)
+    declaration <atr> (122)
         on left: 87 88 89 90
         on right: 227 240 241 251 257 258
     declaration_specifiers <atr> (123)
@@ -670,7 +670,7 @@ Nonterminals, with rules where they appear
     initializer_list <atr> (164)
         on left: 209 210
         on right: 207 210
-    statement (165)
+    statement <atr> (165)
         on left: 211 213 214 215 216 217
         on right: 219 220 221 228 232 233 234 235 236 237 238 239 240 241
     $@6 (166)
@@ -682,16 +682,16 @@ Nonterminals, with rules where they appear
     $@7 (168)
         on left: 218
         on right: 219
-    compound_statement (169)
+    compound_statement <atr> (169)
         on left: 222 223 224
         on right: 213 253 255
-    block_item_list (170)
+    block_item_list <atr> (170)
         on left: 225 226
         on right: 223 224 226
-    block_item (171)
+    block_item <atr> (171)
         on left: 227 228
         on right: 225 226
-    expression_statement (172)
+    expression_statement <atr> (172)
         on left: 229 230 231
         on right: 214 238 239 240 241
     selection_statement (173)
@@ -703,16 +703,16 @@ Nonterminals, with rules where they appear
     jump_statement (175)
         on left: 242 243 244 245 246
         on right: 217
-    Global (176)
+    Global <atr> (176)
         on left: 247
         on right: 0
-    translation_unit (177)
+    translation_unit <atr> (177)
         on left: 248 249
         on right: 129 247 249
-    external_declaration (178)
+    external_declaration <atr> (178)
         on left: 250 251
         on right: 248 249
-    function_definition (179)
+    function_definition <atr> (179)
         on left: 253 255 256
         on right: 250
     $@8 (180)
@@ -721,7 +721,7 @@ Nonterminals, with rules where they appear
     $@9 (181)
         on left: 254
         on right: 255
-    declaration_list (182)
+    declaration_list <atr> (182)
         on left: 257 258
         on right: 253 258
     PushScope (183)

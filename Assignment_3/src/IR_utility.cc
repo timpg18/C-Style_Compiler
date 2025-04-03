@@ -10,34 +10,60 @@ string IRGen::new_label() {
     return "L" + to_string(label_counter++);
 }
 
-void IRGen::emit_raw(const string& code) {
-    if (!current_label.empty()) {
-        ir_code.push_back(current_label + ":");
-        current_label.clear();
+//concatenate codes
+std::string IRGen::concatenate(std::string s1, std::string  s2){
+    if(s1 == "")return s2;
+    if(s2 == "")return s1;
+   string result = s1;
+   result += "\n";
+   result += s2;
+
+    return result; // Caller must free this
+}
+
+
+//assignment operators
+std::string IRGen::add_op(std::string tmp, std::string s1,std::string op, std::string s2){
+    std::string res;
+    res = tmp + " = " + s1 + " " + op + " " + s2;
+    return res;
+}
+
+std::string IRGen::assign(std::string tmp , std::string s1){
+    std::string res;
+    res = tmp +  " = " + s1;
+    return res;
+}
+
+std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
+    std::string res;
+    res = tmp + " = " + op + s1;
+    return res;
+}
+
+
+
+//Function definition stuff
+
+std::string IRGen::add_label(std::string f){
+    std::string res;
+    res = "LABEL " + f + ":";
+    return res;
+}
+
+std::string IRGen::add_par(std::string par){
+    std::string res;
+    res = "PARAM " + par;
+    return res;
+}
+
+void IRGen::generate(const char* s){
+    IRGen::write_to_file("irgen",s);
+}
+void IRGen::print(std::string s){
+    if(s == ""){
+        std::cout <<"NULL STRING \n";
+        return;
     }
-    ir_code.push_back("\t" + code);
-}
-
-// Arithmetic operations
-string IRGen::emit_add(const string& src1, const string& src2) {
-    string temp = new_temp();
-    emit_raw(temp + " = " + src1 + " + " + src2);
-    return temp;
-}
-string IRGen::emit_sub(const std::string& src1, const std::string& src2){
-    string temp = new_temp();
-    emit_raw(temp + " = " + src1 + " - " + src2);
-    return temp;
-}
-
-
-void IRGen::emit_assign(const std::string& dest, const std::string& src) {
-    emit_raw(dest + " = " + src);
-}
-void IRGen::generate(const string& filename) {
-    ofstream out(filename);
-    for (const auto& line : ir_code) {
-        out << line << "\n";
-    }
-    out.close();
+    std::cout <<s <<"\n";
 }
