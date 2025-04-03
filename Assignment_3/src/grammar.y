@@ -90,6 +90,7 @@ std::string currFunc = "";
 %type <atr> init_declarator_list
 %type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
 %type <atr> declaration declaration_list function_definition  block_item compound_statement block_item_list statement expression_statement
+%type <atr> struct_declaration struct_declarator_list struct_declarator
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -166,6 +167,7 @@ constant
 enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER {
 		st.insert_symbol($1.type,"INT" , "ENUM_CONST");
+		st.update_symbol_sizes(std::string($1.type),0);
 	}
 	;
 
@@ -294,9 +296,6 @@ postfix_expression
 			}
 			if(contains($1.type,"*")){
 				yyerror("Pointers dont have members");
-			}
-			if(!ts.hasPointer(std::string($1.type))){
-
 			}
 			$$.type = strdup(st.lookup(s)->type.c_str());
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
@@ -1363,6 +1362,7 @@ class_specifier
 			classDef=1;
 			std::string s = std::string("class ") + std::string(strdup($2.type));
 			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
+			st.update_symbol_sizes(std::string($2.type),0);
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
 			ts.addClass(std::string($2.type));
 		}
@@ -1379,6 +1379,9 @@ class_specifier
         { 
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          	sprintf($$.type, "class %s", $2.type);
+			std::string s = std::string("class ") + std::string($2.type); 
+			int size = st.calculateStructSize(s);
+			st.addTypeSize(s,size);
 		   
 		}
 	| CLASS IDENTIFIER base_clause_opt  
@@ -1472,19 +1475,32 @@ struct_or_union_specifier
 			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
 			if(eq($1.type,"struct")){
 				st.insert_symbol(std::string($2.type),"STRUCT","USER DEFINED");
+				st.update_symbol_sizes(std::string($2.type),0);
 				ts.addStruct(std::string($2.type));
 			}
 			else{
 				st.insert_symbol(std::string($2.type),"UNION","USER DEFINED");
+				st.update_symbol_sizes(std::string($2.type),0);
 				ts.addUnion(std::string($2.type));
 			}
 			st.push_scope(s);
 			}
-		 struct_declaration_list '}' PopScope {
-         /* Named struct/union with body */
-         $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
-         sprintf($$.type, "%s %s", $1.type, $2.type);
-    }
+			struct_declaration_list '}' PopScope {
+			/* Named struct/union with body */
+			$$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
+			sprintf($$.type, "%s %s", $1.type, $2.type);
+			std::string s = std::string(strdup($1.type)) + std::string(" ") + std::string(strdup($2.type));
+			int size =0 ;
+			if(eq($1.type,"struct")){
+				size = st.calculateStructSize(s);
+			}
+			else{
+				size = st.calculateUnionSize(s);
+			}
+			st.addTypeSize(s,size);
+			
+
+		}
 	| struct_or_union IDENTIFIER {
          /* Named struct/union declaration without body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
@@ -1504,7 +1520,10 @@ struct_declaration_list
 
 struct_declaration
 	: specifier_qualifier_list ';'	/* for anonymous struct/union */
-	| specifier_qualifier_list struct_declarator_list ';'
+	| specifier_qualifier_list struct_declarator_list ';'{
+		std::cout<<std::string($1.type)<<"\n"<<std::string($2.name)<<"\n";
+		st.updateVariableTypes(std::string($2.name),std::string($1.type));
+	}
 	;
 
 specifier_qualifier_list
@@ -1515,19 +1534,28 @@ specifier_qualifier_list
 	| type_specifier{
 		$$.type = $1.type;
 	}
-	| type_qualifier specifier_qualifier_list
+	| type_qualifier specifier_qualifier_list {
+		$$.type = $1.type;
+		$$.type = concat($$.type,$2.type);
+	}
 	| type_qualifier
 	;
 
 struct_declarator_list
-	: struct_declarator
-	| struct_declarator_list ',' struct_declarator
+	: struct_declarator{
+		$$.name = $1.name;
+	}
+	| struct_declarator_list ',' struct_declarator {
+		$$.name = concat($1.name,$3.name);
+	}
 	;
 
 struct_declarator
 	: ':' constant_expression
 	| declarator ':' constant_expression
-	| declarator
+	| declarator {
+		$$.type = $1.type;
+	}
 	;
 
 enum_specifier
@@ -1547,6 +1575,7 @@ enum_specifier
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
 		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
+		  st.update_symbol_sizes(std::string($2.type),0);
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
@@ -2206,6 +2235,7 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	//ts.printAllTypes();
 	//ts.printTypedefs();
 	//ts.printStaticVariables();
+	//st.printTypeSizes();
 } else {
 	if(error_count > 0){
 		printf("Errors in LEX stage:\n PARSING FAILED.");
