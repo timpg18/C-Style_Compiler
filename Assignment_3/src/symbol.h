@@ -1101,14 +1101,13 @@ public:
                 result += token;
             }
         }
-        
         return result;
     }
-
+    std::vector<std::unique_ptr<Scope>> scopes_;
 private:
     Scope* global_scope_;
     Scope* current_scope_;
-    std::vector<std::unique_ptr<Scope>> scopes_;
+   
     std::vector<std::string> goto_label ; // labels to be resolved
     // Handle basic types
     std::unordered_map<std::string, int> type_sizes = {

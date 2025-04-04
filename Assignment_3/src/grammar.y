@@ -374,7 +374,26 @@ postfix_expression
 		else{
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
 		}
+		int offset = -1;
+		for (const auto& scope_ptr : st.scopes_) {
+			if(scope_ptr->scope_name == string($1.type)){
+				
+				if(scope_ptr->symbol_map.count(string($3.type)) > 0){
+					offset = scope_ptr->symbol_map[string($3.type)]->offset;
+					//aagaya offset
+					printf("%d \n",offset);
+					break;
+				}
+			}
+		}
+		string tem = string($1.name);
+		tem += "[";
+		string off = std::to_string(offset);
+		tem += off;
+		tem += "]";
+
 		$$.ir.code = strdup($1.ir.code);
+		$$.ir.tmp = strdup(tem.c_str());
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
 		//arrow operator, dereferencing then access
@@ -2301,9 +2320,9 @@ int parserresult = yyparse(); // Parser calls yylex() internally
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	
-	st.print_hierarchy();
+	//st.print_hierarchy();
 	//st.print_token_table();
-	//st.print_all_scopes();
+	st.print_all_scopes();
 	//ts.printAllTypes();
 	//ts.printTypedefs();
 	//ts.printStaticVariables();
