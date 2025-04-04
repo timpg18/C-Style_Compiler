@@ -1,20 +1,8 @@
 LABEL @L0:
-	x = 0
-	h = 0
-	i = 0
-LABEL @L3:
-	$0 = i < 10
-	IF $0 GOTO @L4
-	GOTO @L5
-LABEL @L4:
-	$2 = 3 > 2
-	IF $2 GOTO @L1
-	GOTO @L2
-LABEL @L1:
-	$3 = x
-	x = x + 1
-LABEL @L2:
-	$1 = i
-	i = i + 1
-	GOTO @L3
-LABEL @L5:
+	$0 = 0 * 0
+	$1 = $0 + 1
+	$2 = $1 * 1
+	$3 = $2 + 0
+	$4 = $3 * 2
+	$5 = *k
+	$4 = $5

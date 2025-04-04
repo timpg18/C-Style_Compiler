@@ -240,6 +240,7 @@ postfix_expression
 			if(s[i] == '*')stars++;
 		}
 		vector<int> dim = st.lookup($1.name)->dimensions;
+		string typ = st.lookup($1.name)->type;
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 
 
@@ -249,11 +250,24 @@ postfix_expression
 		int index = dim.size()-stars;
 		//get the index of the next multiplier constant
 		cout <<s <<"\n";
-		printf("%d %d %d \n",dim.size(), stars, index);
 		
-		if(dim.size() == index){
-			yyerror("Cannot index a pointer: ");
+		
+		
+		int ptr_cnt = 0;
+		for(int i=typ.size()-1 ; i>=0;i--){
+			if(typ[i] == '*')ptr_cnt++;
 		}
+		std::cout <<typ <<"\n";
+		printf("%d %d %d \n",dim.size(), stars, ptr_cnt);
+		ptr_cnt -= dim.size();
+		//string s has bache hue type
+		//ie stars
+		
+		if(stars < ptr_cnt){
+			yyerror("cannot index a pointer");
+		}
+	
+		
 		
 		
 		if(eq($1.ir.tmp,$1.name)){
