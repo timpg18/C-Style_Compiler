@@ -39,7 +39,7 @@ class IRGen{
     //func def
     std::string add_label(std::string f);
     std::string add_par(std::string par);
-
+    std::string func_call(std::string name, int param);
     //backpatching
     std::string new_tmp_label();
     std::string create_if_goto(const std::string& condition, const std::string& target_label); // Conditional jump
@@ -49,6 +49,7 @@ class IRGen{
         const std::string& true_label,  // Label to jump to if condition is true
         const std::string& false_label   // Label to jump to if condition is false
     );
+    
 
     void generate(const std::string& code);
     void print(std::string s);

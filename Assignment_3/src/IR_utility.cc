@@ -57,6 +57,14 @@ std::string IRGen::add_par(std::string par){
     return res;
 }
 
+
+std::string IRGen::func_call(std::string name, int param){
+    string res;
+    res = "call " + name + ", ";
+    res += to_string(param);
+    return res;
+}
+
 //backpatching stuff
 std::string IRGen::new_tmp_label() {
     return "@tmp" + std::to_string(tmp_label_counter++);

@@ -320,8 +320,16 @@ postfix_expression
 		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
-		$$.ir.code = strdup($1.ir.code);
+
+		string tmp = irgen.new_temp();
+		string s = string($1.ir.code);
+		string p = irgen.func_call(string($1.name), 0);
+		if(eq($1.type,"VOID") == false)p = irgen.assign(tmp,p);
+		s = irgen.concatenate(s,p);
+		$$.ir.tmp = strdup(tmp.c_str());
 		$$.backpatcher = new BackPatcher();
+		$$.ir.code = strdup(s.c_str());
+
 	}
 	| postfix_expression '(' argument_expression_list ')'{
 		if(eq($1.kind,"CONST")){
@@ -357,8 +365,16 @@ postfix_expression
 		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
-		$$.ir.code = strdup($1.ir.code);
+		
 		$$.backpatcher = new BackPatcher();
+		string tmp = irgen.new_temp();
+		string s = string($1.ir.code);
+		s = irgen.concatenate(s, string($3.ir.code));
+		string p = irgen.func_call(string($1.name), $3.index);
+		if(eq($1.type,"VOID") == false)p = irgen.assign(tmp,p);
+		s = irgen.concatenate(s,p);
+		$$.ir.tmp = strdup(tmp.c_str());
+		$$.ir.code = strdup(s.c_str());
 	}
 	| postfix_expression '.' IDENTIFIER{
 		//STRUCT TYPE CHECKING HANDLED
@@ -459,10 +475,19 @@ postfix_expression
 argument_expression_list
 	: assignment_expression{
 		$$.type = $1.type;
+		
+		string s = irgen.add_par(string($1.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
+		$$.index = 1;
 	}
 	| argument_expression_list ',' assignment_expression{
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
+		string s = string($3.ir.code);
+		string p = irgen.add_par(string($3.ir.tmp));
+		s = irgen.concatenate(s,p);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
+		$$.index = $1.index + 1;
 	}
 	;
 
@@ -1215,6 +1240,7 @@ assignment_expression
 		}
 		
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
+		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
 		$$.backpatcher = new BackPatcher();
 	}
@@ -1516,7 +1542,6 @@ init_declarator
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
-			
 	}
 	| declarator {
 		$$.name = $1.name;
