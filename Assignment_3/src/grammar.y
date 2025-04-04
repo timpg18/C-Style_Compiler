@@ -2316,8 +2316,34 @@ iteration_statement
 		bpneeded = 1;
 
 	}
-	| DO statement WHILE '(' expression ')' ';'
-	| DO statement UNTIL '(' expression ')' ';'
+	| DO statement WHILE '(' expression ')' ';' {
+		std::string label1 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string E_begin = irgen.add_label(label2);
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
+
+		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1;
+	}
+	| DO statement UNTIL '(' expression ')' ';' {
+		std::string label1 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string E_begin = irgen.add_label(label2);
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
+
+		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1;
+	}
 	| FOR '(' PushScope expression_statement expression_statement ')' statement PopScope
 	| FOR '(' PushScope expression_statement expression_statement expression ')' statement PopScope
 	| FOR '(' PushScope declaration expression_statement ')' statement PopScope

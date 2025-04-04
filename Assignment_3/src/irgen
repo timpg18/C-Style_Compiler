@@ -1,19 +1,11 @@
 LABEL @L0:
 	a = 0
-	b = 1
-	$0 = a > b
-	IF $0 GOTO @L3
-	GOTO @L4
-LABEL @L3:
-	$1 = c == d
-	IF $1 GOTO @L1
-	GOTO @L2
 LABEL @L1:
-	x = 1
-	GOTO @L5
+	$0 = a < 100
+	IF $0 GOTO @L2
+	GOTO @L3
 LABEL @L2:
-	x = 2
-	GOTO @L5
-LABEL @L4:
-	x = 3
-LABEL @L5:
+	$1 = a
+	a = a + 1
+	GOTO @L1
+LABEL @L3:
