@@ -1,14 +1,8 @@
 int main(){
-    int x = 0;
-    int h = 0;
-    int i;
-    for (i = 0; i < 10;i++) {
-        if(3>2){
-            x++;
-        }
+    int a = 2;
+    a + 1;
+    if( a + 1 ){
+        a=10;
     }
-    
-    
-    // (a==b)&&(a>b);
-    //return 0;
+
 }
