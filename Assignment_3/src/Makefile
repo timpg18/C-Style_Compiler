@@ -1,7 +1,7 @@
 all: parser
 
 parser: grammar.tab.c lex.yy.c
-	g++ -o parser grammar.tab.c lex.yy.c -ll
+	g++ -w -o parser grammar.tab.c lex.yy.c -ll
 
 grammar.tab.c: grammar.y
 	bison -d -v -t grammar.y

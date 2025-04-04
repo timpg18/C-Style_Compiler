@@ -207,7 +207,9 @@ postfix_expression
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
+		
 		std::cout<<s<<"\n";
+		
 		if(s.back() == '*'){
 			s.pop_back();
 			$$.type = strdup(s.c_str());
@@ -215,7 +217,74 @@ postfix_expression
 		else{
 			yyerror("dereferencing by [ ] invalid");
 		}
-		$$.ir.code = strdup($1.ir.code);
+
+
+		
+		int stars = 0;
+		for(int i=s.size()-1 ; i>=0;i--){
+			if(s[i] == '*')stars++;
+		}
+		vector<int> dim = st.lookup($1.name)->dimensions;
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+
+
+	
+			//not the last case rn.
+			
+		int index = dim.size()-stars;
+		//get the index of the next multiplier constant
+		cout <<s <<"\n";
+		printf("%d %d %d \n",dim.size(), stars, index);
+		
+		if(dim.size() == index){
+			yyerror("Cannot index a pointer: ");
+		}
+		
+		
+		if(eq($1.ir.tmp,$1.name)){
+			//we are just starting array, set t = i*dim;
+			string temp = irgen.new_temp();
+			int n = st.getTypeSize(s);
+			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
+			string cd1 = irgen.add_op(temp, $3.ir.tmp, "*", ss);
+			if(stars > 0)$$.ir.tmp = strdup(temp.c_str());
+			else{
+				string newtemp;
+				newtemp += string($1.name);
+			newtemp += "[";
+			newtemp += temp;
+			newtemp += "]";
+			$$.ir.tmp = strdup(newtemp.c_str());
+			}
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
+		}
+		else{
+			//also add previous temp
+			// we do t' = (told + i)*dim
+			string temp = irgen.new_temp();
+			
+			string cd1 = irgen.add_op(temp, $1.ir.tmp, "+" , $3.ir.tmp); //t1 = told + i
+			string temp2 = irgen.new_temp();
+			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
+			string cd2 = irgen.add_op(temp2, temp, "*" , ss);
+			cd1 += "\n";
+			cd1 += cd2;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
+			if(stars > 0)$$.ir.tmp = strdup(temp2.c_str());
+			else{
+				string newtemp;
+				newtemp += string($1.name);
+				newtemp += "[";
+			newtemp += temp2;
+			newtemp += "]";
+			$$.ir.tmp = strdup(newtemp.c_str());
+			}
+		}
+
+		
+		
+		
+		
 	}
 	| postfix_expression '(' ')'{
 		if(eq($1.kind,"CONST")){
@@ -1043,9 +1112,12 @@ expression
 		$$.name=$1.name;
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.ir.code = strdup($1.ir.code);
+		
 	}
 	| expression ',' assignment_expression {
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		$$.ir.tmp = strdup($3.ir.tmp);
+		
 	}
 	;
 
@@ -1727,6 +1799,7 @@ direct_declarator
 		}
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		
       }
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
@@ -2072,9 +2145,12 @@ block_item
 	;
 
 expression_statement
-	: ';'
+	: ';'{
+		$$.ir.code =  "";
+	}
 	| expression ';' {
 		$$.ir.code = strdup($1.ir.code);
+		
 	}
 	| expression error {yyerrok;}
 	;

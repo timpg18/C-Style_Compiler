@@ -1,4 +1,5 @@
-x = 9
 LABEL L0:
-t0 = -x
-x = t0
+t0 = *p
+t0 = 1
+t1 = &p
+x = t1

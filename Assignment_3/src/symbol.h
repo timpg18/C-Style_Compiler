@@ -1064,6 +1064,46 @@ public:
         std::cout << "Total types: " << type_sizes.size() << "\n\n";
     }
     
+    int getTypeSize(const std::string& type) {
+        // Remove qualifiers (const, volatile, static, etc.)
+        std::string baseType = removeQualifiers((type));
+        
+        // Handle pointers (all pointers have same size)
+        if (baseType.find('*') != std::string::npos) {
+            // Return pointer size (4 for 32-bit, 8 for 64-bit)
+            return sizeof(void*);
+        }
+            
+        // Look up basic types
+        auto it = type_sizes.find(baseType);
+        if (it != type_sizes.end()) {
+            return it->second;
+        }
+    
+        // Default to 4 bytes for unknown types
+        return 4;
+    }
+    
+    std::string removeQualifiers(const std::string& type) {
+        static const std::set<std::string> qualifiers = {
+            "CONST", "VOLATILE", "static", "register", 
+            "extern", "auto", "restrict", "inline",
+            "declared" // in our implementation declared can be present
+        };
+    
+        std::string result;
+        std::istringstream iss(type);
+        std::string token;
+        
+        while (iss >> token) {
+            if (qualifiers.find(token) == qualifiers.end()) {
+                if (!result.empty()) result += " ";
+                result += token;
+            }
+        }
+        
+        return result;
+    }
 
 private:
     Scope* global_scope_;
@@ -1114,47 +1154,7 @@ private:
         return tokens;
     }
 
-    int getTypeSize(const std::string& type) {
-        // Remove qualifiers (const, volatile, static, etc.)
-        std::string baseType = removeQualifiers((type));
-        
-        // Handle pointers (all pointers have same size)
-        if (baseType.find('*') != std::string::npos) {
-            // Return pointer size (4 for 32-bit, 8 for 64-bit)
-            return sizeof(void*);
-        }
-            
-        // Look up basic types
-        auto it = type_sizes.find(baseType);
-        if (it != type_sizes.end()) {
-            return it->second;
-        }
     
-        // Default to 4 bytes for unknown types
-        return 4;
-    }
-    
-    std::string removeQualifiers(const std::string& type) {
-        static const std::set<std::string> qualifiers = {
-            "CONST", "VOLATILE", "static", "register", 
-            "extern", "auto", "restrict", "inline",
-            "declared" // in our implementation declared can be present
-        };
-    
-        std::string result;
-        std::istringstream iss(type);
-        std::string token;
-        
-        while (iss >> token) {
-            if (qualifiers.find(token) == qualifiers.end()) {
-                if (!result.empty()) result += " ";
-                result += token;
-            }
-        }
-        
-        return result;
-    }
-
     void print_scope(Scope* scope, int depth = 0, bool is_last_child = false) const {
         if (!scope) return;
         

@@ -1,5 +1,5 @@
-int x = 9;
-
-int f(){
-   x = -x;
+int main(){
+ int *p;
+ *p = 1;
+ int **x = &p;
 }
