@@ -1,18 +1,17 @@
 int main(){
-    int a,b;
+    int a = 0;
+    int b = 1;
     int c,d,x;
-    a=0;
     if (a > b) {
         if (c == d) {
             x = 1;
-            x++;
-            x++;
         } else {
             x = 2;
         }
-        x++;
     } else {
         x = 3;
     }
-    return 0;
+    
+    // (a==b)&&(a>b);
+    //return 0;
 }
