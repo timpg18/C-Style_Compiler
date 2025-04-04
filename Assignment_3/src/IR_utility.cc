@@ -3,11 +3,11 @@
 using namespace std;
 
 string IRGen::new_temp() {
-    return "t" + to_string(temp_counter++);
+    return "$" + to_string(temp_counter++);
 }
 
 string IRGen::new_label() {
-    return "L" + to_string(label_counter++);
+    return "@L" + to_string(label_counter++);
 }
 
 //concatenate codes
@@ -57,8 +57,40 @@ std::string IRGen::add_par(std::string par){
     return res;
 }
 
-void IRGen::generate(const char* s){
-    IRGen::write_to_file("irgen",s);
+//backpatching stuff
+std::string IRGen::new_tmp_label() {
+    return "@tmp" + std::to_string(tmp_label_counter++);
+}
+
+// Conditional jump: "IF <condition> GOTO <label>"
+std::string IRGen::create_if_goto(const std::string& condition, const std::string& target_label) {
+    return "IF " + condition + " GOTO " + target_label;
+}
+
+// Unconditional jump: "GOTO <label>"
+std::string IRGen::create_goto(const std::string& target_label) {
+    return "GOTO " + target_label;
+}
+
+std::string IRGen::create_conditional_jump(
+    const std::string& condition, 
+    const std::string& true_label, 
+    const std::string& false_label
+) {
+    // Generate "IF <condition> GOTO <true_label>"
+    std::string if_code = create_if_goto(condition, true_label);
+    
+    // Generate "GOTO <false_label>"
+    std::string goto_code = create_goto(false_label);
+    
+    // Combine them into two lines
+    return concatenate(if_code, goto_code);
+}
+
+
+void IRGen::generate(const std::string& code){
+    std::string formatted_code = format_with_tabs(code);
+    IRGen::write_to_file("irgen",formatted_code.c_str());
 }
 void IRGen::print(std::string s){
     if(s == ""){
@@ -66,4 +98,20 @@ void IRGen::print(std::string s){
         return;
     }
     std::cout <<s <<"\n";
+}
+
+std::string IRGen::format_with_tabs(const std::string& code) {
+    std::istringstream input(code);
+    std::ostringstream output;
+    std::string line;
+
+    while (std::getline(input, line)) {
+        // Check if line starts with "LABEL"
+        if (line.find("LABEL ") == 0) {  // 👈 Space after LABEL is intentional
+            output << line << "\n";
+        } else {
+            output << "\t" << line << "\n";  // 👈 Add tab to non-label lines
+        }
+    }
+    return output.str();
 }
