@@ -2181,6 +2181,15 @@ compound_statement
 		$$.ir.code = "";
 	}
 	| '{'  block_item_list '}' {
+
+		// another point for backpatching solving the mentioned problem
+		if(bpneeded == 1){
+			bpneeded = 0;
+			std::string label = irgen.new_label();
+			std::string backpatch_label = irgen.add_label(label);
+			$2.ir.code = strdup($2.backpatcher->backPatchNextList(std::string($2.ir.code),label).c_str());
+			$2.ir.code = strdup(irgen.concatenate(string($2.ir.code),backpatch_label).c_str());
+		}
 		$$.ir.code = strdup($2.ir.code);
 		$$.backpatcher = BackPatcher::copy($2.backpatcher);
 		std::vector<std::string> tmp1 = $2.backpatcher->getNextList();
@@ -2206,6 +2215,9 @@ block_item_list
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
 		std::vector<std::string> tmp1 = $2.backpatcher->getNextList();
 		int size = tmp1.size();
+
+		// one of the spots for backpatching if the incoming has no label in newlist and no backpatching is needed
+		// Problem - must have a statement following the thing to be backpatched (solved)
 		if(size == 0 && bpneeded == 1){
 			std::string backpatch_label = irgen.new_label();
 			std::string S_next = irgen.add_label(backpatch_label);
@@ -2253,15 +2265,18 @@ expression_statement
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement {
-		//back patching
+		// Declaration of all the labels to be used
 		std::string backpatch_label1 = irgen.new_label();
 		std::string backpatch_label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(backpatch_label1);
 		std::string E_false = irgen.add_label(backpatch_label2);
+
+		// Backpatching
 		std::string newIR = $3.backpatcher->backPatchTrueList(std::string($3.ir.code),backpatch_label1);
 		newIR = $3.backpatcher->backPatchFalseList(newIR,backpatch_label2);
 		$3.ir.code = strdup(newIR.c_str());
 
+		// IR GEN
 		std::string S_next = irgen.new_tmp_label();
 		std::string goto_S_next = irgen.create_goto(S_next);
 		$$.ir.code = strdup(irgen.concatenate(string($3.ir.code),E_true).c_str());
@@ -2269,7 +2284,8 @@ selection_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), goto_S_next).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), E_false).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), std::string($7.ir.code)).c_str());
-		//$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), goto_S_next).c_str());
+		
+
 		$$.backpatcher = new BackPatcher();
 		std::vector<string> tmp = $$.backpatcher->merge($5.backpatcher->getNextList(),$7.backpatcher->getNextList());
 		tmp.push_back(S_next);
@@ -2280,11 +2296,16 @@ selection_statement
 
 	}
 	| IF '(' expression ')' statement {
+		// Declaration of all the labels to be used
 		std::string backpatch_label = irgen.new_label();
 		std::string E_true = irgen.add_label(backpatch_label);
+
+		// Backpatching
 		std::string newIR = $3.backpatcher->backPatchTrueList(std::string($3.ir.code),backpatch_label);
 		$3.ir.code = strdup(newIR.c_str());
 
+
+		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($3.ir.code),E_true).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), std::string($5.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
@@ -2298,56 +2319,166 @@ selection_statement
 
 iteration_statement
 	: WHILE '(' expression ')' statement {
+		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(label2);
 		std::string S_next = irgen.new_tmp_label();
 		std::string goto_S_begin = irgen.create_goto(label1);
+
+		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchNextList(std::string($5.ir.code),label1).c_str());
 		$3.ir.code = strdup($3.backpatcher->backPatchTrueList(std::string($3.ir.code),label2).c_str());
 
+		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($3.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_true).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), std::string($5.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), goto_S_begin).c_str());
+
+		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
 		$$.backpatcher->assignNextList($3.backpatcher->getFalseList());
 		bpneeded = 1;
 
 	}
 	| DO statement WHILE '(' expression ')' ';' {
+		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
+
+		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
 
+		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+
+		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
 		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
 		bpneeded = 1;
 	}
 	| DO statement UNTIL '(' expression ')' ';' {
+		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
+
+		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
 
+		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+
+		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
 		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
 		bpneeded = 1;
 	}
-	| FOR '(' PushScope expression_statement expression_statement ')' statement PopScope
-	| FOR '(' PushScope expression_statement expression_statement expression ')' statement PopScope
-	| FOR '(' PushScope declaration expression_statement ')' statement PopScope
-	| FOR '(' PushScope declaration expression_statement expression ')' statement PopScope
+	| FOR '(' PushScope expression_statement expression_statement ')' statement PopScope {
+		// Declaration of all the labels to be used
+		std::string label1 = irgen.new_label();
+		std::string FOR_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label2);
+		std::string Goto_FOR_begin = irgen.create_goto(label1);
+
+		// Backpatching
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+
+		// IR GEN
+		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($7.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+
+		// Progation of nextList
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1 ;
+
+	}
+	| FOR '(' PushScope expression_statement expression_statement expression ')' statement PopScope {
+		// Declaration of all the labels to be used
+		std::string label1 = irgen.new_label();
+		std::string FOR_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label2);
+		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		
+		// Backpatching
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+
+		// IR GEN
+		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($8.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($6.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+
+		// Progation of nextList
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1 ;
+	}
+	| FOR '(' PushScope declaration expression_statement ')' statement PopScope {
+		// Declaration of all the labels to be used
+		std::string label1 = irgen.new_label();
+		std::string FOR_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label2);
+		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		// Backpatching
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+
+		// IR GEN
+		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($7.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+
+		// Progation of nextList
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1 ;
+	}
+	| FOR '(' PushScope declaration expression_statement expression ')' statement PopScope{
+		// Declaration of all the labels to be used
+		std::string label1 = irgen.new_label();
+		std::string FOR_begin = irgen.add_label(label1);
+		std::string label2 = irgen.new_label();
+		std::string S_begin = irgen.add_label(label2);
+		std::string Goto_FOR_begin = irgen.create_goto(label1);
+
+		// Backpatching
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+
+		// IR GEN
+		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($8.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($6.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+
+		// Progation of nextList
+		$$.backpatcher = new BackPatcher();
+		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		bpneeded = 1 ;
+
+
+	}
 	;
 
 jump_statement
@@ -2435,13 +2566,6 @@ function_definition
 		st.pop_scope();
 		if(!st.resolvelabels(std::string($2.name))){
 			yyerror("GOTO label used but not defined");
-		}
-		if(bpneeded == 1){
-			bpneeded = 0;
-			std::string label = irgen.new_label();
-			std::string backpatch_label = irgen.add_label(label);
-			$4.ir.code = strdup($4.backpatcher->backPatchNextList(std::string($4.ir.code),label).c_str());
-			$4.ir.code = strdup(irgen.concatenate(string($4.ir.code),backpatch_label).c_str());
 		}
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));

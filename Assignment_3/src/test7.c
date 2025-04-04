@@ -1,8 +1,13 @@
 int main(){
-    int a = 0;
-    while (a < 100) {
-        a++;
+    int x = 0;
+    int h = 0;
+    int i;
+    for (i = 0; i < 10;i++) {
+        if(3>2){
+            x++;
+        }
     }
+    
     
     // (a==b)&&(a>b);
     //return 0;
