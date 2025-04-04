@@ -11,6 +11,7 @@
 class IRGen{
     int temp_counter = 0;
     int label_counter = 0;
+    int tmp_label_counter = 0;
     void write_to_file(const std::string& filename, const char* content) {
         if (content == nullptr) {  // Handle uninitialized or null pointers
            std::cout <<"\n\nNULL string exists \n\n";
@@ -39,8 +40,18 @@ class IRGen{
     std::string add_label(std::string f);
     std::string add_par(std::string par);
 
+    //backpatching
+    std::string new_tmp_label();
+    std::string create_if_goto(const std::string& condition, const std::string& target_label); // Conditional jump
+    std::string create_goto(const std::string& target_label); // Unconditional jump
+    std::string create_conditional_jump(
+        const std::string& condition, 
+        const std::string& true_label,  // Label to jump to if condition is true
+        const std::string& false_label   // Label to jump to if condition is false
+    );
 
-    void generate(const char* s);
+    void generate(const std::string& code);
     void print(std::string s);
+    std::string format_with_tabs(const std::string& code);
 
 };
