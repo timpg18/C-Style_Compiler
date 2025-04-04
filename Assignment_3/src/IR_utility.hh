@@ -34,12 +34,13 @@ class IRGen{
     std::string add_op(std::string tmp, std::string s1, std::string op,std::string s2);
     std::string assign(std::string tmp , std::string s1);
     std::string add_unary(std::string tmp , std::string op, std::string s1);
-
+    
 
     //func def
     std::string add_label(std::string f);
     std::string add_par(std::string par);
     std::string func_call(std::string name, int param);
+    std::string return_val(std::string temp);
     //backpatching
     std::string new_tmp_label();
     std::string create_if_goto(const std::string& condition, const std::string& target_label); // Conditional jump

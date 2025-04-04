@@ -2000,7 +2000,7 @@ direct_declarator
 		st.updateParameterSizes();
 		st.updateProcedureSize(std::string($$.name));
 		
-		string label = irgen.new_label();
+		string label = string($$.name);
 		string cd = irgen.add_label(label);
 		$$.ir.code = strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
 		$$.ir.tmp = strdup($1.ir.tmp);
@@ -2024,7 +2024,7 @@ direct_declarator
 		// since no parameter_list so directly updating procedure size to 0
 		st.updateProcedureSize(std::string($$.name));
 		
-		string lb = irgen.new_label();
+		string lb = string($$.name);
 		string cd = irgen.add_label(lb);
 		$$.ir.code = strdup(cd.c_str());
 	   $$.ir.tmp  =strdup($1.ir.tmp);
@@ -2268,7 +2268,7 @@ statement
     	delete $1.backpatcher;
 	}
 	| jump_statement{
-		$$.ir.code = "";
+		$$.ir.code = strdup($1.ir.code);
 		$$.backpatcher = new BackPatcher();
 	}
 	;
@@ -2613,14 +2613,22 @@ iteration_statement
 jump_statement
 	: GOTO IDENTIFIER ';' {
 		st.pushlabel(std::string($2.type));
+		$$.ir.code = "";
 	}
-	| CONTINUE ';'
-	| BREAK ';'  
+	| CONTINUE ';'{
+		//do back jumps here
+		$$.ir.code = "";
+	}
+	| BREAK ';'  {
+		//do forward jumps here
+		$$.ir.code = "";
+	}
 	| RETURN ';'  {
 		std::string s = (st.lookup(currFunc)->type);
 		if(s!="VOID"){
 			yyerror("\'return\' with no value, in function returning non-void");
 		}
+		$$.ir.code = "return";
 	}
 	| RETURN expression ';'{
 		if(contains($2.kind,"PROCEDURE")){
@@ -2643,6 +2651,10 @@ jump_statement
 			}
 			
 		}
+		string temp = string($2.ir.tmp);
+		string cd = string($2.ir.code);
+		cd += irgen.return_val(temp);
+		$$.ir.code = strdup(cd.c_str());
 	}
 	;
 

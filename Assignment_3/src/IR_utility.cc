@@ -65,6 +65,12 @@ std::string IRGen::func_call(std::string name, int param){
     return res;
 }
 
+std::string IRGen::return_val(std::string temp){
+string res;
+res = "return " + temp;
+return res;
+}
+
 //backpatching stuff
 std::string IRGen::new_tmp_label() {
     return "@tmp" + std::to_string(tmp_label_counter++);
