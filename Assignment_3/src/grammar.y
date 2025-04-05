@@ -2688,7 +2688,7 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
 		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label();
+		std::string FOR_end = irgen.add_label(label3);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -2720,7 +2720,7 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
 		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label();
+		std::string FOR_end = irgen.add_label(label3);
 		
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -2750,7 +2750,7 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
 		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label();
+		std::string FOR_end = irgen.add_label(label3);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -2779,7 +2779,7 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
 		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label();
+		std::string FOR_end = irgen.add_label(label3);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
