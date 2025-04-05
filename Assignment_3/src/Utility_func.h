@@ -70,6 +70,13 @@ bool is_first_arg_STRING(const char *input) {
     return strncmp(input, "CHAR*", 5) == 0;
 }
 
+bool is_udt(const char*inp){
+    if(contains(inp, "struct") == true || contains(inp,"class") == true||contains(inp,"enum") ==true || contains(inp, "union") == true ){
+        return true;
+    }
+    return false;
+}
+
 bool isPROCEDURE(const char *input){
     return contains(input,"PROCEDURE") && (!eq(input,"PROCEDURE"));
 }

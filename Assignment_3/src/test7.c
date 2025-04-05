@@ -1,17 +1,16 @@
-int main(){
-    int x = (short)2;int z;
-    switch( x>1 ) {
-        case 1 :
-            x++;
-            int y = 10;
-            break;
-        case 2:
-            z = 20;
-            break;
-        default:
-            z = 30;
-            break;
-    }
-    
+struct s{
+    int x;
+    int y;
+};
 
+class myclass{
+public:{
+    int x;
+}
+};
+int main(){
+    struct s *p[20][40];
+    (*p[4][1]).x = 1;
+ 
+    
 }

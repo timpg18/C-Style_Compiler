@@ -386,7 +386,11 @@ postfix_expression
 				newtemp += "[";
 			newtemp += temp2;
 			newtemp += "]";
-			$$.ir.tmp = strdup(newtemp.c_str());
+			
+			if(is_udt($1.type) == true){
+				$$.ir.tmp = strdup(temp2.c_str());
+			}
+			else $$.ir.tmp = strdup(newtemp.c_str());
 			}
 		}
 		$$.backpatcher = new BackPatcher();
@@ -396,7 +400,6 @@ postfix_expression
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
-
 		if(eq($1.name,"printf")){
 			yyerror("too few arguments to function \'printf\'");
 		}
@@ -561,13 +564,16 @@ postfix_expression
 				}
 			}
 		}
+		string t0 = irgen.new_temp();
+		string off = std::to_string(offset);
+		string cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+
 		string tem = string($1.name);
 		tem += "[";
-		string off = std::to_string(offset);
-		tem += off;
+		tem += t0;
 		tem += "]";
-
-		$$.ir.code = strdup($1.ir.code);
+		
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),cd12).c_str());
 		$$.ir.tmp = strdup(tem.c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -2809,7 +2815,7 @@ selection_statement
 		$$.backpatcher->assignNextList($$.backpatcher->merge(vec1,vec2));
 		bpneeded = 1;
 	}
-	| SWITCH '(' expression ')' statement{
+	| SWITCH '(' expression ')'statement{
 		//Type Checking
 		if( (contains($3.type,"INT")) || (contains($3.type,"CHAR")) || (contains($3.type,"SHORT")) || (contains($3.type,"BOOL")) || (contains($3.type,"UNSIGNED INT")) || (contains($3.type,"UNSIGNED CHAR")) || (contains($3.type,"UNSIGNED SHORT"))){}
 		else{
