@@ -1,10 +1,25 @@
 LABEL main:
-	x = 0
+	IF 2 == 0 GOTO @L0
+	GOTO @L2
 LABEL @L0:
-	$0 = x
-	x = x + 1
-LABEL @L1:
-	$1 = x < 100
-	IF $1 GOTO @L0
+	IF 3 == 0 GOTO @L3
 	GOTO @L2
 LABEL @L2:
+	$0 = 1
+	GOTO @L4
+LABEL @L3:
+	$0 = 0
+LABEL @L4:
+	IF 3 == 0 GOTO @L6
+	GOTO @L1
+LABEL @L1:
+	IF 4 == 0 GOTO @L6
+	GOTO @L5
+LABEL @L5:
+	$1 = 1
+	GOTO @L7
+LABEL @L6:
+	$1 = 0
+LABEL @L7:
+	$2 = $0 * $1
+	x = $2

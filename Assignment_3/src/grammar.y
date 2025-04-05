@@ -65,6 +65,40 @@ IRGen irgen;
         EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), end_label).c_str()); \
     } while(0)
 
+#define CONVERT_BOOL_EXPR_TO_VALUE(EXPR)                                                                 \
+    {                                                                                                    \
+        std::vector<std::string> tmpcheck = EXPR.backpatcher->getTrueList();                             \
+        int size = tmpcheck.size();                                                                      \
+        if (size > 0) {                                                                                  \
+            /* Label making */                                                                           \
+            std::string label1 = irgen.new_label();                                                      \
+            std::string True_label = irgen.add_label(label1);                                            \
+            std::string label2 = irgen.new_label();                                                      \
+            std::string False_label = irgen.add_label(label2);                                           \
+            std::string label3 = irgen.new_label();                                                      \
+            std::string False_end = irgen.add_label(label3);                                             \
+            std::string goto_false_end = irgen.create_goto(label3);                                      \
+                                                                                                         \
+            /* Temp assignment for result */                                                             \
+            std::string tmpreg1 = irgen.new_temp();                                                      \
+            EXPR.ir.tmp = strdup(tmpreg1.c_str());                                                       \
+            std::string true_assign = irgen.assign(EXPR.ir.tmp, "1");                                    \
+            std::string false_assign = irgen.assign(EXPR.ir.tmp, "0");                                   \
+                                                                                                         \
+            /* Backpatching */                                                                           \
+            EXPR.ir.code = strdup(EXPR.backpatcher->backPatchTrueList(std::string(EXPR.ir.code), label1).c_str()); \
+            EXPR.ir.code = strdup(EXPR.backpatcher->backPatchFalseList(std::string(EXPR.ir.code), label2).c_str());\
+                                                                                                         \
+            /* Code generation */                                                                        \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), True_label).c_str());     \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), true_assign).c_str());    \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), goto_false_end).c_str()); \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), False_label).c_str());    \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), false_assign).c_str());   \
+            EXPR.ir.code = strdup(irgen.concatenate(std::string(EXPR.ir.code), False_end).c_str());      \
+        }                                                                                                \
+    }
+
 
 TypeSet ts;
 SymbolTable st;
@@ -697,7 +731,7 @@ cast_expression
 			yyerror("the following type is not a valid type");
 		}
 		else if(contains($2.type,"enum") || contains($2.type,"class") || contains($2.type,"struct") || contains($2.type,"union")){
-			yyerror("the following type is not a valid type");
+			yyerror("the following type-conversion is not a valid type");
 		}
 		//printf("\n\n%s\n\n",$2.type);
 		$$.type = $2.type;
@@ -719,6 +753,7 @@ multiplicative_expression
     	delete $1.backpatcher;
 	}
 	| multiplicative_expression '*' cast_expression {
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 		
@@ -728,6 +763,10 @@ multiplicative_expression
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 		
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -736,6 +775,7 @@ multiplicative_expression
 		
 	}
 	| multiplicative_expression '/' cast_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -743,6 +783,11 @@ multiplicative_expression
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
 		}
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
@@ -751,6 +796,7 @@ multiplicative_expression
 		
 	}
 	| multiplicative_expression '%' cast_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -765,6 +811,11 @@ multiplicative_expression
         	yyerror(err);
 		}
 		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -783,6 +834,7 @@ additive_expression
     	delete $1.backpatcher;
 	}
 	| additive_expression '+' multiplicative_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -810,6 +862,11 @@ additive_expression
 			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
 			$$.type = $1.type; 
 		}
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -817,6 +874,7 @@ additive_expression
 
 	}
 	| additive_expression '-' multiplicative_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -844,6 +902,11 @@ additive_expression
 			check_type($1.type, $3.type, "incompatible type expression involved in +: ");
 			$$.type = $1.type; 
 		}
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -862,6 +925,7 @@ shift_expression
     	delete $1.backpatcher;
 	}
 	| shift_expression LEFT_OP additive_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -872,12 +936,18 @@ shift_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<<"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 	}
 	| shift_expression RIGHT_OP additive_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -888,6 +958,11 @@ shift_expression
         yyerror(err);
 		}
 		$$.type = "INT";
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">>"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -906,11 +981,14 @@ relational_expression
     	delete $1.backpatcher;
 	}
 	| relational_expression '<'  shift_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -925,11 +1003,14 @@ relational_expression
 
 	}
 	| relational_expression '>' shift_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -945,11 +1026,14 @@ relational_expression
 		$$.backpatcher->addToFalseList(tmp2);
 	}
 	| relational_expression LE_OP shift_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<="), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -963,11 +1047,14 @@ relational_expression
 		$$.backpatcher->addToFalseList(tmp2);
 	}
 	| relational_expression GE_OP shift_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">="), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -993,11 +1080,14 @@ equality_expression
     	delete $1.backpatcher;
 	}
 	| equality_expression EQ_OP relational_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("=="), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -1011,11 +1101,14 @@ equality_expression
 		$$.backpatcher->addToFalseList(tmp2);
 	}
 	| equality_expression NE_OP relational_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
 		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
 		$$.type = "INT";
+
+		// IR
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("!="), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -1041,6 +1134,7 @@ and_expression
     	delete $1.backpatcher;
 	}
 	| and_expression '&' equality_expression {
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -1056,6 +1150,11 @@ and_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -1074,6 +1173,7 @@ exclusive_or_expression
     	delete $1.backpatcher;
 	}
 	| exclusive_or_expression '^' and_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -1089,6 +1189,11 @@ exclusive_or_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("^"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
@@ -1107,6 +1212,7 @@ inclusive_or_expression
     	delete $1.backpatcher;
 	}
 	| inclusive_or_expression '|' exclusive_or_expression{
+		// Type Checking
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
@@ -1122,6 +1228,11 @@ inclusive_or_expression
         	yyerror(err);
 		}
 		$$.type = "INT";
+
+		// IR
+		CONVERT_BOOL_EXPR_TO_VALUE($1)
+		CONVERT_BOOL_EXPR_TO_VALUE($3)
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("|"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
