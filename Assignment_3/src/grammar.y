@@ -1801,6 +1801,17 @@ struct_or_union_specifier
 		if(st.current_scope_->contains_break_or_continue == true){
 			yyerror("using break/continue invalid in this scope");
 		}
+		if(eq($1.type, "union")){
+			//i need to keep the offset of all internal variables 0 
+			//since all var have same memory location
+				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
+			for(auto &it: st.scopes_.back()->symbol_map){
+				//it.first is variable
+				//it.second->offset is what i need to update
+				it.second->offset = 0;
+				
+			}
+		}
 		st.pop_scope();
 		st.falsekardo();
          /* Anonymous struct or union */
@@ -1829,6 +1840,19 @@ struct_or_union_specifier
 			st.push_scope(s);
 			}
 			struct_declaration_list '}'  {
+			
+		if(eq($1.type, "union")){
+			
+			//i need to keep the offset of all internal variables 0 
+			//since all var have same memory location
+				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
+			for(auto &it: st.scopes_.back()->symbol_map){
+				//it.first is variable
+				//it.second->offset is what i need to update
+				it.second->offset = 0;
+				
+			}
+		}
 				if(st.current_scope_->contains_break_or_continue == true){
 					yyerror("using break/continue invalid in this scope");
 				}
@@ -2512,9 +2536,7 @@ expression_statement
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement {
-		if(st.current_scope_->contains_break_or_continue == true){
-			yyerror("cannot have break/continue in this scope");
-		}
+		
 		// checking if expression is a constant
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3, irgen);
 
@@ -2552,9 +2574,7 @@ selection_statement
 
 	}
 	| IF '(' expression ')' statement {
-		if(st.current_scope_->contains_break_or_continue == true){
-			yyerror("cannot contain break/continue in this context");
-		}
+		
 		// checking if expression is a constant
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3, irgen);
 
