@@ -338,18 +338,21 @@ public:
         std::string token;
         while (iss >> token) {
             auto it = current_scope_->symbol_map.find(token);
+            if(it!=  current_scope_->symbol_map.end())
             it->second->kind += " PRIVATE";
         }
 
         std::istringstream isss(proMem);
         while (isss >> token) {
             auto it = current_scope_->symbol_map.find(token);
+            if(it!=  current_scope_->symbol_map.end())
             it->second->kind += " PROTECTED";
         }
 
         std::istringstream issss(pubMem);
         while (issss >> token) {
             auto it = current_scope_->symbol_map.find(token);
+            if(it!=  current_scope_->symbol_map.end())
             it->second->kind += " PUBLIC";
         }
     }
@@ -958,6 +961,7 @@ public:
                 // Second pass: calculate actual size with padding
                 for (const auto& symbol : scope_ptr->ordered_symbols) {
                     // Add padding for alignment if needed
+                    if(symbol.size!=0)
                     if (totalSize % symbol.size != 0) {
                         size_t padding = symbol.size - (totalSize % symbol.size);
                         totalSize += padding;
