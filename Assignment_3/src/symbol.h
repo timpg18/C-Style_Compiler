@@ -503,6 +503,7 @@ public:
                     for (const auto &member : scope_ptr->ordered_symbols) {
                         std::string newName = token + "." + member.name;
                         std::cout<< newName<<"\n";
+                        
                         if(hasConst && hasStatic){
                             insert_symbol(newName, std::string("static ") + std::string("CONST ") + member.type, member.kind);
                         }

@@ -268,7 +268,7 @@ postfix_expression
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
-		
+		$$.name = $1.name;
 		//std::cout<<s<<"\n";
 		
 		if(s.back() == '*'){
@@ -358,6 +358,7 @@ postfix_expression
 		$$.backpatcher = new BackPatcher();
 	}
 	| postfix_expression '(' ')'{
+		$$.name = $1.name;
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -378,12 +379,37 @@ postfix_expression
 				yyerror("to few arguments passed");
 			}
 		}
+		$$.name = $1.name;
+		string ext ="";
+		int arg = 0;
+		if(contains($1.name, ".") == true){
+			//it is a class, pass obj as parameter
+			arg++;
+			string s = string($1.name);
+			string pref;
+			string suf;
+			bool dot = false;
+			for(int i=0;i<s.size();i++){
+				if(s[i] == '.'){
+					dot = true;
+					continue;
+				}
+				if(dot == false)pref+=s[i];
+				else suf+=s[i];
+			}
+			
+			
+			$1.name = strdup(suf.c_str());
+			ext = irgen.add_par("&" + pref);
+			
+		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
 
 		string tmp = irgen.new_temp();
 		string s = string($1.ir.code);
-		string p = irgen.func_call(string($1.name), 0);
+		s = irgen.concatenate(s,ext);
+		string p = irgen.func_call(string($1.name), arg);
 		if(eq($1.type,"VOID") == false)p = irgen.assign(tmp,p);
 		s = irgen.concatenate(s,p);
 		$$.ir.tmp = strdup(tmp.c_str());
@@ -392,6 +418,8 @@ postfix_expression
 
 	}
 	| postfix_expression '(' argument_expression_list ')'{
+		
+		
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -423,20 +451,48 @@ postfix_expression
 				yyerror("to few arguments passed");
 			}
 		}
+		$$.name = $1.name;
+		string ext ="";
+		
+		if(contains($1.name, ".") == true){
+			//it is a class, pass obj as parameter
+			$3.index++;
+			string s = string($1.name);
+			string pref;
+			string suf;
+			bool dot = false;
+			for(int i=0;i<s.size();i++){
+				if(s[i] == '.'){
+					dot = true;
+					continue;
+				}
+				if(dot == false)pref+=s[i];
+				else suf+=s[i];
+			}
+			
+			
+			$1.name = strdup(suf.c_str());
+			ext = irgen.add_par("&" + pref);
+			
+		}
 		$$.kind = "CONST";
 		$$.type = $1.type;
 		
 		$$.backpatcher = new BackPatcher();
 		string tmp = irgen.new_temp();
 		string s = string($1.ir.code);
+		
+		s = irgen.concatenate(s,ext);
 		s = irgen.concatenate(s, string($3.ir.code));
 		string p = irgen.func_call(string($1.name), $3.index);
 		if(eq($1.type,"VOID") == false)p = irgen.assign(tmp,p);
 		s = irgen.concatenate(s,p);
 		$$.ir.tmp = strdup(tmp.c_str());
 		$$.ir.code = strdup(s.c_str());
+		
 	}
 	| postfix_expression '.' IDENTIFIER{
+		
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		//printf("\n\n%s\n\n",$1.type);
@@ -459,9 +515,10 @@ postfix_expression
 			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
 		}
 		int offset = -1;
+		//$3.type is just right wala
+		//$1.type is type of p.ID as whole
 		for (const auto& scope_ptr : st.scopes_) {
 			if(scope_ptr->scope_name == string($1.type)){
-				
 				if(scope_ptr->symbol_map.count(string($3.type)) > 0){
 					offset = scope_ptr->symbol_map[string($3.type)]->offset;
 					//aagaya offset
@@ -481,6 +538,7 @@ postfix_expression
 		$$.backpatcher = new BackPatcher();
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
+		$$.name = $1.name;
 		//arrow operator, dereferencing then access
 		//access ka do it like old
 		yyerror("-> ooperator not allowed");
@@ -488,6 +546,7 @@ postfix_expression
 		$$.backpatcher = new BackPatcher();
 	}
 	| postfix_expression INC_OP{
+		$$.name = $1.name;
 		lvalueError($1.kind);
 		if(st.is_array($1.name)){
 			yyerror("expression must be a modifiable lvalue");
@@ -511,6 +570,7 @@ postfix_expression
 		
 	}
 	| postfix_expression DEC_OP{
+		$$.name = $1.name;
 		lvalueError($1.kind);
 		if(st.is_array($1.name)){
 			yyerror("expression must be a modifiable lvalue");
@@ -1724,8 +1784,12 @@ class_specifier
 		}
 	| CLASS IDENTIFIER base_clause_opt  
          { 
-           $$.type = (char*)malloc(strlen("class") + strlen($2.type) + 14);
-           sprintf($$.type, "class %s", $2.type);
+          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
+         sprintf($$.type, "%s %s", $1.type, $2.type);
+		
+		 if(!ts.contains(std::string($$.type))){
+			yyerror("Use of undeclared CLASS");
+		 }
 		 }
     ;
 
@@ -1877,6 +1941,11 @@ struct_or_union_specifier
          /* Named struct/union declaration without body */
          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
          sprintf($$.type, "%s %s", $1.type, $2.type);
+	
+		 if(!ts.contains(std::string($$.type))){
+			yyerror("Use of undeclared Struct");
+		 }
+
     }
 	;
 
@@ -1891,10 +1960,19 @@ struct_declaration_list
 	;
 
 struct_declaration
-	: specifier_qualifier_list ';'	/* for anonymous struct/union */
+	: specifier_qualifier_list ';'{
+		if(contains($1.type,"class")){
+			yyerror("class definitions not allowed inside structs");
+		}
+		
+	}
 	| specifier_qualifier_list struct_declarator_list ';'{
 		//std::cout<<std::string($1.type)<<"\n"<<std::string($2.name)<<"\n";
 		st.updateVariableTypes(std::string($2.name),std::string($1.type));
+		if(contains($1.type,"class")){
+			yyerror("class definitions not allowed inside structs");
+		}
+		
 	}
 	;
 
@@ -1916,6 +1994,12 @@ specifier_qualifier_list
 struct_declarator_list
 	: struct_declarator{
 		$$.name = $1.name;
+		$$.index = $1.index;
+		 $$.type = $1.type;
+		 $$.kind = $1.kind;
+		 $$.name = $1.name;
+		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = strdup($1.ir.code);
 	}
 	| struct_declarator_list ',' struct_declarator {
 		$$.name = concat($1.name,$3.name);
@@ -1923,10 +2007,13 @@ struct_declarator_list
 	;
 
 struct_declarator
-	: ':' constant_expression
-	| declarator ':' constant_expression
-	| declarator {
-		$$.type = $1.type;
+	: declarator {
+		 $$.index = $1.index;
+		 $$.type = $1.type;
+		 $$.kind = $1.kind;
+		 $$.name = $1.name;
+		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = strdup($1.ir.code);
 	}
 	;
 
