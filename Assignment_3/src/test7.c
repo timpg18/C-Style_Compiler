@@ -1,3 +1,9 @@
-int f(){
-    return 5;
+
+int main(){
+    int x;
+    switch(x){
+        continue;
+    }
+
+   
 }

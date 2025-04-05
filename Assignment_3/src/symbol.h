@@ -71,9 +71,11 @@ public:
         Scope* parent_scope;
         std::string scope_name;
         int scope_level;
-        int total_size; // Added: total size of all symbols in this scope
+        int total_size;// Added: total size of all symbols in this scope
+        bool jump[2] = {false, false}; //0 for continue 1 for break;
+        bool contains_break_or_continue = false;
         std::vector<Scope*> children;
-
+        
         Scope(Scope* parent = nullptr, 
              std::string name = "global", 
              int level = 0)
@@ -86,6 +88,7 @@ public:
     std::vector<TokenEntry> token_table_;
 
     SymbolTable() {
+        
         global_scope_ = new Scope(nullptr, "global", 0);
         current_scope_ = global_scope_;
         scopes_.emplace_back(global_scope_);
@@ -330,6 +333,7 @@ public:
 
     // To update the Kind for access specifier in class
     void update_class_types(const std::string& priMem,const std::string& pubMem,const std::string& proMem){
+       
         std::istringstream iss(priMem);
         std::string token;
         while (iss >> token) {
@@ -1083,7 +1087,11 @@ public:
         // Default to 4 bytes for unknown types
         return 4;
     }
-    
+    void falsekardo(){
+        current_scope_->jump[0] = false;
+        current_scope_->jump[1] = false;
+        current_scope_->contains_break_or_continue = false;
+    }
     std::string removeQualifiers(const std::string& type) {
         static const std::set<std::string> qualifiers = {
             "CONST", "VOLATILE", "static", "register", 
@@ -1104,9 +1112,10 @@ public:
         return result;
     }
     std::vector<std::unique_ptr<Scope>> scopes_;
+    Scope* current_scope_;
 private:
     Scope* global_scope_;
-    Scope* current_scope_;
+    
    
     std::vector<std::string> goto_label ; // labels to be resolved
     // Handle basic types

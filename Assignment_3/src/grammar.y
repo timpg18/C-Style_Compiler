@@ -1590,15 +1590,19 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' {st.push_scope("class anonymous");} class_member_list '}' PopScope
-         {
+    : CLASS '{' {st.push_scope("class anonymous");} class_member_list '}' 
+         {	
+			if(st.current_scope_->contains_break_or_continue == true){
+				yyerror("Using continue or break inside Classes in invalid");
+			}
+			st.pop_scope();
+			st.current_scope_->contains_break_or_continue =false;
 		 $$.type = (char*)malloc(strlen("class") + 14); 
          sprintf($$.type, "class (anonymous)");
 		 yyerror("anonymous class definition not allowed");
 		   }
 	| CLASS IDENTIFIER base_clause_opt  '{' 
-		{   
-			classDef=1;
+		{   classDef=1;
 			std::string s = std::string("class ") + std::string(strdup($2.type));
 			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
 			st.update_symbol_sizes(std::string($2.type),0);
@@ -1613,9 +1617,11 @@ class_specifier
 			priMem = "";
 			proMem = "";
 			pubMem = ""; 
-		}
-		PopScope
-        { 
+			if(st.current_scope_->contains_break_or_continue == true){
+				yyerror("using continue or break invalid in this context");
+			}
+			st.pop_scope();
+			st.current_scope_->contains_break_or_continue = false;
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          	sprintf($$.type, "class %s", $2.type);
 			std::string s = std::string("class ") + std::string($2.type); 
@@ -1698,7 +1704,12 @@ struct_or_union_specifier
 		else{
 			st.push_scope("union anonymous");
 		}
-	 } struct_declaration_list '}' PopScope {
+	 } struct_declaration_list '}'  {
+		if(st.current_scope_->contains_break_or_continue == true){
+			yyerror("using break/continue invalid in this scope");
+		}
+		st.pop_scope();
+		st.falsekardo();
          /* Anonymous struct or union */
          $$.type = (char*)malloc(strlen($1.type) + 14); // Enough for " (anonymous)" and '\0'
          sprintf($$.type, "%s (anonymous)", $1.type);
@@ -1724,7 +1735,12 @@ struct_or_union_specifier
 			}
 			st.push_scope(s);
 			}
-			struct_declaration_list '}' PopScope {
+			struct_declaration_list '}'  {
+				if(st.current_scope_->contains_break_or_continue == true){
+					yyerror("using break/continue invalid in this scope");
+				}
+				st.pop_scope();
+				st.falsekardo();
 			/* Named struct/union with body */
 			$$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
 			sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -2241,7 +2257,13 @@ statement
     	delete $1.backpatcher;
 	}
 	|  {st.push_scope();} compound_statement {
+		bool x = st.current_scope_->contains_break_or_continue;
+		bool y = st.current_scope_->jump[0];
+		bool z = st.current_scope_->jump[1];
 		st.pop_scope();
+		st.current_scope_->contains_break_or_continue = x;
+		st.current_scope_->jump[1] = z;
+		st.current_scope_->jump[0] = y;
 		$$.ir.code = strdup($2.ir.code);
 		$$.backpatcher = BackPatcher::copy($2.backpatcher);
     	delete $2.backpatcher;
@@ -2394,6 +2416,9 @@ expression_statement
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement {
+		if(st.current_scope_->contains_break_or_continue == true){
+			yyerror("cannot have break/continue in this scope");
+		}
 		// Declaration of all the labels to be used
 		std::string backpatch_label1 = irgen.new_label();
 		std::string backpatch_label2 = irgen.new_label();
@@ -2425,6 +2450,9 @@ selection_statement
 
 	}
 	| IF '(' expression ')' statement {
+		if(st.current_scope_->contains_break_or_continue == true){
+			yyerror("cannot contain break/continue in this context");
+		}
 		// Declaration of all the labels to be used
 		std::string backpatch_label = irgen.new_label();
 		std::string E_true = irgen.add_label(backpatch_label);
@@ -2443,11 +2471,17 @@ selection_statement
 	}
 	| SWITCH '(' expression ')' statement{
 		$$.ir.code = "";
+		if(st.current_scope_->jump[0] == true){
+			yyerror("cannot have continue inside switchcase");
+		}
+		st.falsekardo();
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement {
+		st.falsekardo();
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
@@ -2473,6 +2507,7 @@ iteration_statement
 
 	}
 	| DO statement WHILE '(' expression ')' ';' {
+		st.falsekardo();
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
@@ -2493,6 +2528,7 @@ iteration_statement
 		bpneeded = 1;
 	}
 	| DO statement UNTIL '(' expression ')' ';' {
+		st.falsekardo();
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
@@ -2512,7 +2548,12 @@ iteration_statement
 		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
 		bpneeded = 1;
 	}
-	| FOR '(' PushScope expression_statement expression_statement ')' statement PopScope {
+	| FOR '(' PushScope expression_statement expression_statement ')' statement  {
+
+		st.pop_scope();
+		st.falsekardo();
+		st.current_scope_->jump[0] = false;
+		st.current_scope_->jump[1] = false;
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string FOR_begin = irgen.add_label(label1);
@@ -2536,7 +2577,11 @@ iteration_statement
 		bpneeded = 1 ;
 
 	}
-	| FOR '(' PushScope expression_statement expression_statement expression ')' statement PopScope {
+	| FOR '(' PushScope expression_statement expression_statement expression ')' statement  {
+		st.pop_scope();
+		st.falsekardo();
+		st.current_scope_->jump[1] = false;
+		st.current_scope_->jump[0] = false;
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string FOR_begin = irgen.add_label(label1);
@@ -2560,7 +2605,9 @@ iteration_statement
 		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
 		bpneeded = 1 ;
 	}
-	| FOR '(' PushScope declaration expression_statement ')' statement PopScope {
+	| FOR '(' PushScope declaration expression_statement ')' statement  {
+		st.pop_scope();
+		st.falsekardo();
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string FOR_begin = irgen.add_label(label1);
@@ -2582,7 +2629,9 @@ iteration_statement
 		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
 		bpneeded = 1 ;
 	}
-	| FOR '(' PushScope declaration expression_statement expression ')' statement PopScope{
+	| FOR '(' PushScope declaration expression_statement expression ')' statement {
+		st.pop_scope();
+		st.falsekardo();
 		// Declaration of all the labels to be used
 		std::string label1 = irgen.new_label();
 		std::string FOR_begin = irgen.add_label(label1);
@@ -2618,10 +2667,14 @@ jump_statement
 	| CONTINUE ';'{
 		//do back jumps here
 		$$.ir.code = "";
+		st.current_scope_->contains_break_or_continue = true;
+		st.current_scope_->jump[0] = true;
 	}
 	| BREAK ';'  {
 		//do forward jumps here
 		$$.ir.code = "";
+		st.current_scope_->contains_break_or_continue = true;
+		st.current_scope_->jump[1] = true;
 	}
 	| RETURN ';'  {
 		std::string s = (st.lookup(currFunc)->type);
@@ -2686,7 +2739,11 @@ external_declaration
 
 function_definition
 	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
+		if(st.current_scope_->contains_break_or_continue == true){
+			yyerror("Using continue or break invalid in this scope.");
+		}
 		st.pop_scope();
+		st.falsekardo();
 		yyerror("Declaration before {} is not allowed");
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
@@ -2704,7 +2761,11 @@ function_definition
 		
 	} 
 	compound_statement {
+		if(st.current_scope_->contains_break_or_continue == true){
+			yyerror("using break/continue invalid in this context");
+		}
 		st.pop_scope();
+		st.falsekardo();
 		if(!st.resolvelabels(std::string($2.name))){
 			yyerror("GOTO label used but not defined");
 		}
