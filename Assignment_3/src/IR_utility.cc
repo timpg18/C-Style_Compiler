@@ -47,13 +47,13 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
 
 std::string IRGen::add_label(std::string f){
     std::string res;
-    res = "LABEL " + f + ":";
+    res = "label " + f + ":";
     return res;
 }
 
 std::string IRGen::add_par(std::string par){
     std::string res;
-    res = "PARAM " + par;
+    res = "param " + par;
     return res;
 }
 
@@ -78,12 +78,12 @@ std::string IRGen::new_tmp_label() {
 
 // Conditional jump: "IF <condition> GOTO <label>"
 std::string IRGen::create_if_goto(const std::string& condition, const std::string& target_label) {
-    return "IF " + condition + " GOTO " + target_label;
+    return "if " + condition + " goto " + target_label;
 }
 
 // Unconditional jump: "GOTO <label>"
 std::string IRGen::create_goto(const std::string& target_label) {
-    return "GOTO " + target_label;
+    return "goto " + target_label;
 }
 
 std::string IRGen::create_conditional_jump(
@@ -121,7 +121,7 @@ std::string IRGen::format_with_tabs(const std::string& code) {
 
     while (std::getline(input, line)) {
         // Check if line starts with "LABEL"
-        if (line.find("LABEL ") == 0) {  // 👈 Space after LABEL is intentional
+        if (line.find("label ") == 0) {  // 👈 Space after LABEL is intentional
             output << line << "\n";
         } else {
             output << "\t" << line << "\n";  // 👈 Add tab to non-label lines

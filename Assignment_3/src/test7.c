@@ -1,18 +1,17 @@
-struct s{
-    int a;
-    struct g{
-        int x,y;
-        int z;
-    };
-    class bru {
-        public:{
-            int x;
-        }
-    };
-};
-
-
 int main(){
-    struct s p;
-    //p.h.x = 1;
+    int x = (short)2;int z;
+    switch( x>1 ) {
+        case 1 :
+            x++;
+            int y = 10;
+            break;
+        case 2:
+            z = 20;
+            break;
+        default:
+            z = 30;
+            break;
+    }
+    
+
 }

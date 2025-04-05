@@ -6,3 +6,5 @@ grammar.tab.h
 parser
 a.out
 grammar.output
+ssh_key
+ssh_key.pub
