@@ -5,3 +5,4 @@ grammar.tab.c
 grammar.tab.h
 parser
 a.out
+grammar.output
