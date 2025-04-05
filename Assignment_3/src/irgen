@@ -1,1 +1,10 @@
 LABEL main:
+	x = 0
+LABEL @L0:
+	$0 = x
+	x = x + 1
+LABEL @L1:
+	$1 = x < 100
+	IF $1 GOTO @L0
+	GOTO @L2
+LABEL @L2:

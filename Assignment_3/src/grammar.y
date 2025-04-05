@@ -905,15 +905,15 @@ relational_expression
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	| relational_expression '<' M shift_expression{
+	| relational_expression '<'  shift_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type,"incompatible type expression involved in < : ");
+		check_type($1.type, $3.type,"incompatible type expression involved in < : ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<"), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		std::string tmp1 = irgen.new_tmp_label();
 		std::string tmp2 = irgen.new_tmp_label();
@@ -924,15 +924,15 @@ relational_expression
 		$$.backpatcher->addToFalseList(tmp2);
 
 	}
-	| relational_expression '>' M shift_expression{
+	| relational_expression '>' shift_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type,"incompatible type expression involved in >: ");
+		check_type($1.type, $3.type,"incompatible type expression involved in >: ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">"), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		//std::cout<<std::string($$.ir.code)<<std::endl;
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		//std::cout<<std::string($$.ir.code)<<std::endl;
@@ -944,15 +944,15 @@ relational_expression
 		$$.backpatcher->addToTrueList(tmp1);
 		$$.backpatcher->addToFalseList(tmp2);
 	}
-	| relational_expression LE_OP M shift_expression{
+	| relational_expression LE_OP shift_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type,"incompatible type expression involved in <=: ");
+		check_type($1.type, $3.type,"incompatible type expression involved in <=: ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<="), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		std::string tmp1 = irgen.new_tmp_label();
 		std::string tmp2 = irgen.new_tmp_label();
@@ -962,15 +962,15 @@ relational_expression
 		$$.backpatcher->addToTrueList(tmp1);
 		$$.backpatcher->addToFalseList(tmp2);
 	}
-	| relational_expression GE_OP M shift_expression{
+	| relational_expression GE_OP shift_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type,"incompatible type expression involved in >=: ");
+		check_type($1.type, $3.type,"incompatible type expression involved in >=: ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">="), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		std::string tmp1 = irgen.new_tmp_label();
 		std::string tmp2 = irgen.new_tmp_label();
@@ -992,15 +992,15 @@ equality_expression
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	| equality_expression EQ_OP M relational_expression{
+	| equality_expression EQ_OP relational_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type, "incompatible type expression involved in = : ");
+		check_type($1.type, $3.type, "incompatible type expression involved in = : ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("=="), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("=="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		std::string tmp1 = irgen.new_tmp_label();
 		std::string tmp2 = irgen.new_tmp_label();
@@ -1010,15 +1010,15 @@ equality_expression
 		$$.backpatcher->addToTrueList(tmp1);
 		$$.backpatcher->addToFalseList(tmp2);
 	}
-	| equality_expression NE_OP M relational_expression{
+	| equality_expression NE_OP relational_expression{
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
 
-		check_type($1.type, $4.type, "incompatible type expression involved in != : ");
+		check_type($1.type, $3.type, "incompatible type expression involved in != : ");
 		$$.type = "INT";
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("!="), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("!="), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		std::string tmp1 = irgen.new_tmp_label();
 		std::string tmp2 = irgen.new_tmp_label();
@@ -1139,7 +1139,7 @@ logical_and_expression
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	| logical_and_expression AND_OP {
+	| logical_and_expression AND_OP  inclusive_or_expression{
 		// check for constant expression
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($1,irgen);
 		std::string backpatch_label = irgen.new_label();
@@ -1147,21 +1147,22 @@ logical_and_expression
 		std::string newIR = $1.backpatcher->backPatchTrueList(std::string($1.ir.code),backpatch_label);
 		$1.ir.code = strdup(newIR.c_str());
 		$1.ir.code = strdup(irgen.concatenate(string($1.ir.code), S_next).c_str());
-	} inclusive_or_expression{
+
+
 		// check for constant expression
-		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($4,irgen);
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3,irgen);
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
-		check_type($1.type, $4.type,"incompatible type expression involved in &&: ");
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+		check_type($1.type, $3.type,"incompatible type expression involved in &&: ");
 		$$.type = "INT";
 		// no need of the commented
-		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		//string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&&"), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		//$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		//string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&&"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		//$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignTrueList($4.backpatcher->getTrueList()) ; 
-		$$.backpatcher->assignFalseList($$.backpatcher->merge($1.backpatcher->getFalseList(),$4.backpatcher->getFalseList()));
+		$$.backpatcher->assignTrueList($3.backpatcher->getTrueList()) ; 
+		$$.backpatcher->assignFalseList($$.backpatcher->merge($1.backpatcher->getFalseList(),$3.backpatcher->getFalseList()));
 
 	}
 	;
@@ -1176,7 +1177,7 @@ logical_or_expression
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	| logical_or_expression OR_OP{
+	| logical_or_expression OR_OP logical_and_expression{
 		// check for constant expression
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($1,irgen);
 		std::string backpatch_label = irgen.new_label();
@@ -1184,21 +1185,22 @@ logical_or_expression
 		std::string newIR = $1.backpatcher->backPatchFalseList(std::string($1.ir.code),backpatch_label);
 		$1.ir.code = strdup(newIR.c_str());
 		$1.ir.code = strdup(irgen.concatenate(string($1.ir.code), S_next).c_str());
-	} logical_and_expression{
+
+
 		// check for constant expression
-		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($4,irgen);
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3,irgen);
 		std::string type1,type2 ;
-		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
-		check_type($1.type, $4.type, "incompatible type expression involved in || = : ");
+		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$3);
+		check_type($1.type, $3.type, "incompatible type expression involved in || = : ");
 
 		$$.type = "INT";
 		//$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		//string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("||"), string($4.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
+		//string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("||"), string($3.ir.tmp));
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		//$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignFalseList($4.backpatcher->getFalseList()) ; 
-		$$.backpatcher->assignTrueList($$.backpatcher->merge($1.backpatcher->getTrueList(),$4.backpatcher->getTrueList()));
+		$$.backpatcher->assignFalseList($3.backpatcher->getFalseList()) ; 
+		$$.backpatcher->assignTrueList($$.backpatcher->merge($1.backpatcher->getTrueList(),$3.backpatcher->getTrueList()));
 	}
 	;
 
@@ -2598,23 +2600,24 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(label2);
-		std::string S_next = irgen.new_tmp_label();
+		std::string label3 = irgen.new_label();
+		std::string Loop_end = irgen.add_label(label3);
 		std::string goto_S_begin = irgen.create_goto(label1);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchNextList(std::string($5.ir.code),label1).c_str());
 		$3.ir.code = strdup($3.backpatcher->backPatchTrueList(std::string($3.ir.code),label2).c_str());
+		$3.ir.code = strdup($3.backpatcher->backPatchFalseList(std::string($3.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($3.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_true).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), std::string($5.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), goto_S_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), Loop_end).c_str());
 
-		// Progation of nextList
+
 		$$.backpatcher = new BackPatcher();
-		if($3.backpatcher != NULL){$$.backpatcher->assignNextList($3.backpatcher->getFalseList());}
-		bpneeded = 1;
 
 	}
 	| DO statement WHILE '(' expression ')' ';' {
@@ -2627,19 +2630,21 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
+		std::string label3 = irgen.new_label();
+		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Loop_end).c_str());
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		bpneeded = 1;
 	}
 	| DO statement UNTIL '(' expression ')' ';' {
 		st.falsekardo();
@@ -2651,20 +2656,21 @@ iteration_statement
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
+		std::string label3 = irgen.new_label();
+		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),std::string($5.ir.code)).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Loop_end).c_str());
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		
-		bpneeded = 1;
 	}
 	| FOR '(' PushScope expression_statement expression_statement ')' statement  {
 
@@ -2681,9 +2687,12 @@ iteration_statement
 		std::string label2 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		std::string label3 = irgen.new_label();
+		std::string FOR_end = irgen.add_label();
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
@@ -2691,11 +2700,9 @@ iteration_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($7.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),FOR_end).c_str());
 
-		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		bpneeded = 1 ;
 
 	}
 	| FOR '(' PushScope expression_statement expression_statement expression ')' statement  {
@@ -2712,9 +2719,12 @@ iteration_statement
 		std::string label2 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		std::string label3 = irgen.new_label();
+		std::string FOR_end = irgen.add_label();
 		
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
@@ -2723,11 +2733,9 @@ iteration_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($8.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($6.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),FOR_end).c_str());
 
-		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		bpneeded = 1 ;
 	}
 	| FOR '(' PushScope declaration expression_statement ')' statement  {
 		st.pop_scope();
@@ -2741,8 +2749,12 @@ iteration_statement
 		std::string label2 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		std::string label3 = irgen.new_label();
+		std::string FOR_end = irgen.add_label();
+
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
@@ -2751,11 +2763,8 @@ iteration_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($7.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
 
-		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
 
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		bpneeded = 1 ;
 	}
 	| FOR '(' PushScope declaration expression_statement expression ')' statement {
 		st.pop_scope();
@@ -2769,9 +2778,12 @@ iteration_statement
 		std::string label2 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label2);
 		std::string Goto_FOR_begin = irgen.create_goto(label1);
+		std::string label3 = irgen.new_label();
+		std::string FOR_end = irgen.add_label();
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
@@ -2781,10 +2793,8 @@ iteration_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($6.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
 
-		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
-		bpneeded = 1 ;
+
 
 
 	}
@@ -2928,14 +2938,6 @@ PushScope
 	: {st.push_scope();
     }
 	;
-
-PopScope
-	: {st.pop_scope();
-    }
-	;
-
-M	
-	: {};
 
 
 %%
