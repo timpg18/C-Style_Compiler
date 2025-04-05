@@ -1,25 +1,24 @@
-LABEL main:
-	IF 2 == 0 GOTO @L0
-	GOTO @L2
-LABEL @L0:
-	IF 3 == 0 GOTO @L3
-	GOTO @L2
-LABEL @L2:
-	$0 = 1
-	GOTO @L4
-LABEL @L3:
-	$0 = 0
-LABEL @L4:
-	IF 3 == 0 GOTO @L6
-	GOTO @L1
-LABEL @L1:
-	IF 4 == 0 GOTO @L6
-	GOTO @L5
-LABEL @L5:
-	$1 = 1
-	GOTO @L7
-LABEL @L6:
-	$1 = 0
-LABEL @L7:
-	$2 = $0 * $1
-	x = $2
+label main:
+	n = 10
+	i = 0
+label @L3:
+	$0 = i < n
+	if $0 goto @L4
+	goto @L5
+label @L4:
+	$2 = i == 5
+	if $2 goto @L0
+	goto @L1
+label @L0:
+	goto @L3
+	$3 = n
+	n = n + 1
+	goto @L2
+label @L1:
+	$4 = n
+	n = n - 1
+label @L2:
+	$1 = i
+	i = i + 1
+	goto @L3
+label @L5:

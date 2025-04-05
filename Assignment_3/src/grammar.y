@@ -2720,6 +2720,10 @@ iteration_statement
 		$3.ir.code = strdup($3.backpatcher->backPatchTrueList(std::string($3.ir.code),label2).c_str());
 		$3.ir.code = strdup($3.backpatcher->backPatchFalseList(std::string($3.ir.code),label3).c_str());
 
+		// For break and continue
+		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($5.ir.code),Loop_end).c_str());
+		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.continue_,std::string($5.ir.code),S_begin).c_str());
+
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($3.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_true).c_str());
@@ -2748,6 +2752,10 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
+		// For break and continue
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),Loop_end).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),S_begin).c_str());
+
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),E_begin).c_str());
@@ -2773,6 +2781,10 @@ iteration_statement
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
+
+		// For break and continue
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),Loop_end).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),S_begin).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
@@ -2804,6 +2816,10 @@ iteration_statement
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
+
+		// For break and continue
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),FOR_end).c_str());
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.continue_,std::string($7.ir.code),label1).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
@@ -2837,6 +2853,10 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
+		// For break and continue
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),FOR_end).c_str());
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.continue_,std::string($8.ir.code),label1).c_str());
+
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
@@ -2867,12 +2887,17 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
+		// For break and continue
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),FOR_end).c_str());
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.continue_,std::string($7.ir.code),label1).c_str());
+
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),S_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($7.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),FOR_end).c_str());
 
 		$$.backpatcher = new BackPatcher();
 
@@ -2896,6 +2921,10 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
+		// For break and continue
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),FOR_end).c_str());
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.continue_,std::string($8.ir.code),label1).c_str());
+
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(string($4.ir.code),FOR_begin).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($5.ir.code)).c_str());
@@ -2903,6 +2932,7 @@ iteration_statement
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($8.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),string($6.ir.code)).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),Goto_FOR_begin).c_str());
+		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),FOR_end).c_str());
 
 		$$.backpatcher = new BackPatcher();
 
@@ -2920,14 +2950,20 @@ jump_statement
 	}
 	| CONTINUE ';'{
 		//do back jumps here
-		$$.ir.code = "";
+		std::string s = irgen.new_tmp_label();
+		irgen.continue_.push_back(s);
+		s = irgen.create_goto(s);
+		$$.ir.code = strdup(s.c_str());
 		st.current_scope_->contains_break_or_continue = true;
 		st.current_scope_->jump[0] = true;
 		$$.backpatcher = new BackPatcher();
 	}
 	| BREAK ';'  {
 		//do forward jumps here
-		$$.ir.code = "";
+		std::string s = irgen.new_tmp_label();
+		irgen.break_.push_back(s);
+		s = irgen.create_goto(s);
+		$$.ir.code = strdup(s.c_str());
 		st.current_scope_->contains_break_or_continue = true;
 		st.current_scope_->jump[1] = true;
 		$$.backpatcher = new BackPatcher();

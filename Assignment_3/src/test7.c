@@ -1,4 +1,13 @@
 
 int main(){
-    int x = (2||3) * (3&&4);
+    int n=10;
+    for(int i=0;i<n;i++){
+        if(i==5){
+            continue;
+            n++;
+        }
+        else{
+            n--;
+        }
+    }
 }

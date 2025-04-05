@@ -9,9 +9,14 @@
 
 
 class IRGen{
+    public:
+        std::vector<std::string> break_;
+        std::vector<std::string> continue_;
+    private:
     int temp_counter = 0;
     int label_counter = 0;
     int tmp_label_counter = 0;
+
     void write_to_file(const std::string& filename, const char* content) {
         if (content == nullptr) {  // Handle uninitialized or null pointers
            std::cout <<"\n\nNULL string exists \n\n";
