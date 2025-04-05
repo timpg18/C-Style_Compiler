@@ -738,6 +738,7 @@ cast_expression
 		$$.kind = $4.kind;
 		$$.ir.tmp = strdup($4.ir.tmp);
 		$$.ir.code = strdup($4.ir.code);
+		$$.backpatcher = new BackPatcher();
 	}
 	| '(' type_name error cast_expression { yyerrok; }
 	;
@@ -2515,22 +2516,33 @@ labeled_statement
 		$$.backpatcher = BackPatcher::copy($3.backpatcher);
 	}
 	| CASE constant_expression ':' statement {
-		//DOUBT
+		if(irgen.is_duplicate_case(std::string($2.name))){
+			yyerror("duplicate case value");
+		}
+		if(!eq($2.type,"INT")){
+			yyerror("expression must be an integral constant expression");
+		}
+		if(!eq($2.kind,"CONST")){
+			yyerror("expression must have a constant value");
+		}
+		std::string label = irgen.new_label();
+		std::string Case_label = irgen.add_label(label);
+		irgen.add_case_info(std::string($2.name),label);
 
-
-		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
-		//WILL BE USED IN IRGEN FOR SWITCH CASE, ON WHAT CASES TO JUMP TO
-		$$.ir.code = "";
-		
-		//not sure, since  expression is evaluated before any cases
+		$$.ir.code = strdup(irgen.concatenate(Case_label,std::string($4.ir.code)).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| DEFAULT ':' statement {
-		//do SEMANTIC ANALYSIS FOR THIS IE STORE IN SYMTAB THAT IT IS DEFAULT CASE ETC
-		//WILL BE USED IN IRGEN FOR SWITCH
-		string lb = irgen.new_label();
-		string cd = irgen.add_label(lb);
-		cd += " DEFAULT CASE";
-		$$.ir.code =strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
+		if(irgen.has_default_label()){
+			yyerror("duplicate default label");
+		}
+		irgen.set_default_label();
+		
+		string label = irgen.new_label();
+		string Default_label = irgen.add_label(label);
+		irgen.add_case_info("Default",label);
+		$$.ir.code =strdup(irgen.concatenate(Default_label,string($3.ir.code)).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 compound_statement
@@ -2691,11 +2703,29 @@ selection_statement
 		bpneeded = 1;
 	}
 	| SWITCH '(' expression ')' statement{
-		$$.ir.code = "";
+		//Type Checking
+		if( (contains($3.type,"INT")) || (contains($3.type,"CHAR")) || (contains($3.type,"SHORT")) || (contains($3.type,"BOOL")) || (contains($3.type,"UNSIGNED INT")) || (contains($3.type,"UNSIGNED CHAR")) || (contains($3.type,"UNSIGNED SHORT"))){}
+		else{
+			yyerror("switch quantity not an integer");
+		}
+
 		if(st.current_scope_->jump[0] == true){
 			yyerror("cannot have continue inside switchcase");
 		}
 		st.falsekardo();
+
+		CONVERT_BOOL_EXPR_TO_VALUE($3);		
+
+		std::string label11 = irgen.new_label();
+		std::string Switch_end = irgen.add_label(label11);
+		std::string Switch_start = irgen.generate_switch_cases(std::string($3.ir.tmp));
+	
+		$$.ir.code = strdup($3.ir.code);
+		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_start).c_str()); 
+		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),std::string($5.ir.code)).c_str()); 
+		$$.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($$.ir.code),label11).c_str());
+		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_end).c_str()); 
+
 		$$.backpatcher = new BackPatcher();
 	}
 	;
@@ -3033,6 +3063,9 @@ external_declaration
 
 function_definition
 	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
+		if(irgen.get_case_info_size() > 0){
+			yyerror("a case label may only be used within a switch");
+		}
 		if(st.current_scope_->contains_break_or_continue == true){
 			yyerror("Using continue or break invalid in this scope.");
 		}
@@ -3055,6 +3088,9 @@ function_definition
 		
 	} 
 	compound_statement {
+		if(irgen.get_case_info_size() > 0){
+			yyerror("a case label may only be used within a switch");
+		}
 		if(st.current_scope_->contains_break_or_continue == true){
 			yyerror("using break/continue invalid in this context");
 		}
