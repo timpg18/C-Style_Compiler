@@ -38,6 +38,34 @@ IRGen irgen;
         }                                                                              \
     } while (0)
 
+// for evaluation where there is a bool expression 
+#define HANDLE_BOOL_RESULT_ASSIGN(E1, EFinal, E2, irgen)                                            \
+    do {                                                                                            \
+        std::string label1 = irgen.new_label();                                                     \
+        std::string true_label = irgen.add_label(label1);                                           \
+                                                                                                    \
+        std::string label2 = irgen.new_label();                                                     \
+        std::string false_label = irgen.add_label(label2);                                          \
+                                                                                                    \
+        std::string label3 = irgen.new_label();                                                     \
+        std::string end_label = irgen.add_label(label3);                                            \
+        std::string goto_end = irgen.create_goto(label3);                                           \
+                                                                                                    \
+        std::string assign_true = irgen.assign(E1.ir.tmp, "1");                                     \
+        std::string assign_false = irgen.assign(E1.ir.tmp, "0");                                    \
+                                                                                                    \
+        E2.ir.code = strdup(E2.backpatcher->backPatchTrueList(std::string(E2.ir.code), label1).c_str()); \
+        E2.ir.code = strdup(E2.backpatcher->backPatchFalseList(std::string(E2.ir.code), label2).c_str()); \
+                                                                                                    \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(E2.ir.code), true_label).c_str());    \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), assign_true).c_str()); \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), goto_end).c_str());  \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), false_label).c_str()); \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), assign_false).c_str()); \
+        EFinal.ir.code = strdup(irgen.concatenate(std::string(EFinal.ir.code), end_label).c_str()); \
+    } while(0)
+
+
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
@@ -1098,18 +1126,22 @@ logical_and_expression
     	delete $1.backpatcher;
 	}
 	| logical_and_expression AND_OP {
+		// check for constant expression
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($1,irgen);
 		std::string backpatch_label = irgen.new_label();
 		std::string S_next = irgen.add_label(backpatch_label);
 		std::string newIR = $1.backpatcher->backPatchTrueList(std::string($1.ir.code),backpatch_label);
 		$1.ir.code = strdup(newIR.c_str());
 		$1.ir.code = strdup(irgen.concatenate(string($1.ir.code), S_next).c_str());
 	} inclusive_or_expression{
+		// check for constant expression
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($4,irgen);
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
 		check_type($1.type, $4.type,"incompatible type expression involved in &&: ");
 		$$.type = "INT";
 		// no need of the commented
-		//$$.ir.tmp = strdup(irgen.new_temp().c_str());
+		$$.ir.tmp = strdup(irgen.new_temp().c_str());
 		//string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&&"), string($4.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($4.ir.code)).c_str());
 		//$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
@@ -1131,12 +1163,16 @@ logical_or_expression
     	delete $1.backpatcher;
 	}
 	| logical_or_expression OR_OP{
+		// check for constant expression
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($1,irgen);
 		std::string backpatch_label = irgen.new_label();
 		std::string S_next = irgen.add_label(backpatch_label);
 		std::string newIR = $1.backpatcher->backPatchFalseList(std::string($1.ir.code),backpatch_label);
 		$1.ir.code = strdup(newIR.c_str());
 		$1.ir.code = strdup(irgen.concatenate(string($1.ir.code), S_next).c_str());
 	} logical_and_expression{
+		// check for constant expression
+		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($4,irgen);
 		std::string type1,type2 ;
 		CHECK_PROCEDURE_AND_CLEAN_TYPE($1,$4);
 		check_type($1.type, $4.type, "incompatible type expression involved in || = : ");
@@ -1256,8 +1292,15 @@ assignment_expression
 			s.pop_back();
 			tem = (irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)));
 		}
-		
-		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
+		std::vector<std::string> tmpcheck = $3.backpatcher->getTrueList();
+		int size = tmpcheck.size();
+		if(size){
+			HANDLE_BOOL_RESULT_ASSIGN($1, $$, $3, irgen);
+
+		}
+		else{
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
+		}
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
 		$$.backpatcher = new BackPatcher();
@@ -2309,20 +2352,18 @@ statement
     	delete $1.backpatcher;
 	}
 	| jump_statement{
-		$$.ir.code = "";
-		$$.backpatcher = new BackPatcher();
+		$$.ir.code = $1.ir.code;
+		$$.backpatcher = BackPatcher::copy($1.backpatcher);
 	}
 	;
 
 
 labeled_statement
-	: IDENTIFIER ':'{
-		
+	: IDENTIFIER ':' statement {
 		st.insert_symbol($1.type,"LABEL" , "GOTO LABEL");
-	} statement {
-		string lb = irgen.new_label();
-		string cd = irgen.add_label(lb);
-		$$.ir.code =strdup(irgen.concatenate(cd,string($4.ir.code)).c_str());
+		string lb = irgen.add_label(std::string($1.type));
+		$$.ir.code =strdup(irgen.concatenate(lb,string($3.ir.code)).c_str());
+		$$.backpatcher = BackPatcher::copy($3.backpatcher);
 	}
 	| CASE constant_expression ':' statement {
 		//DOUBT
@@ -2460,7 +2501,10 @@ selection_statement
 		
 
 		$$.backpatcher = new BackPatcher();
-		std::vector<string> tmp = $$.backpatcher->merge($5.backpatcher->getNextList(),$7.backpatcher->getNextList());
+		std::vector<std::string> vec1(0),vec2(0);
+		if($5.backpatcher != NULL) vec1 = $5.backpatcher->getNextList();
+		if($7.backpatcher != NULL) vec2 = $7.backpatcher->getNextList();
+		std::vector<string> tmp = $$.backpatcher->merge(vec1,vec2);
 		tmp.push_back(S_next);
 		$$.backpatcher->assignNextList(tmp);
 		bpneeded = 1;
@@ -2485,7 +2529,10 @@ selection_statement
 		$$.ir.code = strdup(irgen.concatenate(string($3.ir.code),E_true).c_str());
 		$$.ir.code = strdup(irgen.concatenate(string($$.ir.code), std::string($5.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($$.backpatcher->merge($5.backpatcher->getNextList(),$3.backpatcher->getFalseList()));
+		std::vector<std::string> vec1(0),vec2(0);
+		if($5.backpatcher != NULL)vec1 = $5.backpatcher->getNextList();
+		if($3.backpatcher != NULL)vec2 = $3.backpatcher->getFalseList();
+		$$.backpatcher->assignNextList($$.backpatcher->merge(vec1,vec2));
 		bpneeded = 1;
 	}
 	| SWITCH '(' expression ')' statement{
@@ -2518,7 +2565,7 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($3.backpatcher->getFalseList());
+		if($3.backpatcher != NULL){$$.backpatcher->assignNextList($3.backpatcher->getFalseList());}
 		bpneeded = 1;
 
 	}
@@ -2542,7 +2589,7 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
 		bpneeded = 1;
 	}
 	| DO statement UNTIL '(' expression ')' ';' {
@@ -2565,7 +2612,8 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
+		
 		bpneeded = 1;
 	}
 	| FOR '(' PushScope expression_statement expression_statement ')' statement PopScope {
@@ -2591,7 +2639,7 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
 		bpneeded = 1 ;
 
 	}
@@ -2619,7 +2667,7 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
 		bpneeded = 1 ;
 	}
 	| FOR '(' PushScope declaration expression_statement ')' statement PopScope {
@@ -2644,7 +2692,8 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
 		bpneeded = 1 ;
 	}
 	| FOR '(' PushScope declaration expression_statement expression ')' statement PopScope{
@@ -2671,7 +2720,7 @@ iteration_statement
 
 		// Progation of nextList
 		$$.backpatcher = new BackPatcher();
-		$$.backpatcher->assignNextList($5.backpatcher->getFalseList());
+		if($5.backpatcher != NULL){$$.backpatcher->assignNextList($5.backpatcher->getFalseList());}
 		bpneeded = 1 ;
 
 
@@ -2680,10 +2729,19 @@ iteration_statement
 
 jump_statement
 	: GOTO IDENTIFIER ';' {
-		st.pushlabel(std::string($2.type));
+		std::string s = std::string($2.type);
+		st.pushlabel(s);
+		$$.ir.code = strdup(irgen.create_goto(s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
-	| CONTINUE ';'
-	| BREAK ';'  
+	| CONTINUE ';'{
+		$$.ir.code = "";
+		$$.backpatcher = new BackPatcher();
+	}
+	| BREAK ';'  {
+		$$.ir.code = "";
+		$$.backpatcher = new BackPatcher();
+	}
 	| RETURN ';'  {
 		std::string s = (st.lookup(currFunc)->type);
 		if(s!="VOID"){
