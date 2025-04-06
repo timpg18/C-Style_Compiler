@@ -352,6 +352,7 @@ postfix_expression
 		
 		
 		if(eq($1.ir.tmp,$1.name)){
+			printf("bruhh");
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
@@ -365,7 +366,16 @@ postfix_expression
 			newtemp += temp;
 			newtemp += "]";
 			$$.ir.tmp = strdup(newtemp.c_str());
+			if(is_udt($1.type) == true){
+				$$.ir.tmp = strdup(temp.c_str());
+				
 			}
+			else {
+				
+				$$.ir.tmp = strdup(newtemp.c_str());
+			}
+			}
+			
 			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
 		}
 		else{
@@ -390,10 +400,17 @@ postfix_expression
 			
 			if(is_udt($1.type) == true){
 				$$.ir.tmp = strdup(temp2.c_str());
+				
 			}
-			else $$.ir.tmp = strdup(newtemp.c_str());
+			else {
+				
+				$$.ir.tmp = strdup(newtemp.c_str());
+			}
+			
 			}
 		}
+		yyerror($1.type);
+		yyerror($$.ir.tmp);
 		$$.backpatcher = new BackPatcher();
 		$$.index = 0;
 	}
@@ -577,8 +594,8 @@ postfix_expression
 		string t0 = irgen.new_temp();
 		string off = std::to_string(offset);
 		string cd12;
-		if($1.index != 0)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
-		else cd12 = irgen.add_op(t0, puranaind,"+",off);
+		cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		
 		$$.index = offset;
 		string tem = string($1.name);
 		tem += "[";

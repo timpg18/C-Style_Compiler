@@ -1,3 +1,4 @@
-label f:
-	param ptr
-	param g
+label main:
+	$0 = 2 * 8
+	$1 = $0 + 0
+	a[$1] = 1
