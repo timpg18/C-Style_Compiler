@@ -3217,6 +3217,7 @@ function_definition
 				yyerror("main must have return type int");
 			}
 		}
+		 st.transferParametersToFunctionScope(std::string(strdup($2.name)));
 		
 	} 
 	compound_statement {

@@ -165,6 +165,102 @@ public:
         }
     }
 
+    void transferParametersToFunctionScope(const std::string& function_name) {
+        // Find the parent scope
+        Scope* parent_scope = current_scope_->parent_scope;
+        if (!parent_scope) {
+            yyerror("No parent scope found");
+            return;
+        }
+        
+        // Find the function symbol in the parent scope
+        auto func_it = parent_scope->symbol_map.find(function_name);
+        if (func_it == parent_scope->symbol_map.end() || 
+            func_it->second->kind.find("PROCEDURE") == std::string::npos) {
+            std::string err = "Function '" + function_name + "' not found in parent scope";
+            yyerror(err.c_str());
+            return;
+        }
+        
+        // Find the position of the function in the ordered symbols list
+        auto func_pos = parent_scope->ordered_symbols.begin();
+        for (; func_pos != parent_scope->ordered_symbols.end(); ++func_pos) {
+            if (func_pos->name == function_name) {
+                break;
+            }
+        }
+        
+        // If we reached the end, something went wrong
+        if (func_pos == parent_scope->ordered_symbols.end()) {
+            yyerror("Internal error: Function found in map but not in list");
+            return;
+        }
+        
+        // Process parameters directly after the function
+        auto param_pos = std::next(func_pos);
+        int size_reduction = 0;
+        
+        // Track the start of parameters for later removal
+        auto erase_start = param_pos;
+        
+        // Process all consecutive parameters after the function
+        while (param_pos != parent_scope->ordered_symbols.end() && 
+               param_pos->kind.find("PARAMETER") != std::string::npos) {
+                std::cout<<"PARMATER FOUND"<<std::endl;
+            // Create a new entry in the current scope based on parameter data
+            const std::string& name = param_pos->name;
+            const std::string& type = param_pos->type;
+            const std::string& kind = param_pos->kind;
+            int param_size = param_pos->size;
+            std::vector<int> dims = param_pos->dimensions; // Copy dimensions vector
+            
+            // Track size for later adjustment
+            size_reduction += param_size;
+            
+            // Add parameter to token table for current scope
+            token_table_.push_back({
+                name, type, kind, 
+                current_scope_->scope_level, param_size, 
+                current_scope_->total_size, dims
+            });
+            
+            // Insert directly into current scope
+            current_scope_->ordered_symbols.emplace_back(
+                name, type, kind, current_scope_->scope_level,
+                param_size, current_scope_->total_size);
+            
+            // Update symbol map with iterator to new symbol
+            auto new_sym_it = --current_scope_->ordered_symbols.end();
+            current_scope_->symbol_map[name] = new_sym_it;
+            
+            // Copy dimensions to new symbol
+            new_sym_it->dimensions = dims;
+            
+            // Update current scope size
+            current_scope_->total_size += param_size;
+            
+            // Move to next parameter in parent scope
+            ++param_pos;
+        }
+        
+        // Store the end iterator for erasing
+        auto erase_end = param_pos;
+        
+        // Remove parameters from parent scope
+        for (auto it = erase_start; it != erase_end; ++it) {
+            parent_scope->symbol_map.erase(it->name);
+        }
+        
+        // Remove parameter entries from ordered_symbols
+        parent_scope->ordered_symbols.erase(erase_start, erase_end);
+        
+        // Update parent scope's total size
+        parent_scope->total_size -= size_reduction;
+        
+        // Call updateParameterSizes to zero out parameter sizes and fix offsets
+        updateParameterSizes();
+    }
+
     bool is_array(const std::string& name) {
         // Find the symbol in the current scope or parent scopes
         Scope* scope = current_scope_;

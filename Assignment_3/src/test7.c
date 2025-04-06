@@ -1,11 +1,9 @@
 int f(int a){
+    int b;
     return 0;
 }
+int d;
+
 int main(){
-    // int a;
-    f(7);
-    return 0;
-
-    
-
+    char* dd;
 }
