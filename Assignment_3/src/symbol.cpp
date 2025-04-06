@@ -1413,3 +1413,27 @@ std::string SymbolTable::format_size(size_t size_in_bytes) const {
     
     return formatted.str();
 }
+
+// This one is for checking of diamond inheritence
+bool SymbolTable::hasDuplicateNamesInScope(const std::string& scope_name) {
+
+    // Use a set to track names we've seen
+    std::unordered_set<std::string> seen_names;
+    for (const auto& scope_ptr : scopes_) {
+        if (scope_ptr->scope_name == scope_name) {
+            // Check each symbol in the scope
+            for (const auto& symbol : scope_ptr->ordered_symbols) {
+                // If we've seen this name before, we found a duplicate
+                if (seen_names.find(symbol.name) != seen_names.end()) {
+                    return true;
+                }
+                
+                // Add this name to our set of seen names
+                seen_names.insert(symbol.name);
+            }
+        }
+    }
+    
+    // No duplicates found
+    return false;
+}

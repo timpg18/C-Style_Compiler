@@ -24,6 +24,7 @@ std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
 int bpneeded = 0; 
 std::string final_ir_code = "";
+int counter = 1;
 
 std::string formatTypeChange(const std::string& type1, const std::string& type2) {
     std::string lowerType1 = type1;
@@ -1963,6 +1964,9 @@ class_specifier
 
 			int size = st.calculateStructSize(s);
 			st.addTypeSize(s,size);
+			if(st.hasDuplicateNamesInScope(s)){
+				yyerror("Diamond Inheritence Not allowed");
+			}
 		   
 		}
 	| CLASS IDENTIFIER base_clause_opt  
@@ -2941,13 +2945,14 @@ iteration_statement
 		st.falsekardo();
 		// checking if expression is a constant
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3, irgen);
-
+		
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "while_begin" + std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "while_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 		std::string goto_S_begin = irgen.create_goto(label1);
 
@@ -2977,11 +2982,12 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "do_while_begin"+ std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "do_while_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
@@ -3007,11 +3013,12 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "do_until_begin"+ std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "do_until_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
@@ -3041,13 +3048,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3077,13 +3078,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 		
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3111,13 +3106,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3145,13 +3134,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());

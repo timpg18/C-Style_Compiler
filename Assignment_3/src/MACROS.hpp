@@ -111,3 +111,14 @@
             yyerror("Cannot access the protected member of the class"); \
         } \
     } while (0)
+
+#define GEN_FOR_LABELS \
+    int count = counter++; \
+    std::string label1 = "for_begin" + std::to_string(count); \
+    std::string FOR_begin = irgen.add_label(label1); \
+    std::string label2 = irgen.new_label(); \
+    std::string S_begin = irgen.add_label(label2); \
+    std::string Goto_FOR_begin = irgen.create_goto(label1); \
+    std::string label3 = "for_end" + std::to_string(count); \
+    std::string FOR_end = irgen.add_label(label3);
+
