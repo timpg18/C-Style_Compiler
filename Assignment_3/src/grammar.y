@@ -100,6 +100,17 @@ IRGen irgen;
     }
 
 
+#define IS_INT_LIKE_TYPE(t) ( \
+    contains(t, "INT") || \
+    contains(t, "CHAR") || \
+    contains(t, "SHORT") || \
+    contains(t, "BOOL") || \
+    contains(t, "UNSIGNED INT") || \
+    contains(t, "UNSIGNED CHAR") || \
+    contains(t, "UNSIGNED SHORT") \
+)
+
+
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
@@ -2647,7 +2658,6 @@ labeled_statement
 		if(irgen.has_default_label()){
 			yyerror("duplicate default label");
 		}
-		irgen.set_default_label();
 		
 		string label = irgen.new_label();
 		string Default_label = irgen.add_label(label);
@@ -2809,9 +2819,9 @@ selection_statement
 		$$.backpatcher->assignNextList($$.backpatcher->merge(vec1,vec2));
 		bpneeded = 1;
 	}
-	| SWITCH '(' expression ')' statement{
+	| SWITCH '(' expression ')' {irgen.start_new_switch();} statement{
 		//Type Checking
-		if( (contains($3.type,"INT")) || (contains($3.type,"CHAR")) || (contains($3.type,"SHORT")) || (contains($3.type,"BOOL")) || (contains($3.type,"UNSIGNED INT")) || (contains($3.type,"UNSIGNED CHAR")) || (contains($3.type,"UNSIGNED SHORT"))){}
+		if( IS_INT_LIKE_TYPE($3.type)){}
 		else{
 			yyerror("switch quantity not an integer");
 		}
@@ -2829,11 +2839,12 @@ selection_statement
 	
 		$$.ir.code = strdup($3.ir.code);
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_start).c_str()); 
-		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),std::string($5.ir.code)).c_str()); 
-		$$.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($$.ir.code),label11).c_str());
+		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),std::string($6.ir.code)).c_str()); 
+		$$.ir.code = strdup($6.backpatcher->staticBackPatch(irgen.break_,std::string($$.ir.code),label11).c_str());
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_end).c_str()); 
 
 		$$.backpatcher = new BackPatcher();
+		irgen.end_switch();
 	}
 	;
 
