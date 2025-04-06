@@ -1,16 +1,30 @@
 struct s{
     int x;
     int y;
+    struct g{
+        int pp;
+        int k;
+        struct s3{
+            double ggg;
+            int op;
+            int og;
+            struct s4{
+              int  opppp;
+            };
+
+        };
+       
+    };
+    struct g h;
+    struct s4 pk;
+    struct s3 t;
+
 };
 
-class myclass{
-public:{
-    int x;
-}
-};
+
 int main(){
-    struct s *p[20][40];
-    (*p[4][1]).x = 1;
+   struct s p ;
+   p.pk.opppp = 1;
  
     
 }

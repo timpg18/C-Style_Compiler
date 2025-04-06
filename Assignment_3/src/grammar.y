@@ -299,6 +299,7 @@ postfix_expression
 		$$.ir.code = strdup($1.ir.code);
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
+		$$.index = 0;
 	}
 	| postfix_expression '[' expression ']' {
 		std::string s = std::string($1.type);
@@ -394,6 +395,7 @@ postfix_expression
 			}
 		}
 		$$.backpatcher = new BackPatcher();
+		$$.index = 0;
 	}
 	| postfix_expression '(' ')'{
 		$$.name = $1.name;
@@ -452,11 +454,11 @@ postfix_expression
 		$$.ir.tmp = strdup(tmp.c_str());
 		$$.backpatcher = new BackPatcher();
 		$$.ir.code = strdup(s.c_str());
-
+	$$.index = 0;
 	}
 	| postfix_expression '(' argument_expression_list ')'{
 		
-		
+		$$.index = 0;
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -534,6 +536,7 @@ postfix_expression
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		//printf("\n\n%s\n\n",$1.type);
 		//std::cout<<s<<"\n";
+		
 		if(st.lookup(s) != nullptr){
 			if(contains(strdup(st.lookup(s)->kind.c_str()),"PRIVATE")){
 				yyerror("Cannot access the private member of the class");
@@ -548,33 +551,51 @@ postfix_expression
 			$$.kind = strdup(st.lookup(s)->kind.c_str());
 			$$.name = strdup(s.c_str());
 		}
-		else{
-			yyerror(("error:" + std::string($3.type) + " is not a member of the struct").c_str());
-		}
+		
 		int offset = -1;
+		string typ;
+		
 		//$3.type is just right wala
 		//$1.type is type of p.ID as whole
+		
+		
 		for (const auto& scope_ptr : st.scopes_) {
 			if(scope_ptr->scope_name == string($1.type)){
 				if(scope_ptr->symbol_map.count(string($3.type)) > 0){
 					offset = scope_ptr->symbol_map[string($3.type)]->offset;
+					typ = scope_ptr->symbol_map[string($3.type)]->type;
 					//aagaya offset
 					printf("%d \n",offset);
 					break;
 				}
 			}
 		}
+		if(offset == -1){
+			yyerror("could not find required id");
+		}
+		string puranaind = to_string($1.index);
 		string t0 = irgen.new_temp();
 		string off = std::to_string(offset);
-		string cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
-
+		string cd12;
+		if($1.index != 0)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		else cd12 = irgen.add_op(t0, puranaind,"+",off);
+		$$.index = offset;
 		string tem = string($1.name);
 		tem += "[";
 		tem += t0;
 		tem += "]";
-		
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),cd12).c_str());
-		$$.ir.tmp = strdup(tem.c_str());
+		if(is_udt(strdup(typ.c_str())) == true){
+			//there is struct inside
+			$$.ir.tmp = strdup(t0.c_str());
+		}
+		else{
+			$$.ir.tmp = strdup(tem.c_str());
+			
+		}
+		$$.type = strdup(typ.c_str());
+		$$.name = strdup($1.name);
+		
 		$$.backpatcher = new BackPatcher();
 	}
 	| postfix_expression PTR_OP IDENTIFIER{
@@ -599,6 +620,7 @@ postfix_expression
 		}
 		$$.type = $1.type;
 		$$.kind = $1.kind;
+		$$.index = 0;
 		//a++
 		std::string temp = irgen.new_temp();
 		
@@ -629,6 +651,7 @@ postfix_expression
 		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
 		$$.ir.tmp = strdup(temp.c_str());
 		$$.backpatcher = new BackPatcher();
+		$$.index = 0;
 	}
 	;
 
@@ -3247,13 +3270,13 @@ void yyerror(const char *s) {
 main(int argc, char **argv) {
 	 yydebug = 1;
 int parserresult = yyparse(); // Parser calls yylex() internally
-
+st.print_all_scopes();
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	
 	//st.print_hierarchy();
 	//st.print_token_table();
-	st.print_all_scopes();
+	
 	//ts.printAllTypes();
 	//ts.printTypedefs();
 	//ts.printStaticVariables();
