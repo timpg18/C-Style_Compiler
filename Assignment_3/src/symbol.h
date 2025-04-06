@@ -478,6 +478,207 @@ public:
                  << std::string(max_offset_len, '-') << "+\n";
     }
 
+    void implement_inheritance(const std::string& derived_class_name, const std::string& inheritance_spec) {
+        // Find the derived class in the scopes
+        Scope* derived_scope = nullptr;
+        for (const auto& scope_ptr : scopes_) {
+            if (scope_ptr->scope_name == derived_class_name) {
+                derived_scope = scope_ptr.get();
+                break;
+            }
+        }
+        
+        if (!derived_scope) {
+            std::string err = "Derived class '" + derived_class_name + "' not found";
+            yyerror(err.c_str());
+            return;
+        }
+        
+        // Parse the inheritance specification
+        std::istringstream iss(inheritance_spec);
+        std::string access_specifier, base_class_name;
+        
+        while (iss >> access_specifier >> base_class_name) {
+            // Validate access specifier (must be public, private, or protected)
+            if (access_specifier != "public" && access_specifier != "private" && access_specifier != "protected") {
+                std::string err = "Invalid access specifier '" + access_specifier + "' for inheritance";
+                yyerror(err.c_str());
+                continue;
+            }
+            
+            // Find the base class in the scopes
+            std::string class_name_ = "class " + base_class_name;
+            Scope* base_scope = nullptr;
+            for (const auto& scope_ptr : scopes_) {
+                if (scope_ptr->scope_name == class_name_) {
+                    base_scope = scope_ptr.get();
+                    break;
+                }
+            }
+            
+            if (!base_scope) {
+                std::string err = "Base class '" + base_class_name + "' not found";
+                yyerror(err.c_str());
+                continue;
+            }
+            
+            // Copy all members from base class to derived class, adjusting access modifiers
+            for (const auto& base_symbol : base_scope->ordered_symbols) {
+                // Create a new symbol instead of copying (to avoid unique_ptr issue)
+                std::string inherited_name =  base_symbol.name;
+                
+                // Determine the new access modifier based on inheritance rules
+                std::string original_access = "";
+                
+                // Extract original access modifier from the kind string
+                if (base_symbol.kind.find("PUBLIC") != std::string::npos) {
+                    original_access = "PUBLIC";
+                } else if (base_symbol.kind.find("PROTECTED") != std::string::npos) {
+                    original_access = "PROTECTED";
+                } else if (base_symbol.kind.find("PRIVATE") != std::string::npos) {
+                    original_access = "PRIVATE";
+                }
+                
+                // Skip private members
+                if (original_access == "PRIVATE") {
+                    continue;
+                }
+                
+                // Remove old access modifier if present
+                std::string new_kind = base_symbol.kind;
+                if (!original_access.empty()) {
+                    size_t pos = new_kind.find(original_access);
+                    if (pos != std::string::npos) {
+                        new_kind.erase(pos, original_access.length());
+                    }
+                    // Clean up extra spaces
+                    new_kind = std::regex_replace(new_kind, std::regex("\\s+"), " ");
+                    new_kind = std::regex_replace(new_kind, std::regex("^\\s+|\\s+$"), "");
+                }
+                
+                // Apply inheritance access rules
+                std::string new_access = "";
+                
+                if (original_access == "PROTECTED") {
+                    // Protected members remain protected under public inheritance,
+                    // become private under private inheritance
+                    if (access_specifier == "public") {
+                        new_access = "PROTECTED";
+                    } else if (access_specifier == "private") {
+                        new_access = "PRIVATE";
+                    } else { // protected inheritance
+                        new_access = "PROTECTED";
+                    }
+                } else if (original_access == "PUBLIC") {
+                    // Public members inherit the inheritance access specifier
+                    if (access_specifier == "public") {
+                        new_access = "PUBLIC";
+                    } else if (access_specifier == "private") {
+                        new_access = "PRIVATE";
+                    } else { // protected inheritance
+                        new_access = "PROTECTED";
+                    }
+                } else {
+                    // No explicit access specifier, treat as public
+                    if (access_specifier == "public") {
+                        new_access = "PUBLIC";
+                    } else if (access_specifier == "private") {
+                        new_access = "PRIVATE";
+                    } else { // protected inheritance
+                        new_access = "PROTECTED";
+                    }
+                }
+                
+                // Set the new kind with updated access modifier
+                new_kind = new_kind + " " + new_access;
+                
+                // Add the new symbol to the derived scope
+                derived_scope->ordered_symbols.emplace_back(
+                    inherited_name,
+                    base_symbol.type,
+                    new_kind,
+                    derived_scope->scope_level,
+                    base_symbol.size,
+                    derived_scope->total_size
+                );
+                
+                // Get iterator to the newly added symbol
+                auto it = std::prev(derived_scope->ordered_symbols.end());
+                
+                // Copy dimensions if any
+                it->dimensions = base_symbol.dimensions;
+                
+                // Don't copy child_table as it's a unique_ptr
+                // If needed, create a new one: it->child_table = std::make_unique<SymbolTable>();
+                
+                // Add to symbol map
+                derived_scope->symbol_map[inherited_name] = it;
+                
+                // Update token table
+                token_table_.push_back({
+                    inherited_name,
+                    base_symbol.type,
+                    new_kind,
+                    derived_scope->scope_level,
+                    base_symbol.size,
+                    derived_scope->total_size,
+                    base_symbol.dimensions
+                });
+                
+                // Update the derived class's total size
+                derived_scope->total_size += base_symbol.size;
+            }
+        }
+        
+        // Recalculate offsets with proper alignment for all symbols in the derived class
+        recalculate_offsets_with_alignment(derived_scope);
+    }
+    
+    // Helper function to recalculate offsets with alignment
+    void recalculate_offsets_with_alignment(Scope* scope) {
+        if (!scope) return;
+        
+        size_t current_offset = 0;
+        
+        for (auto& symbol : scope->ordered_symbols) {
+            // Determine alignment requirement for this symbol
+            size_t alignment = 1;
+            if (symbol.size == 2) alignment = 2;
+            else if (symbol.size == 4) alignment = 4;
+            else if (symbol.size >= 8) alignment = 8;
+            
+            // Align the current offset
+            if (current_offset % alignment != 0) {
+                current_offset += alignment - (current_offset % alignment);
+            }
+            
+            // Set the aligned offset
+            symbol.offset = current_offset;
+            
+            // Update token table
+            for (auto& entry : token_table_) {
+                if (entry.token == symbol.name && entry.scope_level == scope->scope_level) {
+                    entry.offset = current_offset;
+                    break;
+                }
+            }
+            
+            // Move to next position
+            current_offset += symbol.size;
+        }
+        
+        // Update total size with proper alignment at the end
+        size_t max_alignment = 8; // Maximum alignment requirement
+        if (current_offset % max_alignment != 0) {
+            current_offset += max_alignment - (current_offset % max_alignment);
+        }
+        
+        // Set the final aligned size
+        scope->total_size = current_offset;
+        
+        std::cout << "Recalculated class '" << scope->scope_name 
+                  << "' layout. Total size: " << current_offset << " bytes\n";
+    }
 
 
     // Declare struct variables in the scope
