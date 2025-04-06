@@ -181,13 +181,23 @@ void IRGen::start_new_switch() {
 // Adds the case to current Switch case
 void IRGen::add_case_info(const std::string& value, const std::string& label) {
     if (!case_info_stack.empty()) {
-        case_info_stack.top().push_back({value, label});
+        case_info_stack.top().push_back({value, label,depth_current});
         
         // Update has_default flag if this is a default case
         if (value == "Default" && !has_default_stack.empty()) {
             has_default_stack.top() = true;
         }
     }
+}
+
+// to get depth of current stack
+bool IRGen::get_depth(){
+    for (const auto& info : case_info_stack.top()) {
+        if (abs(info.depth - depth_current)>1) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // checks for duplicate value for a case statement
@@ -253,6 +263,7 @@ std::string IRGen::generate_switch_cases(const std::string& dispatch_var) {
         std::string goto_default = create_goto(default_label);
         result = concatenate(result, goto_default);
     }
+    end_switch();
     
     return result;
 }

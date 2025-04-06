@@ -175,11 +175,13 @@ constant
 	| ENUMERATION_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "ENUM_CONST";
+		$$.name = strdup((std::string(yytext)).c_str());
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}	/* after it has been defined as such */
 	| BOOLEAN{
-		$$.type = "BOOL";
+		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.name = $1.name;
 		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	;
@@ -194,9 +196,11 @@ enumeration_constant		/* before it has been defined as such */
 BOOLEAN
 	: TRUE {
 		$$.ir.tmp  = "true";
+		$$.name = "TRUE";
 	}
 	| FALSE{
 		$$.ir.tmp = "false";
+		$$.name = "FALSE";
 	}
 
 string
@@ -341,6 +345,10 @@ postfix_expression
 	}
 	| postfix_expression '(' ')'{
 		$$.name = $1.name;
+		if(isPROCEDURE($1.kind)){}
+		else{
+			yyerror("called object is not a function or function pointer");
+		}
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -387,7 +395,7 @@ postfix_expression
 			ext = irgen.add_par("&" + pref);
 			
 		}
-		$$.kind = "CONST";
+		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
 
 		string tmp = irgen.new_temp();
@@ -404,6 +412,10 @@ postfix_expression
 	| postfix_expression '(' argument_expression_list ')'{
 		
 		$$.index = 0;
+		if(isPROCEDURE($1.kind)){}
+		else{
+			yyerror("called object is not a function or function pointer");
+		}
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -463,7 +475,7 @@ postfix_expression
 			ext = irgen.add_par("&" + pref);
 			
 		}
-		$$.kind = "CONST";
+		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
 		
 		$$.backpatcher = new BackPatcher();
@@ -2628,7 +2640,8 @@ statement
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	|  {st.push_scope();} compound_statement {
+	|  {st.push_scope();irgen.depth_current++;} compound_statement {
+		irgen.depth_current++;
 		bool x = st.current_scope_->contains_break_or_continue;
 		bool y = st.current_scope_->jump[0];
 		bool z = st.current_scope_->jump[1];
@@ -2858,6 +2871,10 @@ selection_statement
 		bpneeded = 1;
 	}
 	| SWITCH '(' expression ')' {irgen.start_new_switch();} statement{
+		if(!irgen.get_depth()){
+			yyerror("'case' label not within a switch statement");
+		}
+		
 		//Type Checking
 		if( IS_INT_LIKE_TYPE($3.type)){}
 		else{

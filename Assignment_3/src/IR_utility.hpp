@@ -20,6 +20,7 @@ class IRGen{
     struct CaseInfo {
         std::string value;    // The constant expression value
         std::string label;    // The corresponding label
+        int depth;
     };
 
     // Stack of case info vectors to handle nested switches
@@ -34,6 +35,7 @@ class IRGen{
         temp_counter = 0;
         label_counter = 0;
         tmp_label_counter = 0;
+        depth_current = 0;
         
         // Initialize first empty switch context
         case_info_stack.push(std::vector<CaseInfo>());
@@ -42,6 +44,7 @@ class IRGen{
 
     std::vector<std::string> break_;
     std::vector<std::string> continue_;
+    int depth_current;
 
     // Start a new switch statement context
     void start_new_switch();
@@ -57,6 +60,8 @@ class IRGen{
     int get_case_info_size();
     // Generate switch cases code for current switch context
     std::string generate_switch_cases(const std::string& dispatch_var);
+    // To get current depth
+    bool get_depth();
         
 
     //temporaries and label generation.

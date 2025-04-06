@@ -36,6 +36,7 @@ int validate_arguments(const char* params, const char* args) {
 
     return 1; // Valid
 }
+
 bool eq(const char *s1, const char *s2) {
     // If either pointer is NULL, check if both are NULL.
     if (s1 == NULL || s2 == NULL) {
@@ -43,6 +44,7 @@ bool eq(const char *s1, const char *s2) {
     }
     return strcmp(s1, s2) == 0;
 }
+
 char *concat(const char *s1, const char *s2) {
     size_t len1 = strlen(s1);
     size_t len2 = strlen(s2);

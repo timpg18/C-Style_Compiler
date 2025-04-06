@@ -1,9 +1,7 @@
 label main:
 	func_prologue  main
-		cast: char -> int 
-		a = 'c'
-		cast: float -> int 
-		b = 8.999
-		cast: float -> int 
-		return 9.0
+		if x == 1 goto @L0
+	label @L0:
+		goto @L1
+	label @L1:
 	func_epilogue  main

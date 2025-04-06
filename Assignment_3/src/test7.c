@@ -1,8 +1,11 @@
 int  main(){
-  int a ='c';
-  int b;
-  b= 8.999;
-  return 9.0;
+  int x;
+  switch (x) 
+        case 1: // ❌ Case not directly inside switch
+            break;
+
+  
+
 }
 
 
