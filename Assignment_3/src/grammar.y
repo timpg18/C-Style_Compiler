@@ -3219,7 +3219,9 @@ function_definition
 		}
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,concat("func_prologue ",$2.name));
 		temp = irgen.concatenate(temp,string($4.ir.code));
+		temp = irgen.concatenate(temp,concat("func_epilogue ",$2.name));
 		$$.ir.code = strdup(temp.c_str());
 	}
 	| declaration_specifiers   declarator  error { yyerrok; }

@@ -1,3 +1,7 @@
+int f(int a,int b){
+    return 0;
+}
+
 int main(){
     int x = 2, y = 1;
 
