@@ -1,8 +1,13 @@
-struct AA{
-    int a,b;
-
+union G{
+    int k;
+    struct s{
+        int p;
+        double f;
+    };
+    struct s t;
 };
+
 int main(){
-struct AA a[10];
-a[2].a = 1;
+    union G h;
+    h.t.f = 0;
 }

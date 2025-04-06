@@ -409,8 +409,7 @@ postfix_expression
 			
 			}
 		}
-		yyerror($1.type);
-		yyerror($$.ir.tmp);
+		
 		$$.backpatcher = new BackPatcher();
 		$$.index = 0;
 	}
@@ -594,7 +593,10 @@ postfix_expression
 		string t0 = irgen.new_temp();
 		string off = std::to_string(offset);
 		string cd12;
-		cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		
+		if(eq($1.name,$1.ir.tmp) ==false)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		else cd12 = irgen.add_op(t0, puranaind,"+",off);
+		
 		
 		$$.index = offset;
 		string tem = string($1.name);
@@ -2080,19 +2082,6 @@ struct_or_union_specifier
 			st.push_scope(s);
 			}
 			struct_declaration_list '}'  {
-			
-		if(eq($1.type, "union")){
-			
-			//i need to keep the offset of all internal variables 0 
-			//since all var have same memory location
-				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
-			for(auto &it: st.scopes_.back()->symbol_map){
-				//it.first is variable
-				//it.second->offset is what i need to update
-				it.second->offset = 0;
-				
-			}
-		}
 				if(st.current_scope_->contains_break_or_continue == true){
 					yyerror("using break/continue invalid in this scope");
 				}
@@ -2108,6 +2097,25 @@ struct_or_union_specifier
 			}
 			else{
 				size = st.calculateUnionSize(s);
+				if(eq($1.type, "union")){
+			
+			//i need to keep the offset of all internal variables 0 
+			//since all var have same memory location
+				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
+				string t = string($1.type);
+				t += " ";
+				t += string($2.type);
+				cout <<t <<"\n";
+
+			for(auto &it: st.scopes_){
+				if(it->scope_name == t){
+					for(auto &it2: it->symbol_map){
+						it2.second->offset = 0;
+					}
+				}
+			}
+			
+		}
 			}
 			st.addTypeSize(s,size);
 			
