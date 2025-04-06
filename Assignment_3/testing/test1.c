@@ -22,7 +22,6 @@ int main(){
     c ^= b;
     c %= k;
 
-
     lab:
     //if + loops (all kind)
     //also goto + break + continue added
@@ -60,11 +59,10 @@ int main(){
         break;
     }
 
-
     //arrays
     int arr[200][100][10][12];
     int brr[1][2][3][4];
-    arr[0][1][2][1] =3;
+    arr[0][1][2][1] = 3;
     brr[10][12][12][32] = 10;
 
     //static

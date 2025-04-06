@@ -285,7 +285,6 @@ postfix_expression
 		
 		
 		if(eq($1.ir.tmp,$1.name)){
-			printf("bruhh");
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
@@ -985,7 +984,7 @@ $$.backpatcher = new BackPatcher();
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("-"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
@@ -1517,7 +1516,7 @@ assignment_expression
 			HANDLE_BOOL_RESULT_ASSIGN($1, $$, $3, irgen);
 		}
 		else{
-			std::string ss = irgen.concatenate(string($$.ir.code),type_change_statement) + tem;
+			std::string ss = irgen.concatenate(irgen.concatenate(string($$.ir.code),type_change_statement),tem);
 			$$.ir.code = strdup(ss.c_str());
 		}
 		$$.ir.tmp = strdup($1.ir.tmp);
@@ -3223,6 +3222,7 @@ jump_statement
 		}
 		string temp = string($2.ir.tmp);
 		string cd = string($2.ir.code);
+		cd += "\n";
 		cd += irgen.return_val(temp);
 		if(type_change_statement != ""){
 			type_change_statement+=cd;
