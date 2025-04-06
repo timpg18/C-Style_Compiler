@@ -10,12 +10,13 @@
 #include <regex>
 #include <iomanip>
 #include <locale>
-int yylex();
-void yyerror(const char *s);
+#include <list>
+#include <sstream>
+#include <set>
 #include <stdio.h>
 
-
-
+int yylex();
+void yyerror(const char *s);
 char *currentType = NULL;
 int parser_error=0;
 int token_count=0;
@@ -27,16 +28,6 @@ extern void update_symtab(char* ttoken);
 extern int symcount;
 extern char* yytext;
 
-
-#include <iostream>
-#include <vector>
-#include <string>
-#include <memory>
-#include <unordered_map>
-#include <list>
-#include <cstring>
-#include <sstream>
-#include <set>
 
 class SymbolTable {
 public:

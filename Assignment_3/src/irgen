@@ -1,4 +1,8 @@
+label f:
+param a
+	func_prologue  f
+		return 0
+	func_epilogue  f
 label main:
-	$0 = 0 + 0
-	$1 = $0 + 4
-	h[$1] = 0
+	func_prologue  main
+	func_epilogue  main
