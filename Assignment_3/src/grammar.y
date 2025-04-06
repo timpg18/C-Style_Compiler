@@ -374,6 +374,7 @@ postfix_expression
 		
 		
 		if(eq($1.ir.tmp,$1.name)){
+			printf("bruhh");
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
@@ -387,7 +388,16 @@ postfix_expression
 			newtemp += temp;
 			newtemp += "]";
 			$$.ir.tmp = strdup(newtemp.c_str());
+			if(is_udt($1.type) == true){
+				$$.ir.tmp = strdup(temp.c_str());
+				
 			}
+			else {
+				
+				$$.ir.tmp = strdup(newtemp.c_str());
+			}
+			}
+			
 			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
 		}
 		else{
@@ -412,10 +422,16 @@ postfix_expression
 			
 			if(is_udt($1.type) == true){
 				$$.ir.tmp = strdup(temp2.c_str());
+				
 			}
-			else $$.ir.tmp = strdup(newtemp.c_str());
+			else {
+				
+				$$.ir.tmp = strdup(newtemp.c_str());
+			}
+			
 			}
 		}
+		
 		$$.backpatcher = new BackPatcher();
 		$$.index = 0;
 	}
@@ -599,8 +615,11 @@ postfix_expression
 		string t0 = irgen.new_temp();
 		string off = std::to_string(offset);
 		string cd12;
-		if($1.index != 0)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		
+		if(eq($1.name,$1.ir.tmp) ==false)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
 		else cd12 = irgen.add_op(t0, puranaind,"+",off);
+		
+		
 		$$.index = offset;
 		string tem = string($1.name);
 		tem += "[";
@@ -2116,6 +2135,25 @@ struct_or_union_specifier
 			}
 			else{
 				size = st.calculateUnionSize(s);
+				if(eq($1.type, "union")){
+			
+			//i need to keep the offset of all internal variables 0 
+			//since all var have same memory location
+				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
+				string t = string($1.type);
+				t += " ";
+				t += string($2.type);
+				cout <<t <<"\n";
+
+			for(auto &it: st.scopes_){
+				if(it->scope_name == t){
+					for(auto &it2: it->symbol_map){
+						it2.second->offset = 0;
+					}
+				}
+			}
+			
+		}
 			}
 			st.addTypeSize(s,size);
 			

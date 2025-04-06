@@ -1,3 +1,4 @@
-label f:
-	param ptr
-	param g
+label main:
+	$0 = 0 + 0
+	$1 = $0 + 4
+	h[$1] = 0
