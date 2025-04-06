@@ -100,6 +100,27 @@ IRGen irgen;
     }
 
 
+#define IS_INT_LIKE_TYPE(t) ( \
+    contains(t, "INT") || \
+    contains(t, "CHAR") || \
+    contains(t, "SHORT") || \
+    contains(t, "BOOL") || \
+    contains(t, "UNSIGNED INT") || \
+    contains(t, "UNSIGNED CHAR") || \
+    contains(t, "UNSIGNED SHORT") \
+)
+
+#define CHECK_ACCESS(s) \
+    do { \
+        char* kind_str = strdup(st.lookup(s)->kind.c_str()); \
+        if (contains(kind_str, "PRIVATE")) { \
+            yyerror("Cannot access the private member of the class"); \
+        } else if (contains(kind_str, "PROTECTED")) { \
+            yyerror("Cannot access the protected member of the class"); \
+        } \
+    } while (0)
+
+
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
@@ -177,7 +198,7 @@ int bpneeded = 0;
 %type <atr> init_declarator_list
 %type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
 %type <atr> declaration declaration_list function_definition  block_item compound_statement statement expression_statement
-%type <atr> struct_declaration struct_declarator_list struct_declarator
+%type <atr> struct_declaration struct_declarator_list struct_declarator 
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -196,6 +217,7 @@ primary_expression
     		yyerror(err.c_str());
 		}
 		else{
+			CHECK_ACCESS(std::string($1.type));
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
@@ -658,7 +680,7 @@ postfix_expression
 argument_expression_list
 	: assignment_expression{
 		$$.type = $1.type;
-		
+		CONVERT_BOOL_EXPR_TO_VALUE($1);
 		string s = irgen.add_par(string($1.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
 		$$.index = 1;
@@ -666,6 +688,7 @@ argument_expression_list
 	| argument_expression_list ',' assignment_expression{
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
+		CONVERT_BOOL_EXPR_TO_VALUE($3);
 		string s = string($3.ir.code);
 		string p = irgen.add_par(string($3.ir.tmp));
 		s = irgen.concatenate(s,p);
@@ -1464,7 +1487,7 @@ assignment_expression
 					yyerror("const variable cannot be re-changed");
 				}
 				// ONLY INT TYPE VALUES CAN BE ASSIGNED 
-				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+				if(eq($3.kind, "ENUM_CONST") || contains($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
 					if(!eq($3.type,"INT")){
 						yyerror("incompatible types when assigning to type \'enum\'");
 					}
@@ -1762,7 +1785,7 @@ init_declarator
 
 					//printf("\n\n%s\n\n%s\n\n",$3.kind,$3.type);
 					// ENUM CAN BE INITIALIZED BY ENUM_CONST , IDENTIFIER , CONST 
-					if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+					if(eq($3.kind, "ENUM_CONST") || contains($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
 						// ONLY INT TYPE VALUES CAN BE ASSIGNED 
 						std::string tmp = ts.removeConstFromDeclaration(std::string(temp));
 						temp = strdup(tmp.c_str());
@@ -1909,9 +1932,9 @@ class_specifier
 			}
 			st.pop_scope();
 			st.current_scope_->contains_break_or_continue =false;
-		 $$.type = (char*)malloc(strlen("class") + 14); 
-         sprintf($$.type, "class (anonymous)");
-		 yyerror("anonymous class definition not allowed");
+			$$.type = (char*)malloc(strlen("class") + 14); 
+			sprintf($$.type, "class (anonymous)");
+			yyerror("anonymous class definition not allowed");
 		   }
 	| CLASS IDENTIFIER base_clause_opt  '{' 
 		{   classDef=1;
@@ -1920,6 +1943,9 @@ class_specifier
 			st.update_symbol_sizes(std::string($2.type),0);
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
 			ts.addClass(std::string($2.type));
+			if(!eq($3.name,"NULL")){
+				st.implement_inheritance(std::string(concat("class",$2.type)),std::string($3.name));
+			}
 		}
 		class_member_list '}' 
 		{
@@ -1937,14 +1963,15 @@ class_specifier
 		    $$.type = (char*)malloc( strlen("class") + strlen($2.type) + 14 ); // one space plus null
          	sprintf($$.type, "class %s", $2.type);
 			std::string s = std::string("class ") + std::string($2.type); 
+
 			int size = st.calculateStructSize(s);
 			st.addTypeSize(s,size);
 		   
 		}
 	| CLASS IDENTIFIER base_clause_opt  
          { 
-          $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2);
-         sprintf($$.type, "%s %s", $1.type, $2.type);
+          $$.type = (char*)malloc(strlen("class") + strlen($2.type) + 2);
+         sprintf($$.type, "%s %s", "class", $2.type);
 		
 		 if(!ts.contains(std::string($$.type))){
 			yyerror("Use of undeclared CLASS");
@@ -1974,35 +2001,31 @@ access_specifier
     ;
 /* Optional inheritance clause */
 base_clause_opt
-    : ':' base_specifier_list { $$.type = $2.type; }
-    | /* empty */ { $$.type = NULL; }
+    : ':' base_specifier_list { $$.name = $2.name; }
+    | /* empty */ { $$.name = "NULL"; }
     ;
 
 base_specifier_list
     : base_specifier { $$.type = $1.type; }
-    | base_specifier_list ',' base_specifier 
-         { 
-           /* Concatenate the list, e.g., "public Base1, private Base2" */
-           char *tmp = (char*)malloc(strlen($1.type) + strlen($3.type) + 14);
-           sprintf(tmp, "%s, %s", $1.type, $3.type);
-           $$.type= tmp;
-         }
+    | base_specifier_list ',' base_specifier { 
+           
+		   $$.name = concat($1.name,$3.name);
+        }
     ;
 
 /* A single base specifier with an optional access specifier */
 base_specifier
-    : access_specifier_opt IDENTIFIER
-         { 
-           if ($1.type)
-           {
-              $$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 14);
-              sprintf($$.type, "%s %s", $1.type, $2.type);
-           }
-           else
-           {
-              $$.type = strdup($2.type);
-           }
-         }
+    : access_specifier_opt IDENTIFIER{
+		if( (st.lookup(std::string($2.type))) && (st.lookup(std::string($2.type))->type == "CLASS") ){}
+		else{
+			std::string err = "base class \'" + std::string($2.type) + "\' has not been declared";
+			char* errr = strdup(err.c_str());
+			yyerror(errr);
+		}
+
+		$$.name = strdup(concat($1.type,$2.type));
+	}
+		
     ;
 
 /* Optional access specifier in the base clause */
@@ -2064,23 +2087,25 @@ struct_or_union_specifier
 			}
 			struct_declaration_list '}'  {
 			
-		if(eq($1.type, "union")){
-			
-			//i need to keep the offset of all internal variables 0 
-			//since all var have same memory location
-				//offset = scope_ptr->symbol_map[string($3.type)]->offset;
-			for(auto &it: st.scopes_.back()->symbol_map){
-				//it.first is variable
-				//it.second->offset is what i need to update
-				it.second->offset = 0;
+			if(eq($1.type, "union")){
 				
-			}
-		}
-				if(st.current_scope_->contains_break_or_continue == true){
-					yyerror("using break/continue invalid in this scope");
+				//i need to keep the offset of all internal variables 0 
+				//since all var have same memory location
+					//offset = scope_ptr->symbol_map[string($3.type)]->offset;
+				for(auto &it: st.scopes_.back()->symbol_map){
+					//it.first is variable
+					//it.second->offset is what i need to update
+					it.second->offset = 0;
+					
 				}
-				st.pop_scope();
-				st.falsekardo();
+			}
+
+			if(st.current_scope_->contains_break_or_continue == true){
+				yyerror("using break/continue invalid in this scope");
+			}
+			st.pop_scope();
+			st.falsekardo();
+
 			/* Named struct/union with body */
 			$$.type = (char*)malloc(strlen($1.type) + strlen($2.type) + 2); // one space plus null
 			sprintf($$.type, "%s %s", $1.type, $2.type);
@@ -2406,7 +2431,7 @@ direct_declarator
 		string lb = string($$.name);
 		string cd = irgen.add_label(lb);
 		$$.ir.code = strdup(cd.c_str());
-	   $$.ir.tmp  =strdup($1.ir.tmp);
+	   	$$.ir.tmp  =strdup($1.ir.tmp);
     }
 	| direct_declarator '('  identifier_list ')'{
 		//NOW GIVES ERROR
@@ -2692,7 +2717,6 @@ labeled_statement
 		if(irgen.has_default_label()){
 			yyerror("duplicate default label");
 		}
-		irgen.set_default_label();
 		
 		string label = irgen.new_label();
 		string Default_label = irgen.add_label(label);
@@ -2854,9 +2878,9 @@ selection_statement
 		$$.backpatcher->assignNextList($$.backpatcher->merge(vec1,vec2));
 		bpneeded = 1;
 	}
-	| SWITCH '(' expression ')'statement{
+	| SWITCH '(' expression ')' {irgen.start_new_switch();} statement{
 		//Type Checking
-		if( (contains($3.type,"INT")) || (contains($3.type,"CHAR")) || (contains($3.type,"SHORT")) || (contains($3.type,"BOOL")) || (contains($3.type,"UNSIGNED INT")) || (contains($3.type,"UNSIGNED CHAR")) || (contains($3.type,"UNSIGNED SHORT"))){}
+		if( IS_INT_LIKE_TYPE($3.type)){}
 		else{
 			yyerror("switch quantity not an integer");
 		}
@@ -2874,11 +2898,12 @@ selection_statement
 	
 		$$.ir.code = strdup($3.ir.code);
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_start).c_str()); 
-		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),std::string($5.ir.code)).c_str()); 
-		$$.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($$.ir.code),label11).c_str());
+		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),std::string($6.ir.code)).c_str()); 
+		$$.ir.code = strdup($6.backpatcher->staticBackPatch(irgen.break_,std::string($$.ir.code),label11).c_str());
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_end).c_str()); 
 
 		$$.backpatcher = new BackPatcher();
+		irgen.end_switch();
 	}
 	;
 
@@ -3237,6 +3262,7 @@ function_definition
 				yyerror("main must have return type int");
 			}
 		}
+		 st.transferParametersToFunctionScope(std::string(strdup($2.name)));
 		
 	} 
 	compound_statement {
@@ -3253,7 +3279,9 @@ function_definition
 		}
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
+		temp = irgen.concatenate(temp,concat("func_prologue ",$2.name));
 		temp = irgen.concatenate(temp,string($4.ir.code));
+		temp = irgen.concatenate(temp,concat("func_epilogue ",$2.name));
 		$$.ir.code = strdup(temp.c_str());
 	}
 	| declaration_specifiers   declarator  error { yyerrok; }

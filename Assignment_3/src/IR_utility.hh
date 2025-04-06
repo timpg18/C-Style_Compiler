@@ -5,24 +5,64 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_map>
+#include <stack>
 
 
 
 class IRGen{
     public:
+        IRGen() {
+            // Initialize counters
+            temp_counter = 0;
+            label_counter = 0;
+            tmp_label_counter = 0;
+            
+            // Initialize first empty switch context
+            case_info_stack.push(std::vector<CaseInfo>());
+            has_default_stack.push(false);
+        }
+
         std::vector<std::string> break_;
         std::vector<std::string> continue_;
 
-        void add_case_info(const std::string& value, const std::string& label) {
-            case_infos.push_back({value, label});
+        // Start a new switch statement context
+        void start_new_switch() {
+            case_info_stack.push(std::vector<CaseInfo>());
+            has_default_stack.push(false);
         }
 
-        void set_default_label() {
-            has_default = true;
+        // End current switch statement context
+        void end_switch() {
+            if (!case_info_stack.empty()) {
+                case_info_stack.pop();
+                has_default_stack.pop();
+                
+                // Always ensure we have at least one context
+                if (case_info_stack.empty()) {
+                    case_info_stack.push(std::vector<CaseInfo>());
+                    has_default_stack.push(false);
+                }
+            }
         }
+
+        void add_case_info(const std::string& value, const std::string& label) {
+            if (!case_info_stack.empty()) {
+                case_info_stack.top().push_back({value, label});
+                
+                // Update has_default flag if this is a default case
+                if (value == "Default" && !has_default_stack.empty()) {
+                    has_default_stack.top() = true;
+                }
+            }
+        }
+
 
         bool is_duplicate_case(const std::string& value) {
-            for (const auto& info : case_infos) {
+            if (case_info_stack.empty()) {
+                return false;
+            }
+            
+            for (const auto& info : case_info_stack.top()) {
                 if (info.value == value) {
                     return true;
                 }
@@ -30,67 +70,73 @@ class IRGen{
             return false;
         }
 
+        // Check if default label is already defined in current switch
         bool has_default_label() {
-            return has_default;
+            if (has_default_stack.empty()) {
+                return false;
+            }
+            return has_default_stack.top();
         }
 
-        void clear_switch_info() {
-            case_infos.clear();
-            has_default = false;
-        }
 
-        int get_case_info_size(){
-            return case_infos.size();
-        }
-
-        // Add this function to the public section of your IRGen class
-
-    std::string generate_switch_cases(const std::string& dispatch_var) {
-        std::string result = "";
-        
-        // Generate if-goto for each case
-        for (const auto& case_info : case_infos) {
-            if (case_info.value == "Default") {
-                // Skip default case for now, we'll handle it at the end
-                continue;
+        int get_case_info_size() {
+            if (case_info_stack.empty()) {
+                return 0;
             }
             
-            // Create condition: dispatch_var == case_value
-            std::string condition = dispatch_var + " == " + case_info.value;
-            
-            // Use existing create_if_goto function
-            std::string if_goto = create_if_goto(condition, case_info.label);
-            
-            // Concatenate to result
-            result = concatenate(result, if_goto);
+            return case_info_stack.top().size();
         }
-        
-        // Add goto for default case if it exists
-        for (const auto& case_info : case_infos) {
-            if (case_info.value == "Default") {
-                // Use existing create_goto function
-                std::string goto_default = create_goto(case_info.label);
+
+        // Generate switch cases code for current switch context
+        std::string generate_switch_cases(const std::string& dispatch_var) {
+            if (case_info_stack.empty()) {
+                return "";
+            }
+            
+            std::string result = "";
+            std::string default_label = "";
+            
+            // Generate if-goto for each case
+            for (const auto& case_info : case_info_stack.top()) {
+                if (case_info.value == "Default") {
+                    // Store default label for later use
+                    default_label = case_info.label;
+                    continue;
+                }
+                
+                // Create condition: dispatch_var == case_value
+                std::string condition = dispatch_var + " == " + case_info.value;
+                
+                // Use existing create_if_goto function
+                std::string if_goto = create_if_goto(condition, case_info.label);
+                
+                // Concatenate to result
+                result = concatenate(result, if_goto);
+            }
+            
+            // Add goto for default case if it exists
+            if (!default_label.empty()) {
+                std::string goto_default = create_goto(default_label);
                 result = concatenate(result, goto_default);
-                break;
             }
+            
+            return result;
         }
-        
-        clear_switch_info();
-        
-        return result;
-    }
         
     private:
-    int temp_counter = 0;
-    int label_counter = 0;
-    int tmp_label_counter = 0;
+    int temp_counter ;
+    int label_counter ;
+    int tmp_label_counter ;
+
+    // for Switch case handling
     struct CaseInfo {
         std::string value;    // The constant expression value
         std::string label;    // The corresponding label
     };
 
-    std::vector<CaseInfo> case_infos; //Store all cases
-    bool has_default = false;
+    // Stack of case info vectors to handle nested switches
+    std::stack<std::vector<CaseInfo>> case_info_stack;
+    std::stack<bool> has_default_stack;
 
     void write_to_file(const std::string& filename, const char* content) {
         if (content == nullptr) {  // Handle uninitialized or null pointers

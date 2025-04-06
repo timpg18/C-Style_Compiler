@@ -119,13 +119,43 @@ std::string IRGen::format_with_tabs(const std::string& code) {
     std::ostringstream output;
     std::string line;
 
+    bool inside_function = false;
+
     while (std::getline(input, line)) {
-        // Check if line starts with "LABEL"
-        if (line.find("label ") == 0) {  // 👈 Space after LABEL is intentional
-            output << line << "\n";
+        std::string trimmed = line;
+        trimmed.erase(0, trimmed.find_first_not_of(" \t"));  // Trim leading spaces
+
+        // 1. Always handle label lines first
+        if (trimmed.rfind("label ", 0) == 0) {
+            if(inside_function)
+            output << "\t"<<line << "\n";
+            else output <<line << "\n";
+            continue;
+        }
+
+        // 2. Detect start and end of function block
+        if (trimmed.rfind("func_prologue", 0) == 0) {
+            inside_function = true;
+            output << "\t"<<line << "\n";
+            continue;
+        }
+
+        if (trimmed.rfind("func_epilogue", 0) == 0) {
+            inside_function = false;
+            output << "\t"<<line << "\n";
+            continue;
+        }
+
+        // 3. Indent inside-function lines (except labels)
+        if (inside_function) {
+            output << "\t\t" << line << "\n";
         } else {
-            output << "\t" << line << "\n";  // 👈 Add tab to non-label lines
+            output << line << "\n";  // Outside function: print as-is
         }
     }
+
     return output.str();
 }
+
+
+
