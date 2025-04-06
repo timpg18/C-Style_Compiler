@@ -669,7 +669,7 @@ unary_expression
 	}
 	| unary_operator cast_expression{
 		//deref.
-
+$$.kind = $2.kind;
 		
 		char *ptr = "*";
 		if(eq($1.type, ptr) == true){
@@ -687,12 +687,23 @@ unary_expression
 		ptr = "&";
 		if(eq($1.type,ptr) == true){
 			//we have to convert T to T*
-			std::string s = std::string($2.type);
-			s.push_back('*');
-			$$.type = strdup(s.c_str());
+			if(contains($2.kind,"PROCEDURE") == true){
+				std::string s = std::string($2.kind);
+				s.push_back('*');
+				$$.kind = strdup(s.c_str());
+				$$.type = strdup($2.type);
+			}
+			else{
+				//reference to function for func_ptr
+				std::string s = std::string($2.type);
+				s.push_back('*');
+				$$.type = strdup(s.c_str());
+			}
+		
 		}
 		else{
 			$$.type = $2.type;
+			$$.kind = $2.kind;
 		}
 		}
 		
@@ -717,7 +728,7 @@ unary_expression
 		}
 		
 		$$.name = $2.name;
-		$$.kind = $2.kind;
+		
 
 	}
 	| SIZEOF unary_expression{
@@ -1679,9 +1690,7 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator {
-		if(contains($1.kind , "PROCEDURE") ==true){
-			yyerror("NO FUNC DECLARATIONS ALLOWED, ONLY DEFINITIONS");
-		}
+		
 		 $$.index = $1.index;
 		 $$.type = $1.type;
 		 $$.kind = $1.kind;
@@ -1691,9 +1700,7 @@ init_declarator_list
 		
 	}
 	| init_declarator_list ',' init_declarator {
-		if(contains($1.kind , "PROCEDURE") ==true || contains($3.kind, "PROCEDURE") == true){
-			yyerror("NO FUNC DECLARATIONS ALLOWED, ONLY DEFINITIONS");
-		}
+		
 		$$.name = concat($1.name,$3.name);
 		$$.type = $1.type;
 		$$.ir.tmp = strdup($3.ir.tmp);
@@ -1710,7 +1717,7 @@ init_declarator
 			lvalueError($1.kind);
 			
 			// If a procedure then must be called procedure
-			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
+		if(isPROCEDURE($3.kind) == true && isPROCEDURE($1.kind) == false){yyerror("Cannot assign function to a variable");}
 
 			//remove static
 			std::string t = ts.removeStaticFromDeclaration(std::string($1.type));
@@ -1776,10 +1783,30 @@ init_declarator
 					char* matchingType1 = strdup(ts.removeConstFromDeclaration(std::string(temp)).c_str());
 					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
 					if(!isConvertible(matchingType1,matchingType2)){
-						char *err = "incompatible type declaration: ";
+						
+						if(contains($1.kind,"PROCEDURE") == true && contains($3.kind, "PROCEDURE") == true){
+							string t = string($1.type);
+							int cnt = 0;
+							string kin1 = string($1.kind);
+							while(kin1.back() == '*'){
+								t.pop_back();
+								kin1.pop_back();
+							}
+							$1.type = strdup(t.c_str());
+							if(eq($1.type,$3.type) == true && eq($1.kind,$3.kind) == true){
+
+							}
+							else{
+								yyerror("func_ptr mismatch");
+							}
+						}
+						else{
+							char *err = "incompatible type declaration: ";
 						err = concat(err,$1.type);
 						err = concat(err, $3.type);
 						yyerror(err);
+						}
+						
 					}
 					
 					$$.type = $1.type;
@@ -1853,6 +1880,9 @@ init_declarator
 		 $$.name = $1.name;
 		 $$.ir.tmp = strdup($1.ir.tmp);
 		 $$.ir.code = strdup($1.ir.code);
+		 if(contains($1.kind , "PROCEDURE") ==true){
+			yyerror("NO FUNC DECLARATIONS ALLOWED, ONLY DEFINITIONS");
+		}
 	}
 	;
 
@@ -2299,7 +2329,19 @@ direct_declarator
 		$$.ir.code = "";
     }
 	| '(' declarator ')' {
+		//this comes here if func_ptr
+		//ie int*(func) (int,int) comes here same too, but during f id time it is int
+		//int (*func)(int ,  int) is int* both when f id and procedure
+		//ie int (****func)(int ,int) has int***** at both times..
+		//(int*) func(int, int) type give error cuz it treats func as id
+		//only possible scenario for this is int (*func)(int, int)
+		//shift ptr to this
+		//THIS IS ONLY WHEN KIND OF $2 IS PROCEDURE.. it also comes before it (when identifier)
+		//also , it must have int* as $2.type cuz int (func)(int,int) is invalid.
+		
 		 $$.index = $2.index;
+		 $$.type = $2.type;
+		 $$.kind = $2.kind;
 		$$.name = $2.name;
 		$$.ir.tmp = strdup($2.ir.tmp);
 		$$.ir.code = strdup($2.ir.code);
@@ -2354,16 +2396,30 @@ direct_declarator
 	| direct_declarator '('  parameter_type_list ')' {
 		/* pushing scopes extra if there are arguments inside, eg. fun(int a, int b) */
        int idx = $1.index;  // $1 is now of type int (the token index)
-		
+			
 	   	st.token_table_[idx].kind = strdup("PROCEDURE ");
 		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
 		newkind = concat(newkind,$3.type);
 		newkind = concat(newkind,")");
 		st.token_table_[idx].kind = strdup(newkind);
-
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-	  	$$.type = strdup(st.token_table_[idx].token_type.c_str());
+		if(eq($1.kind , "IDENTIFIER")){
+			string kin = newkind;
+			string tem = string($1.type);
+			while(tem.back() == '*'){
+				tem.pop_back();
+				kin += "*";
+			}
+		$$.type = strdup(tem.c_str());
+		$$.kind = strdup(kin.c_str());
+		}
+		else{
+			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 	   	$$.kind = newkind;
+		}
+
+
+	  	
       	$$.index = idx;
 	   	$$.name = $1.name;
 		currFunc = std::string($$.name);
@@ -2384,15 +2440,29 @@ direct_declarator
 		string cd = irgen.add_label(label);
 		$$.ir.code = strdup(irgen.concatenate(cd,string($3.ir.code)).c_str());
 		$$.ir.tmp = strdup($1.ir.tmp);
-
+		
     }
 	| direct_declarator '('   ')'  {
+		
        int idx = $1.index;
 		st.token_table_[idx].kind = strdup("PROCEDURE ( )");
 		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
-		$$.type = strdup(st.token_table_[idx].token_type.c_str());
+		if(eq($1.kind , "IDENTIFIER")){
+			string kin = "PROCEDURE ( )";
+			string tem = string($1.type);
+			while(tem.back() == '*'){
+				tem.pop_back();
+				kin += "*";
+			}
+		$$.type = strdup(tem.c_str());
+		$$.kind = strdup(kin.c_str());
+		}
+		else{
+			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 		$$.kind = strdup("PROCEDURE ( )");
+		}
+		
 		$$.index = idx;
 		$$.name = $1.name;
 		
@@ -2408,6 +2478,7 @@ direct_declarator
 		string cd = irgen.add_label(lb);
 		$$.ir.code = strdup(cd.c_str());
 	   	$$.ir.tmp  =strdup($1.ir.tmp);
+		
     }
 	| direct_declarator '('  identifier_list ')'{
 		//NOW GIVES ERROR
@@ -2507,6 +2578,14 @@ parameter_declaration
 		$$.type = $2.type;
 		$$.name = $2.name;
 
+		$$.ir.code ="";
+	}
+	| declaration_specifiers{
+		if(!ts.contains(std::string($1.type))){
+			yyerror("parameter type not allowed");
+		}
+		$$.type = $1.type;
+		$$.name = "";
 		$$.ir.code ="";
 	}
 	;
