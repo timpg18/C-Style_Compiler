@@ -164,7 +164,7 @@ int bpneeded = 0;
 
 %token TYPEDEF EXTERN STATIC AUTO REGISTER SIZEOF
 %token CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID BOOL
-%token STRUCT UNION ENUM 
+%token STRUCT UNION ENUM ELLIPSIS
 
 %token CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN UNTIL
 %start Global
@@ -449,11 +449,14 @@ postfix_expression
 		else{
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,"")==true){
+			
+			if(validate_arguments(to_check, "") == 1){
 				
 			}
 			else{
-				yyerror("to few arguments passed");
+				//match prefix with variadic
+
+				yyerror("too few arguments passed or type mismatch");
 			}
 		}
 		$$.name = $1.name;
@@ -521,11 +524,15 @@ postfix_expression
 		else{
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
-			if(eq(to_check,$3.type)==true){
+			
+			
+			if(validate_arguments(to_check, $3.type) == 1){
 				
 			}
 			else{
-				yyerror("to few arguments passed");
+				//match prefix with variadic
+
+				yyerror("too few arguments passed or type mismatch");
 			}
 		}
 		$$.name = $1.name;
@@ -796,6 +803,7 @@ unary_expression
 		if(eq($1.type,"+") == true){
 			$$.ir.code = strdup($2.ir.code);
 			$$.ir.tmp = strdup($2.ir.tmp);
+			$$.backpatcher = new BackPatcher();
 		}
 		else{
 			$$.ir.tmp = strdup(irgen.new_temp().c_str());
@@ -806,6 +814,9 @@ unary_expression
 				$$.backpatcher = new BackPatcher();
 				$$.backpatcher->assignFalseList($2.backpatcher->getTrueList());
 				$$.backpatcher->assignTrueList($2.backpatcher->getFalseList());
+			}
+			else{
+				$$.backpatcher = new BackPatcher();
 			}
 		}
 		
@@ -1776,9 +1787,10 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
+		
 		// the left of the declarator muse be lvalue;
 			lvalueError($1.kind);
-
+			
 			// If a procedure then must be called procedure
 			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
 
@@ -1872,10 +1884,14 @@ init_declarator
 					$$.type = concat($$.type, "declared");
 				}
 			}	
+		
 			//IR GEN
+			
 			std::vector<std::string> tmpcheck = $3.backpatcher->getTrueList();
 				int size = tmpcheck.size();
+					
 			if(size>0){ // case where a = ()||()
+			
 				// Label making
 				std::string label1 = irgen.new_label();
 				std::string True_label = irgen.add_label(label1);
@@ -1900,8 +1916,10 @@ init_declarator
 				$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),False_label).c_str());
 				$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),false_assign).c_str());
 				$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),False_end).c_str());
+				
 			}
 			else{
+				
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
@@ -2536,6 +2554,15 @@ parameter_type_list
 		$$.type = $1.type;
 		$$.name = $1.name;
 		$$.ir.code = strdup($1.ir.code);
+		$$.index = 0;
+	}
+	| parameter_list ',' ELLIPSIS{
+		$$.type = $1.type;
+		$$.type = concat($1.type, "...");
+		
+		$$.name = $1.name;
+		$$.ir.code = strdup($1.ir.code);
+		$$.index = 1;
 	}
 	;
 
@@ -2561,8 +2588,8 @@ parameter_declaration
 		}
 		$$.type = $2.type;
 		$$.name = $2.name;
-		string cd = irgen.add_par(string($$.name));
-		$$.ir.code = strdup(cd.c_str());
+
+		$$.ir.code ="";
 	}
 	;
 
@@ -2659,6 +2686,7 @@ initializer
 		std::string s = std::string($2.type);
 		s += "*";
 		$$.type = strdup(s.c_str());
+		yyerror("initializer list not allowed");
 	}
 	| assignment_expression {
 		$$.type = $1.type;

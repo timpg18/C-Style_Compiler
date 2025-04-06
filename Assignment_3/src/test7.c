@@ -1,9 +1,12 @@
-int f(int a){
-    int b;
-    return 0;
-}
-int d;
 
-int main(){
-    char* dd;
+// A normal function
+int add(int a, ...){
+    // va_list args1;
+ 
 }
+
+int  main(){
+  int x = add(1,3);
+}
+
+

@@ -216,7 +216,7 @@ UNTERMINATED_MULTILINE_COMMENT "/*"([^*]|\*+[^*/])*(\n|$)
     addtosymtab(yytext, "identifier", line_no);
     return IDENTIFIER;
 }
-
+"..."			{ return(ELLIPSIS); }
 ";"          { return(';'); }
 "{"          { return('{'); }
 "}"          { return('}'); }

@@ -1,4 +1,10 @@
+label add:
+	func_prologue  add
+	func_epilogue  add
 label main:
-	c = RED
-	s = OK
-	c = s
+	func_prologue  main
+		param 1
+		param 3
+		$0 = call add, 2
+		x = $0
+	func_epilogue  main
