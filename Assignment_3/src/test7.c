@@ -1,12 +1,7 @@
-
-// A normal function
-int add(int a, ...){
-    // va_list args1;
- 
+int add(int x, int y){
+    
 }
-
-int  main(){
-  int x = add(1,3);
+int main(){
+    int (*func)(int ,int ) = add;
+    int f() = add;
 }
-
-

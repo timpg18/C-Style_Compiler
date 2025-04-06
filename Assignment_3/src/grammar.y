@@ -645,6 +645,7 @@ unary_expression
 		//t' = t0 + 1
 		$$.ir.tmp = strdup(s.c_str());
 		$$.ir.code = strdup(g.c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| DEC_OP unary_expression{
 		lvalueError($2.kind);
@@ -664,11 +665,12 @@ unary_expression
 		//t' = t0 + 1
 		$$.ir.tmp = strdup(s.c_str());
 		$$.ir.code = strdup(g.c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| unary_operator cast_expression{
 		//deref.
 
-
+		
 		char *ptr = "*";
 		if(eq($1.type, ptr) == true){
 			//we have to dereference
@@ -721,11 +723,24 @@ unary_expression
 	| SIZEOF unary_expression{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.backpatcher = new BackPatcher();
+		$$.name = "sizeof";
+		$$.ir.code = "";
+		int sz = st.getTypeSize(string($2.type));
+		string tem = to_string(sz);
+		$$.ir.tmp = strdup(tem.c_str());
+		
 		
 	}
 	| SIZEOF '(' type_name ')'{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.name = "sizeof";
+		int sz = st.getTypeSize(string($3.type));
+		string tem = to_string(sz);
+		$$.ir.tmp = strdup(tem.c_str());
+		$$.ir.code = "";
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -808,8 +823,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-		
-		
+		$$.backpatcher = new BackPatcher();
 	}
 	| multiplicative_expression '/' cast_expression{
 		// Type Checking
@@ -830,7 +844,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-		
+		$$.backpatcher = new BackPatcher();
 	}
 	| multiplicative_expression '%' cast_expression{
 		// Type Checking
@@ -857,6 +871,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -908,7 +923,7 @@ additive_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-
+$$.backpatcher = new BackPatcher();
 	}
 	| additive_expression '-' multiplicative_expression{
 		// Type Checking
@@ -948,6 +963,7 @@ additive_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -982,6 +998,7 @@ shift_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<<"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| shift_expression RIGHT_OP additive_expression{
 		// Type Checking
@@ -1004,6 +1021,7 @@ shift_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">>"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1196,6 +1214,7 @@ and_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1235,6 +1254,7 @@ exclusive_or_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("^"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1274,6 +1294,7 @@ inclusive_or_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("|"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1360,6 +1381,7 @@ conditional_expression
 		$$.name = $1.name;
 		$$.ir.code = strdup($1.ir.code);
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
+		
     	delete $1.backpatcher;
 	}
 	| logical_or_expression '?' expression ':' conditional_expression 
@@ -1495,6 +1517,8 @@ expression
 		$$.ir.code = strdup($1.ir.code);
 		
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
+		
+		
     	delete $1.backpatcher;
 	}
 	| expression ',' assignment_expression {
@@ -2767,6 +2791,7 @@ block_item
 expression_statement
 	: ';'{
 		$$.ir.code =  "";
+		$$.backpatcher = new BackPatcher();
 	}
 	| expression ';' {
 		$$.ir.code = strdup($1.ir.code);
