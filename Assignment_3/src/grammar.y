@@ -586,7 +586,7 @@ postfix_expression
 		tem += "]";
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),cd12).c_str());
 		if(is_udt(strdup(typ.c_str())) == true){
-			//there is struct inside
+			//there is struct inside or any other except class inside
 			$$.ir.tmp = strdup(t0.c_str());
 		}
 		else{
@@ -1568,10 +1568,12 @@ declaration
 		//printf("\n\n%s\n\n",$2.name);
 		//std::cout<<"HELL"<<std::endl;
 		//printf("\n\n%s\n\n",$2.type);
+		//no func
 		// saving the static varibles in a map in TypeSet ts
 		if(contains($1.type,"static")){
 			ts.addStaticVariable(currFunc,std::string($2.name));
 		}
+		
 		
 		char* tocheck1 = "struct";
 		char* tocheck2 = "class";
@@ -1704,15 +1706,26 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator {
-		$$.name = $1.name;
-		$$.type = $1.type;
-		$$.ir.code = strdup($1.ir.code);
-		
+		if(contains($1.kind , "PROCEDURE") ==true){
+			yyerror("NO FUNC DECLARATIONS ALLOWED, ONLY DEFINITIONS");
+		}
+		 $$.index = $1.index;
+		 $$.type = $1.type;
+		 $$.kind = $1.kind;
+		 $$.name = $1.name;
+		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = strdup($1.ir.code);
 		
 	}
 	| init_declarator_list ',' init_declarator {
+		if(contains($1.kind , "PROCEDURE") ==true || contains($3.kind, "PROCEDURE") == true){
+			yyerror("NO FUNC DECLARATIONS ALLOWED, ONLY DEFINITIONS");
+		}
 		$$.name = concat($1.name,$3.name);
 		$$.type = $1.type;
+		$$.ir.tmp = strdup($3.ir.tmp);
+		 $$.kind = $1.kind;
+		 $$.index = $1.index;
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 	}
 	;
@@ -1854,9 +1867,12 @@ init_declarator
 				
 	}
 	| declarator {
-		$$.name = $1.name;
-		$$.type = $1.type;
-		$$.ir.code = strdup($1.ir.code);
+		 $$.index = $1.index;
+		 $$.type = $1.type;
+		 $$.kind = $1.kind;
+		 $$.name = $1.name;
+		 $$.ir.tmp = strdup($1.ir.tmp);
+		 $$.ir.code = strdup($1.ir.code);
 	}
 	;
 
