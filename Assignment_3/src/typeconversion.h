@@ -96,38 +96,4 @@ bool isConvertible( const std::string& target,const std::string& source) {
     return false;
 }
 
-// std::string getLowerRankType(const std::string& type1, const std::string& type2) {
-//     // Convert inputs to uppercase to match type_map keys
-//     auto uppercase = [](std::string str) {
-//         std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-//         return str;
-//     };
-
-//     const std::string upper1 = uppercase(type1);
-//     const std::string upper2 = uppercase(type2);
-
-//     // Predefined type ranks from previous implementation
-//     const std::unordered_map<std::string, int> type_rank = {
-//         {"VOID", 0}, {"BOOL", 1},
-//         {"CHAR", 2}, {"SIGNED CHAR", 2}, {"UNSIGNED CHAR", 2},
-//         {"SHORT", 3}, {"UNSIGNED SHORT", 3}, {"SHORT INT", 3}, 
-//         {"SIGNED SHORT INT", 3}, {"UNSIGNED SHORT INT", 3},
-//         {"INT", 4}, {"UNSIGNED INT", 4},
-//         {"LONG", 5}, {"UNSIGNED LONG", 5}, {"LONG INT", 5},
-//         {"SIGNED LONG INT", 5}, {"UNSIGNED LONG INT", 5},
-//         {"LONG LONG", 6}, {"UNSIGNED LONG LONG", 6},
-//         {"LONG LONG INT", 6}, {"SIGNED LONG LONG INT", 6},
-//         {"UNSIGNED LONG LONG INT", 6},
-//         {"FLOAT", 7}, {"DOUBLE", 8}, {"LONG DOUBLE", 9}
-//     };
-
-//     // Check if both types exist in the map
-//     if (!type_rank.count(upper1) || !type_rank.count(upper2)) {
-//         return ""; // Handle invalid types
-//     }
-
-//     // Compare ranks and return type with lower rank
-//     return (type_rank.at(upper1) <= type_rank.at(upper2)) ? type1 : type2;
-// }
-
 #endif

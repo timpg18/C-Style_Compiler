@@ -2,9 +2,6 @@ label add:
 	func_prologue  add
 	func_epilogue  add
 label main:
-	func_prologue  main
-		param 1
-		param 3
-		$0 = call add, 2
-		x = $0
-	func_epilogue  main
+	$0 = 0 + 0
+	$1 = $0 + 4
+	h[$1] = 0
