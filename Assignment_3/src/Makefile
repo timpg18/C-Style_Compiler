@@ -1,7 +1,7 @@
 all: parser
 
 parser: grammar.tab.c lex.yy.c
-	g++ -w -o parser grammar.tab.c lex.yy.c -ll
+	g++ -w -o parser grammar.tab.c lex.yy.c types.cpp IR_utility.cpp symbol.cpp -ll
 
 grammar.tab.c: grammar.y
 	bison -d -v -t grammar.y

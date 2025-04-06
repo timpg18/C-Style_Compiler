@@ -1,10 +1,15 @@
 %{
-#include "symbol.h"
+#include "symbol.hpp"
 #include "Utility_func.h"
-#include "types.h"
+#include "types.hpp"
 #include "typeconversion.h"
-#include "IR_utility.cc"
+#include "IR_utility.hpp"
 #include "backPatcher.h"
+using namespace std;
+
+char *currentType = NULL;
+int parser_error=0;
+int token_count=0;
 
 // #include "backPatcher.h"
 IRGen irgen;

@@ -1,4 +1,4 @@
-#include "IR_utility.hh"
+#include "IR_utility.hpp"
 
 using namespace std;
 
