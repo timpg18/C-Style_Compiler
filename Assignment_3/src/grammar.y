@@ -11,6 +11,7 @@ using namespace std;
 char *currentType = NULL;
 int parser_error=0;
 int token_count=0;
+extern FILE *yyin;
 
 // #include "backPatcher.h"
 IRGen irgen;
@@ -22,6 +23,18 @@ int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
 int bpneeded = 0; 
+std::string final_ir_code = "";
+int counter = 1;
+
+std::string formatTypeChange(const std::string& type1, const std::string& type2) {
+    std::string lowerType1 = type1;
+    std::string lowerType2 = type2;
+
+    std::transform(lowerType1.begin(), lowerType1.end(), lowerType1.begin(), ::tolower);
+    std::transform(lowerType2.begin(), lowerType2.end(), lowerType2.begin(), ::tolower);
+
+    return "cast: " + lowerType1 + " -> " + lowerType2 + " \n";
+}
 
 %}
 
@@ -165,11 +178,13 @@ constant
 	| ENUMERATION_CONSTANT{
 		$$.type = "INT";
 		$$.kind = "ENUM_CONST";
+		$$.name = strdup((std::string(yytext)).c_str());
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}	/* after it has been defined as such */
 	| BOOLEAN{
-		$$.type = "BOOL";
+		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.name = $1.name;
 		$$.ir.tmp = strdup($1.ir.tmp);
 	}
 	;
@@ -184,9 +199,11 @@ enumeration_constant		/* before it has been defined as such */
 BOOLEAN
 	: TRUE {
 		$$.ir.tmp  = "true";
+		$$.name = "TRUE";
 	}
 	| FALSE{
 		$$.ir.tmp = "false";
+		$$.name = "FALSE";
 	}
 
 string
@@ -268,7 +285,6 @@ postfix_expression
 		
 		
 		if(eq($1.ir.tmp,$1.name)){
-			printf("bruhh");
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
@@ -331,6 +347,10 @@ postfix_expression
 	}
 	| postfix_expression '(' ')'{
 		$$.name = $1.name;
+		if(isPROCEDURE($1.kind)){}
+		else{
+			yyerror("called object is not a function or function pointer");
+		}
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -377,7 +397,7 @@ postfix_expression
 			ext = irgen.add_par("&" + pref);
 			
 		}
-		$$.kind = "CONST";
+		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
 
 		string tmp = irgen.new_temp();
@@ -394,6 +414,10 @@ postfix_expression
 	| postfix_expression '(' argument_expression_list ')'{
 		
 		$$.index = 0;
+		if(isPROCEDURE($1.kind)){}
+		else{
+			yyerror("called object is not a function or function pointer");
+		}
 		if(eq($1.kind,"CONST")){
 			yyerror("called object is not a function or function pointer");
 		}
@@ -453,7 +477,7 @@ postfix_expression
 			ext = irgen.add_par("&" + pref);
 			
 		}
-		$$.kind = "CONST";
+		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
 		
 		$$.backpatcher = new BackPatcher();
@@ -971,7 +995,7 @@ $$.backpatcher = new BackPatcher();
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
+		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("-"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
@@ -1423,6 +1447,8 @@ assignment_expression
 		std::string s = ts.removeStaticFromDeclaration(std::string($1.type));
 		$1.type = strdup(s.c_str());
 
+		std::string type_change_statement = "";
+
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 				char *err = "both operands must be int, int in ";
@@ -1474,6 +1500,12 @@ assignment_expression
 					s1 = concat(s1," : ");
 					check_type($1.type, $3.type,s1);
 				}
+				else{
+					if(!eq($1.type,$3.type)){
+						type_change_statement = formatTypeChange(type2,s);
+					}
+
+				}
 				
 			}
 			
@@ -1493,10 +1525,10 @@ assignment_expression
 		int size = tmpcheck.size();
 		if(size){
 			HANDLE_BOOL_RESULT_ASSIGN($1, $$, $3, irgen);
-
 		}
 		else{
-			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
+			std::string ss = irgen.concatenate(irgen.concatenate(string($$.ir.code),type_change_statement),tem);
+			$$.ir.code = strdup(ss.c_str());
 		}
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
@@ -1729,7 +1761,7 @@ init_declarator
 
 			//printf("\n%s\n%s\n",temp,temp2);
 
-
+			std::string type_change_statement = "";
 			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
 			if(eq(temp2 , temp) == false){
 				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
@@ -1772,6 +1804,9 @@ init_declarator
 					}
 					else if(isConvertible(std::string(matchingType1),std::string(matchingType2))){
 						$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+						if(!eq(matchingType1,matchingType2)){
+							type_change_statement = formatTypeChange(matchingType2,matchingType1);
+						}
 					}
 					else {
 						yyerror("invalid assignment");
@@ -1808,6 +1843,12 @@ init_declarator
 						}
 						
 					}
+					else{
+						if(!eq(matchingType2,matchingType1)){
+							type_change_statement = formatTypeChange(std::string(matchingType2),std::string(matchingType1));
+						}
+						
+					}
 					
 					$$.type = $1.type;
 				}	
@@ -1817,9 +1858,6 @@ init_declarator
 				// IF THE TYPES ARE SAME
 				//printf("\n%s\n%s\n",$1.kind,$3.kind);
 				$$.type = $1.type;
-				
-				
-				
 				
 				// If a porcedure then must be called procedure
 				if(isPROCEDURE($3.kind)){
@@ -1867,7 +1905,9 @@ init_declarator
 				
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
-				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
+				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
+				g += tem;
+				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
 			}
 				
@@ -1953,6 +1993,9 @@ class_specifier
 
 			int size = st.calculateStructSize(s);
 			st.addTypeSize(s,size);
+			if(st.hasDuplicateNamesInScope(s)){
+				yyerror("Diamond Inheritence Not allowed");
+			}
 		   
 		}
 	| CLASS IDENTIFIER base_clause_opt  
@@ -2679,7 +2722,6 @@ direct_abstract_declarator
 initializer
 	: '{' initializer_list '}' {
 		// if this will go to declarator '=' initializer , it will give error because of backpatcher checking;
-
 		std::string s = std::string($2.type);
 		s += "*";
 		$$.type = strdup(s.c_str());
@@ -2714,7 +2756,8 @@ statement
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	|  {st.push_scope();} compound_statement {
+	|  {st.push_scope();irgen.depth_current++;} compound_statement {
+		irgen.depth_current++;
 		bool x = st.current_scope_->contains_break_or_continue;
 		bool y = st.current_scope_->jump[0];
 		bool z = st.current_scope_->jump[1];
@@ -2945,6 +2988,8 @@ selection_statement
 		bpneeded = 1;
 	}
 	| SWITCH '(' expression ')' {irgen.start_new_switch();} statement{
+
+		
 		//Type Checking
 		if( IS_INT_LIKE_TYPE($3.type)){}
 		else{
@@ -2978,13 +3023,14 @@ iteration_statement
 		st.falsekardo();
 		// checking if expression is a constant
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3, irgen);
-
+		
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "while_begin" + std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "while_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 		std::string goto_S_begin = irgen.create_goto(label1);
 
@@ -3014,11 +3060,12 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "do_while_begin"+ std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "do_while_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
@@ -3044,11 +3091,12 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
+		int count = counter++;
+		std::string label1 = "do_until_begin"+ std::to_string(count);
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = irgen.new_label();
+		std::string label3 = "do_until_end"+ std::to_string(count);
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
@@ -3078,13 +3126,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3114,13 +3156,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 		
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3148,13 +3184,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3182,13 +3212,7 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		std::string label1 = irgen.new_label();
-		std::string FOR_begin = irgen.add_label(label1);
-		std::string label2 = irgen.new_label();
-		std::string S_begin = irgen.add_label(label2);
-		std::string Goto_FOR_begin = irgen.create_goto(label1);
-		std::string label3 = irgen.new_label();
-		std::string FOR_end = irgen.add_label(label3);
+		GEN_FOR_LABELS
 
 		// Backpatching
 		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label2).c_str());
@@ -3260,6 +3284,7 @@ jump_statement
 		s = ts.removeConstFromDeclaration(s);
 		s = ts.removeStaticFromDeclaration(s);
 		std::string err = std::string($2.type);
+		std::string type_change_statement = "";
 		if(s==err){}
 		else{
 			if(!isConvertible(err,s)){
@@ -3268,11 +3293,20 @@ jump_statement
 				err += " The return expression has type different from the declared function";
 				yyerror(strdup(err.c_str()));
 			}
-			
+			else{
+				if(!eq($2.type,s.c_str())){
+					type_change_statement = formatTypeChange(std::string($2.type),s);
+				}
+			}
 		}
 		string temp = string($2.ir.tmp);
 		string cd = string($2.ir.code);
+		cd += "\n";
 		cd += irgen.return_val(temp);
+		if(type_change_statement != ""){
+			type_change_statement+=cd;
+			cd=type_change_statement;
+		}
 		$$.ir.code = strdup(cd.c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -3280,7 +3314,7 @@ jump_statement
 
 Global
 	:  translation_unit{
-		if(error_count == 0)irgen.generate(std::string($1.ir.code));
+		final_ir_code = std::string($1.ir.code);
 	}
 
 translation_unit
@@ -3378,12 +3412,26 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 yydebug = 1;
+	 //yydebug = 1;
+
+	// Check if a filename is passed
+	if (argc > 1) {
+		FILE* file = fopen(argv[1], "r");
+		if (!file) {
+			perror("Failed to open input file");
+			return 1;
+		}
+		yyin = file;  // Tell the parser to read from this file
+	} else {
+		yyin = stdin; // Fall back to stdin (for ./parser < test.c)
+	}
+
 int parserresult = yyparse(); // Parser calls yylex() internally
 st.print_all_scopes();
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
-	
+	std::string filename = std::string(argv[1]);
+	irgen.generate(final_ir_code,filename);
 	//st.print_hierarchy();
 	//st.print_token_table();
 	

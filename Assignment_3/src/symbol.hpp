@@ -13,6 +13,7 @@
 #include <sstream>
 #include <set>
 #include <stdio.h>
+#include <unordered_set>
 
 int yylex();
 void yyerror(const char *s);
@@ -78,12 +79,14 @@ public:
         global_scope_ = new Scope(nullptr, "global", 0);
         current_scope_ = global_scope_;
         scopes_.emplace_back(global_scope_);
-        insert_symbol("printf","INT","PROCEDURE ( ARG DEPENDENT )");
-        insert_symbol("scanf","INT","PROCEDURE ( ARG DEPENDENT )");
+        insert_symbol("printf","INT","PROCEDURE ( CHAR* ... )");
+        insert_symbol("scanf","INT","PROCEDURE ( CHAR* ... )");
         insert_symbol("malloc","INT*","PROCEDURE ( INT )");
+        insert_symbol("free","VOID","PROCEDURE ( VOID* )");
         updateProcedureSize("printf");
         updateProcedureSize("scanf");
         updateProcedureSize("malloc");
+        updateProcedureSize("free");
     }
 
     // Operations on Symbol table
@@ -157,6 +160,8 @@ public:
     void falsekardo();
     // To remove Qualifers
     std::string removeQualifiers(const std::string& type);
+    // To check for Diamond inheritence
+    bool hasDuplicateNamesInScope(const std::string& scope_name);
 
     // Public declarations
     std::vector<std::unique_ptr<Scope>> scopes_;

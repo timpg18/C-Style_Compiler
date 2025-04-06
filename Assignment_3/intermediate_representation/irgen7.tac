@@ -1,13 +1,8 @@
 label func_ellipses:
 	func_prologue  func_ellipses
-		$0 = a + breturn $0
+		$0 = a + b
+		return $0
 	func_epilogue  func_ellipses
-label add:
-	func_prologue  add
-		a = 10
-		$1 = &a
-		$2 = &$1return $2
-	func_epilogue  add
 label main:
 	func_prologue  main
 		param 7
@@ -21,17 +16,13 @@ label main:
 		param 3
 		param 8
 		param 3
-		$3 = call func_ellipses, 11
-		a = $3
+		$1 = call func_ellipses, 11a = $1
 		param 8
 		param 2
 		param 5
-		$4 = call func_ellipses, 3
-		a = $4
-		$5 = &add
-		func = $5
-		$6 = &a
-		p = $6
-		$7 = *p
-		$7 = 100
+		$2 = call func_ellipses, 3
+		a = $2
+		$3 = &ap = $3
+		$4 = *p
+		$4 = 100
 	func_epilogue  main

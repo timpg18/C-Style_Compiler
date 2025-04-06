@@ -111,7 +111,6 @@ void SymbolTable::transferParametersToFunctionScope(const std::string& function_
     // Process all consecutive parameters after the function
     while (param_pos != parent_scope->ordered_symbols.end() && 
            param_pos->kind.find("PARAMETER") != std::string::npos) {
-            std::cout<<"PARMATER FOUND"<<std::endl;
         // Create a new entry in the current scope based on parameter data
         const std::string& name = param_pos->name;
         const std::string& type = param_pos->type;
@@ -212,7 +211,6 @@ void SymbolTable::update_dimension_sizes(const std::string& name){
     }
     std::string& baseType = symbolIt->type;
     
-    std::cout<<(symbolIt->dimensions.size())<<"\n\n";
     // Remove appropriate number of pointer stars from the type
     std::string actualBaseType = baseType;
     int totalElements = 1;
@@ -233,8 +231,6 @@ void SymbolTable::update_dimension_sizes(const std::string& name){
     int originalSize = symbolIt->size;
     int newSize = elementSize * totalElements;
     int sizeDelta = newSize - originalSize;
-    std::cout<<actualBaseType<<"\n\n";
-    std::cout<<newSize<<"\n\n";
     // Update the symbol size
     symbolIt->size = newSize;
     
@@ -682,8 +678,6 @@ void SymbolTable::recalculate_offsets_with_alignment(Scope* scope) {
     // Set the final aligned size
     scope->total_size = current_offset;
     
-    std::cout << "Recalculated class '" << scope->scope_name 
-              << "' layout. Total size: " << current_offset << " bytes\n";
 }
 
 // Declare struct variables in the scope
@@ -708,7 +702,6 @@ void SymbolTable::declare_struct_variables(const std::string& structName,const s
             while (iss >> token) {
                 for (const auto &member : scope_ptr->ordered_symbols) {
                     std::string newName = token + "." + member.name;
-                    std::cout<< newName<<"\n";
                     
                     if(hasConst && hasStatic){
                         insert_symbol(newName, std::string("static ") + std::string("CONST ") + member.type, member.kind);
@@ -871,9 +864,7 @@ bool SymbolTable::resolvelabels(const std::string funcName){
         
     for(const auto &scope_ptr:scopes_){
         if(scope_ptr->scope_name == funcName){
-            std::cout<<"hello"<<std::endl;
             int size = goto_label.size();
-            std::cout<<size<<std::endl;
             if(size==0)return true;
             int count = 0 ;
             for(const auto &label : goto_label){
@@ -922,7 +913,6 @@ void SymbolTable::updateVariableTypes(const std::string& variables, const std::s
         int oldSize = sym.size;
         sym.type = newType;
         sym.size = getTypeSize(newType);
-        std::cout<<"HELLO WORLD"<<"   "<<sym.size<<std::endl;
         accumulatedDelta += (sym.size - oldSize);
     }
 
@@ -1193,7 +1183,6 @@ int SymbolTable::calculateStructSize(const std::string& structName) {
             // Update the scope's total size
             scope_ptr->total_size = totalSize;
             
-            std::cout << "Struct '" << structName << "' size calculated: " << totalSize << " bytes\n";
             return totalSize;
         }
     }
@@ -1221,8 +1210,6 @@ int SymbolTable::calculateUnionSize(const std::string& unionName) {
             
             // Update the scope's total size to match the largest member
             scope_ptr->total_size = maxSize;
-            
-            std::cout << "Union '" << unionName << "' size calculated: " << maxSize << " bytes\n";
             return maxSize;
         }
     }
@@ -1425,4 +1412,28 @@ std::string SymbolTable::format_size(size_t size_in_bytes) const {
     }
     
     return formatted.str();
+}
+
+// This one is for checking of diamond inheritence
+bool SymbolTable::hasDuplicateNamesInScope(const std::string& scope_name) {
+
+    // Use a set to track names we've seen
+    std::unordered_set<std::string> seen_names;
+    for (const auto& scope_ptr : scopes_) {
+        if (scope_ptr->scope_name == scope_name) {
+            // Check each symbol in the scope
+            for (const auto& symbol : scope_ptr->ordered_symbols) {
+                // If we've seen this name before, we found a duplicate
+                if (seen_names.find(symbol.name) != seen_names.end()) {
+                    return true;
+                }
+                
+                // Add this name to our set of seen names
+                seen_names.insert(symbol.name);
+            }
+        }
+    }
+    
+    // No duplicates found
+    return false;
 }

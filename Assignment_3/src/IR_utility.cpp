@@ -102,9 +102,21 @@ std::string IRGen::create_conditional_jump(
 }
 
 
-void IRGen::generate(const std::string& code){
+void IRGen::generate(const std::string& code, const std::string& filename) {
     std::string formatted_code = format_with_tabs(code);
-    IRGen::write_to_file("irgen",formatted_code.c_str());
+
+    // Extract number from filename using regex
+    std::smatch match;
+    std::regex pattern("test(\\d+)\\.c");  // Matches 'test' followed by digits and '.c'
+
+    std::string output_file = "./intermediate_representation/irgen.tac"; // default
+
+    if (std::regex_search(filename, match, pattern) && match.size() > 1) {
+        std::string number = match[1];  // Captured group with the digits
+        output_file = "./intermediate_representation/irgen" + number + ".tac";
+    }
+
+    IRGen::write_to_file(output_file, formatted_code.c_str());
 }
 void IRGen::print(std::string s){
     if(s == ""){
@@ -181,13 +193,23 @@ void IRGen::start_new_switch() {
 // Adds the case to current Switch case
 void IRGen::add_case_info(const std::string& value, const std::string& label) {
     if (!case_info_stack.empty()) {
-        case_info_stack.top().push_back({value, label});
+        case_info_stack.top().push_back({value, label,depth_current});
         
         // Update has_default flag if this is a default case
         if (value == "Default" && !has_default_stack.empty()) {
             has_default_stack.top() = true;
         }
     }
+}
+
+// to get depth of current stack
+bool IRGen::get_depth(){
+    for (const auto& info : case_info_stack.top()) {
+        if (abs(info.depth - depth_current)>1) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // checks for duplicate value for a case statement
@@ -253,6 +275,7 @@ std::string IRGen::generate_switch_cases(const std::string& dispatch_var) {
         std::string goto_default = create_goto(default_label);
         result = concatenate(result, goto_default);
     }
+    end_switch();
     
     return result;
 }
