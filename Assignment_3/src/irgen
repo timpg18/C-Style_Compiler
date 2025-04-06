@@ -1,7 +1,9 @@
-label add:
-	func_prologue  add
-	func_epilogue  add
 label main:
-	$0 = 0 + 0
-	$1 = $0 + 4
-	h[$1] = 0
+	func_prologue  main
+		cast: char -> int 
+		a = 'c'
+		cast: float -> int 
+		b = 8.999
+		cast: float -> int 
+		return 9.0
+	func_epilogue  main

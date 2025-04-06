@@ -23,6 +23,16 @@ std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
 int bpneeded = 0; 
 
+std::string formatTypeChange(const std::string& type1, const std::string& type2) {
+    std::string lowerType1 = type1;
+    std::string lowerType2 = type2;
+
+    std::transform(lowerType1.begin(), lowerType1.end(), lowerType1.begin(), ::tolower);
+    std::transform(lowerType2.begin(), lowerType2.end(), lowerType2.begin(), ::tolower);
+
+    return "cast: " + lowerType1 + " -> " + lowerType2 + " \n";
+}
+
 %}
 
 %code requires {
@@ -1390,6 +1400,8 @@ assignment_expression
 		std::string s = ts.removeStaticFromDeclaration(std::string($1.type));
 		$1.type = strdup(s.c_str());
 
+		std::string type_change_statement = "";
+
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 				char *err = "both operands must be int, int in ";
@@ -1441,6 +1453,9 @@ assignment_expression
 					s1 = concat(s1," : ");
 					check_type($1.type, $3.type,s1);
 				}
+				else{
+					type_change_statement = formatTypeChange(type2,s);
+				}
 				
 			}
 			
@@ -1460,10 +1475,10 @@ assignment_expression
 		int size = tmpcheck.size();
 		if(size){
 			HANDLE_BOOL_RESULT_ASSIGN($1, $$, $3, irgen);
-
 		}
 		else{
-			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),tem).c_str());
+			std::string ss = irgen.concatenate(string($$.ir.code),type_change_statement) + tem;
+			$$.ir.code = strdup(ss.c_str());
 		}
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
@@ -1698,7 +1713,7 @@ init_declarator
 
 			//printf("\n%s\n%s\n",temp,temp2);
 
-
+			std::string type_change_statement = "";
 			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
 			if(eq(temp2 , temp) == false){
 				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
@@ -1757,6 +1772,9 @@ init_declarator
 						err = concat(err, $3.type);
 						yyerror(err);
 					}
+					else{
+						type_change_statement = formatTypeChange(std::string(matchingType2),std::string(matchingType1));
+					}
 					
 					$$.type = $1.type;
 				}	
@@ -1766,9 +1784,6 @@ init_declarator
 				// IF THE TYPES ARE SAME
 				//printf("\n%s\n%s\n",$1.kind,$3.kind);
 				$$.type = $1.type;
-				
-				
-				
 				
 				// If a porcedure then must be called procedure
 				if(isPROCEDURE($3.kind)){
@@ -1816,7 +1831,9 @@ init_declarator
 				
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
-				std::string g = irgen.concatenate(std::string($3.ir.code), tem);
+				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
+				g += tem;
+				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
 			}
 				
@@ -3156,6 +3173,7 @@ jump_statement
 		s = ts.removeConstFromDeclaration(s);
 		s = ts.removeStaticFromDeclaration(s);
 		std::string err = std::string($2.type);
+		std::string type_change_statement = "";
 		if(s==err){}
 		else{
 			if(!isConvertible(err,s)){
@@ -3164,11 +3182,17 @@ jump_statement
 				err += " The return expression has type different from the declared function";
 				yyerror(strdup(err.c_str()));
 			}
-			
+			else{
+				type_change_statement = formatTypeChange(std::string($2.type),s);
+			}
 		}
 		string temp = string($2.ir.tmp);
 		string cd = string($2.ir.code);
 		cd += irgen.return_val(temp);
+		if(type_change_statement != ""){
+			type_change_statement+=cd;
+			cd=type_change_statement;
+		}
 		$$.ir.code = strdup(cd.c_str());
 		$$.backpatcher = new BackPatcher();
 	}
