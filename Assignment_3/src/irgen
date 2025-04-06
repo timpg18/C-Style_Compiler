@@ -1,7 +1,0 @@
-label main:
-	func_prologue  main
-		if x == 1 goto @L0
-	label @L0:
-		goto @L1
-	label @L1:
-	func_epilogue  main

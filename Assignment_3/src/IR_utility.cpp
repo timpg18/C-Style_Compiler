@@ -102,9 +102,21 @@ std::string IRGen::create_conditional_jump(
 }
 
 
-void IRGen::generate(const std::string& code){
+void IRGen::generate(const std::string& code, const std::string& filename) {
     std::string formatted_code = format_with_tabs(code);
-    IRGen::write_to_file("irgen",formatted_code.c_str());
+
+    // Extract number from filename using regex
+    std::smatch match;
+    std::regex pattern("test(\\d+)\\.c");  // Matches 'test' followed by digits and '.c'
+
+    std::string output_file = "./intermediate_representation/irgen.tac"; // default
+
+    if (std::regex_search(filename, match, pattern) && match.size() > 1) {
+        std::string number = match[1];  // Captured group with the digits
+        output_file = "./intermediate_representation/irgen" + number + ".tac";
+    }
+
+    IRGen::write_to_file(output_file, formatted_code.c_str());
 }
 void IRGen::print(std::string s){
     if(s == ""){

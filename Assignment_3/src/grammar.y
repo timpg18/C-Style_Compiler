@@ -11,6 +11,7 @@ using namespace std;
 char *currentType = NULL;
 int parser_error=0;
 int token_count=0;
+extern FILE *yyin;
 
 // #include "backPatcher.h"
 IRGen irgen;
@@ -22,6 +23,7 @@ int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
 int bpneeded = 0; 
+std::string final_ir_code = "";
 
 std::string formatTypeChange(const std::string& type1, const std::string& type2) {
     std::string lowerType1 = type1;
@@ -667,6 +669,7 @@ unary_expression
 		//t' = t0 + 1
 		$$.ir.tmp = strdup(s.c_str());
 		$$.ir.code = strdup(g.c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| DEC_OP unary_expression{
 		lvalueError($2.kind);
@@ -686,11 +689,12 @@ unary_expression
 		//t' = t0 + 1
 		$$.ir.tmp = strdup(s.c_str());
 		$$.ir.code = strdup(g.c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| unary_operator cast_expression{
 		//deref.
 
-
+		
 		char *ptr = "*";
 		if(eq($1.type, ptr) == true){
 			//we have to dereference
@@ -743,11 +747,24 @@ unary_expression
 	| SIZEOF unary_expression{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.backpatcher = new BackPatcher();
+		$$.name = "sizeof";
+		$$.ir.code = "";
+		int sz = st.getTypeSize(string($2.type));
+		string tem = to_string(sz);
+		$$.ir.tmp = strdup(tem.c_str());
+		
 		
 	}
 	| SIZEOF '(' type_name ')'{
 		$$.type = "INT";
 		$$.kind = "CONST";
+		$$.name = "sizeof";
+		int sz = st.getTypeSize(string($3.type));
+		string tem = to_string(sz);
+		$$.ir.tmp = strdup(tem.c_str());
+		$$.ir.code = "";
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -830,8 +847,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-		
-		
+		$$.backpatcher = new BackPatcher();
 	}
 	| multiplicative_expression '/' cast_expression{
 		// Type Checking
@@ -852,7 +868,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-		
+		$$.backpatcher = new BackPatcher();
 	}
 	| multiplicative_expression '%' cast_expression{
 		// Type Checking
@@ -879,6 +895,7 @@ multiplicative_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -930,7 +947,7 @@ additive_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-
+$$.backpatcher = new BackPatcher();
 	}
 	| additive_expression '-' multiplicative_expression{
 		// Type Checking
@@ -970,6 +987,7 @@ additive_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1004,6 +1022,7 @@ shift_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("<<"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	| shift_expression RIGHT_OP additive_expression{
 		// Type Checking
@@ -1026,6 +1045,7 @@ shift_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string(">>"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1218,6 +1238,7 @@ and_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("&"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1257,6 +1278,7 @@ exclusive_or_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("^"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1296,6 +1318,7 @@ inclusive_or_expression
 		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("|"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
+		$$.backpatcher = new BackPatcher();
 	}
 	;
 
@@ -1382,6 +1405,7 @@ conditional_expression
 		$$.name = $1.name;
 		$$.ir.code = strdup($1.ir.code);
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
+		
     	delete $1.backpatcher;
 	}
 	| logical_or_expression '?' expression ':' conditional_expression 
@@ -1466,7 +1490,10 @@ assignment_expression
 					check_type($1.type, $3.type,s1);
 				}
 				else{
-					type_change_statement = formatTypeChange(type2,s);
+					if(!eq($1.type,$3.type)){
+						type_change_statement = formatTypeChange(type2,s);
+					}
+
 				}
 				
 			}
@@ -1522,6 +1549,8 @@ expression
 		$$.ir.code = strdup($1.ir.code);
 		
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
+		
+		
     	delete $1.backpatcher;
 	}
 	| expression ',' assignment_expression {
@@ -1768,6 +1797,9 @@ init_declarator
 					}
 					else if(isConvertible(std::string(matchingType1),std::string(matchingType2))){
 						$$.type = concat($$.type,"declared");  //adding this to show that the const variable is declared (to be only used for declaration of const);
+						if(!eq(matchingType1,matchingType2)){
+							type_change_statement = formatTypeChange(matchingType2,matchingType1);
+						}
 					}
 					else {
 						yyerror("invalid assignment");
@@ -1785,7 +1817,10 @@ init_declarator
 						yyerror(err);
 					}
 					else{
-						type_change_statement = formatTypeChange(std::string(matchingType2),std::string(matchingType1));
+						if(!eq(matchingType2,matchingType1)){
+							type_change_statement = formatTypeChange(std::string(matchingType2),std::string(matchingType1));
+						}
+						
 					}
 					
 					$$.type = $1.type;
@@ -2605,7 +2640,6 @@ direct_abstract_declarator
 initializer
 	: '{' initializer_list '}' {
 		// if this will go to declarator '=' initializer , it will give error because of backpatcher checking;
-
 		std::string s = std::string($2.type);
 		s += "*";
 		$$.type = strdup(s.c_str());
@@ -2797,6 +2831,7 @@ block_item
 expression_statement
 	: ';'{
 		$$.ir.code =  "";
+		$$.backpatcher = new BackPatcher();
 	}
 	| expression ';' {
 		$$.ir.code = strdup($1.ir.code);
@@ -2871,9 +2906,7 @@ selection_statement
 		bpneeded = 1;
 	}
 	| SWITCH '(' expression ')' {irgen.start_new_switch();} statement{
-		if(!irgen.get_depth()){
-			yyerror("'case' label not within a switch statement");
-		}
+
 		
 		//Type Checking
 		if( IS_INT_LIKE_TYPE($3.type)){}
@@ -3200,7 +3233,9 @@ jump_statement
 				yyerror(strdup(err.c_str()));
 			}
 			else{
-				type_change_statement = formatTypeChange(std::string($2.type),s);
+				if(!eq($2.type,s.c_str())){
+					type_change_statement = formatTypeChange(std::string($2.type),s);
+				}
 			}
 		}
 		string temp = string($2.ir.tmp);
@@ -3217,7 +3252,7 @@ jump_statement
 
 Global
 	:  translation_unit{
-		if(error_count == 0)irgen.generate(std::string($1.ir.code));
+		final_ir_code = std::string($1.ir.code);
 	}
 
 translation_unit
@@ -3315,12 +3350,26 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 yydebug = 1;
+	 //yydebug = 1;
+
+	// Check if a filename is passed
+	if (argc > 1) {
+		FILE* file = fopen(argv[1], "r");
+		if (!file) {
+			perror("Failed to open input file");
+			return 1;
+		}
+		yyin = file;  // Tell the parser to read from this file
+	} else {
+		yyin = stdin; // Fall back to stdin (for ./parser < test.c)
+	}
+
 int parserresult = yyparse(); // Parser calls yylex() internally
 st.print_all_scopes();
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
-	
+	std::string filename = std::string(argv[1]);
+	irgen.generate(final_ir_code,filename);
 	//st.print_hierarchy();
 	//st.print_token_table();
 	

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <stack>
+#include <regex>
 
 
 
@@ -91,7 +92,7 @@ class IRGen{
     );
     
 
-    void generate(const std::string& code);
+    void generate(const std::string& code,const std::string& filename);
     void print(std::string s);
     std::string format_with_tabs(const std::string& code);
 
