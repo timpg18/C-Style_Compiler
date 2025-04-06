@@ -651,7 +651,7 @@ postfix_expression
 argument_expression_list
 	: assignment_expression{
 		$$.type = $1.type;
-		
+		CONVERT_BOOL_EXPR_TO_VALUE($1);
 		string s = irgen.add_par(string($1.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
 		$$.index = 1;
@@ -659,6 +659,7 @@ argument_expression_list
 	| argument_expression_list ',' assignment_expression{
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
+		CONVERT_BOOL_EXPR_TO_VALUE($3);
 		string s = string($3.ir.code);
 		string p = irgen.add_par(string($3.ir.tmp));
 		s = irgen.concatenate(s,p);
@@ -2385,7 +2386,7 @@ direct_declarator
 		string lb = string($$.name);
 		string cd = irgen.add_label(lb);
 		$$.ir.code = strdup(cd.c_str());
-	   $$.ir.tmp  =strdup($1.ir.tmp);
+	   	$$.ir.tmp  =strdup($1.ir.tmp);
     }
 	| direct_declarator '('  identifier_list ')'{
 		//NOW GIVES ERROR

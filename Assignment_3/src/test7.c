@@ -1,22 +1,11 @@
-class human  {
-    public:{
-        int a,b;
-    }
-};
-
-class hero : private human{
-    public:{
-        int c,d;
-        int f(int n, int m){
-            return 0;
-        }
-        bool k;
-    }
-};
-
-int main(){
-    class hero A;
+int f(int a){
     return 0;
+}
+int main(){
+    // int a;
+    f(7);
+    return 0;
+
     
 
 }

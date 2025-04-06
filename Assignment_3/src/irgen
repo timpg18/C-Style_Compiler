@@ -1,4 +1,11 @@
+label f:
+param a
+	func_prologue  f
+		return 0
+	func_epilogue  f
 label main:
 	func_prologue  main
+		param 7
+		$0 = call f, 1
 		return 0
 	func_epilogue  main
