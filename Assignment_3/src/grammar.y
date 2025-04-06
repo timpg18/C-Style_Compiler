@@ -1506,8 +1506,8 @@ assignment_expression
 					yyerror("const variable cannot be re-changed");
 				}
 				// ONLY INT TYPE VALUES CAN BE ASSIGNED 
-				if(eq($3.kind, "ENUM_CONST") || contains($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
-					if(!eq($3.type,"INT")){
+				if(eq($3.kind, "ENUM_CONST") || eq($3.kind,"IDENTIFIER") || eq($3.kind, "CONST") ){
+					if((eq($3.type,"INT") || eq($1.type,$3.type)) == false){
 						yyerror("incompatible types when assigning to type \'enum\'");
 					}
 				}
@@ -1563,6 +1563,8 @@ assignment_expression
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
 		$$.backpatcher = new BackPatcher();
+		
+
 	}
 	;
 
