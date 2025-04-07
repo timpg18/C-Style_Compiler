@@ -47,7 +47,7 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
 
 std::string IRGen::add_label(std::string f){
     std::string res;
-    res = "label " + f + ":";
+    res = "." + f + ":";
     return res;
 }
 
@@ -146,13 +146,13 @@ std::string IRGen::format_with_tabs(const std::string& code) {
         }
 
         // 2. Detect start and end of function block
-        if (trimmed.rfind("func_prologue", 0) == 0) {
+        if (trimmed.rfind("func_begin", 0) == 0) {
             inside_function = true;
             output << "\t"<<line << "\n";
             continue;
         }
 
-        if (trimmed.rfind("func_epilogue", 0) == 0) {
+        if (trimmed.rfind("func_end", 0) == 0) {
             inside_function = false;
             output << "\t"<<line << "\n";
             continue;

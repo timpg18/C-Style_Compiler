@@ -8,6 +8,8 @@
 
 int validate_arguments(const char* params, const char* args) {
     // Calculate the length of the fixed parameter list (up to '.' or end)
+    if(!params) params = "";
+    if(!args) args = "";
     size_t param_len = 0;
     int has_variadic = 0;
     for (; params[param_len] != '\0' && params[param_len] != '.'; param_len++);

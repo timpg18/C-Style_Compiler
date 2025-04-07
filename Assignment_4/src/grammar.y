@@ -364,8 +364,8 @@ postfix_expression
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
 			
-			if(validate_arguments(to_check, "") == 1){
-				
+			std::cout<<"Nigga"<<std::endl;
+			if(!eq(to_check, "")){
 			}
 			else{
 				//match prefix with variadic
@@ -442,8 +442,6 @@ postfix_expression
 		else{
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
-			
-			
 			if(validate_arguments(to_check, $3.type) == 1){
 				
 			}
@@ -560,7 +558,11 @@ postfix_expression
 			
 		}
 		$$.type = strdup(typ.c_str());
-		$$.name = strdup($1.name);
+		if(contains($1.type, "class")){}
+		else{
+			$$.name = strdup($1.name);
+		}
+		
 		
 		$$.backpatcher = new BackPatcher();
 	}
@@ -1879,6 +1881,7 @@ init_declarator
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
+				g += "\n";
 				g += tem;
 				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
@@ -3303,9 +3306,9 @@ function_definition
 		}
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
-		temp = irgen.concatenate(temp,concat("func_prologue ",$2.name));
+		temp = irgen.concatenate(temp,concat("func_begin",$2.name));
 		temp = irgen.concatenate(temp,string($4.ir.code));
-		temp = irgen.concatenate(temp,concat("func_epilogue ",$2.name));
+		temp = irgen.concatenate(temp,concat("func_end",$2.name));
 		$$.ir.code = strdup(temp.c_str());
 	}
 	| declaration_specifiers   declarator  error { yyerrok; }
