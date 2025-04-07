@@ -1,7 +1,18 @@
-int add(int x, int y){
-    
+//advance features
+
+int func_ellipses(int a, int b , ...){
+    return a +b;
 }
+int** add(int x){
+   
+}
+
 int main(){
-    int (*func)(int ,int ) = add;
-    int f() = add;
+    //int a = func_ellipses(7,2); ERROR!
+    
+    int** (*func)(int x) = &add;
+    int** (*fu)(int y) = &add;
+    int** (**fuk)(int z) = &fu;
+   
+
 }

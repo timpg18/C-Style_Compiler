@@ -712,6 +712,7 @@ $$.kind = $2.kind;
 		if(eq($1.type,ptr) == true){
 			//we have to convert T to T*
 			if(contains($2.kind,"PROCEDURE") == true){
+				
 				std::string s = std::string($2.kind);
 				s.push_back('*');
 				$$.kind = strdup(s.c_str());
@@ -1749,13 +1750,40 @@ init_declarator
 			lvalueError($1.kind);
 			
 			// If a procedure then must be called procedure
-		if(isPROCEDURE($3.kind) == true && isPROCEDURE($1.kind) == false){yyerror("Cannot assign function to a variable");}
+			if((isPROCEDURE($3.kind) == false && contains($3.kind , "PROCEDURE") == true)&& (isPROCEDURE($3.kind) == false && contains($3.kind , "PROCEDURE") == true) ){
 
-			//remove static
+			}
+			else{
+				if(contains($1.kind, "PROCEDURE") == false && contains($3.kind,"PROCEDURE") == false){
+
+				}
+				else{
+				if(isPROCEDURE($3.kind) == false){
+					yyerror("uncalled func");
+				}
+				}
+				
+			}
+			
+			if(contains($1.kind,"PROCEDURE") == true && contains($3.kind, "PROCEDURE") == true){
+							string t = string($1.type);
+							int cnt = 0;
+							string kin1 = string($1.kind);
+							
+							$1.type = strdup(t.c_str());
+							if(eq($1.type,$3.type) == true && eq($1.kind,$3.kind) == true){
+
+							}
+							else{
+								yyerror("func_ptr mismatch");
+							}
+						}
+			else{
+				//remove static
 			std::string t = ts.removeStaticFromDeclaration(std::string($1.type));
 			char* temp = strdup(t.c_str());
 
-			// remove static and const
+			// remove static
 			t = ts.removeStaticFromDeclaration(std::string($3.type));
 			char* temp2 = strdup(t.c_str());
 
@@ -1763,6 +1791,8 @@ init_declarator
 
 			std::string type_change_statement = "";
 			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
+			yyerror(temp2);
+			yyerror(temp);
 			if(eq(temp2 , temp) == false){
 				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
 				if(eq($1.type,"auto")){
@@ -1819,28 +1849,13 @@ init_declarator
 					char* matchingType2 = strdup(ts.removeConstFromDeclaration(std::string(temp2)).c_str());
 					if(!isConvertible(matchingType1,matchingType2)){
 						
-						if(contains($1.kind,"PROCEDURE") == true && contains($3.kind, "PROCEDURE") == true){
-							string t = string($1.type);
-							int cnt = 0;
-							string kin1 = string($1.kind);
-							while(kin1.back() == '*'){
-								t.pop_back();
-								kin1.pop_back();
-							}
-							$1.type = strdup(t.c_str());
-							if(eq($1.type,$3.type) == true && eq($1.kind,$3.kind) == true){
-
-							}
-							else{
-								yyerror("func_ptr mismatch");
-							}
-						}
-						else{
+						
+					
 							char *err = "incompatible type declaration: ";
 						err = concat(err,$1.type);
 						err = concat(err, $3.type);
 						yyerror(err);
-						}
+						
 						
 					}
 					else{
@@ -1860,7 +1875,7 @@ init_declarator
 				$$.type = $1.type;
 				
 				// If a porcedure then must be called procedure
-				if(isPROCEDURE($3.kind)){
+				if(contains($3.kind, "PROCEDURE")){
 					yyerror("Cannot assign function to a variable");
 				}
 				else if(contains($1.type,"CONST")){
@@ -1910,6 +1925,9 @@ init_declarator
 				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
 			}
+			}
+			
+			
 				
 				
 	}
@@ -2444,8 +2462,7 @@ direct_declarator
 		char* newkind =concat(st.token_table_[idx].kind.c_str(),"(");
 		newkind = concat(newkind,$3.type);
 		newkind = concat(newkind,")");
-		st.token_table_[idx].kind = strdup(newkind);
-		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+		
 		if(eq($1.kind , "IDENTIFIER")){
 			string kin = newkind;
 			string tem = string($1.type);
@@ -2455,8 +2472,14 @@ direct_declarator
 			}
 		$$.type = strdup(tem.c_str());
 		$$.kind = strdup(kin.c_str());
+		st.token_table_[idx].kind = strdup(kin.c_str());
+		st.token_table_[idx].token_type = strdup(tem.c_str());
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 		}
 		else{
+			st.token_table_[idx].kind = strdup(newkind);
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
 			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 	   	$$.kind = newkind;
 		}
@@ -2488,9 +2511,8 @@ direct_declarator
 	| direct_declarator '('   ')'  {
 		
        int idx = $1.index;
-		st.token_table_[idx].kind = strdup("PROCEDURE ( )");
-		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
-		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
+		
+		
 		if(eq($1.kind , "IDENTIFIER")){
 			string kin = "PROCEDURE ( )";
 			string tem = string($1.type);
@@ -2500,8 +2522,14 @@ direct_declarator
 			}
 		$$.type = strdup(tem.c_str());
 		$$.kind = strdup(kin.c_str());
+		st.token_table_[idx].kind = strdup(kin.c_str());
+		st.token_table_[idx].token_type = strdup(tem.c_str());
+		st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 		}
 		else{
+			st.lookup(std::string($1.name))->kind = st.token_table_[idx].kind;
+		st.lookup(std::string($1.name))->type = st.token_table_[idx].token_type;
 			$$.type = strdup(st.token_table_[idx].token_type.c_str());
 		$$.kind = strdup("PROCEDURE ( )");
 		}
@@ -3412,7 +3440,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 //yydebug = 1;
+	 yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {
@@ -3428,6 +3456,7 @@ main(int argc, char **argv) {
 
 int parserresult = yyparse(); // Parser calls yylex() internally
 st.print_all_scopes();
+
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	std::string filename = std::string(argv[1]);
