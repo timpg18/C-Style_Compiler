@@ -391,15 +391,12 @@ postfix_expression
 				if(dot == false)pref+=s[i];
 				else suf+=s[i];
 			}
-			
-			
 			$1.name = strdup(suf.c_str());
 			ext = irgen.add_par("&" + pref);
-			
 		}
 		$$.kind = "PROCEDURE";
 		$$.type = $1.type;
-
+		
 		string tmp = irgen.new_temp();
 		string s = string($1.ir.code);
 		s = irgen.concatenate(s,ext);
@@ -810,7 +807,6 @@ cast_expression
 		$$.ir.code = strdup($1.ir.code);
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
-		
 	}
 	| '(' type_name ')' cast_expression{
 		//explicit typecast
@@ -1791,8 +1787,7 @@ init_declarator
 
 			std::string type_change_statement = "";
 			// TO CHECK IF BOTH THE TYPES ARE SAME OR NOT
-			yyerror(temp2);
-			yyerror(temp);
+			
 			if(eq(temp2 , temp) == false){
 				// HANDLING IN CASE OF AUTO AND CHANGING THE TYPE TO THE FIRST ASSIGNED TYPE
 				if(eq($1.type,"auto")){
@@ -1875,13 +1870,13 @@ init_declarator
 				$$.type = $1.type;
 				
 				// If a porcedure then must be called procedure
-				if(contains($3.kind, "PROCEDURE")){
+				if(isPROCEDURE($3.kind)){
 					yyerror("Cannot assign function to a variable");
 				}
 				else if(contains($1.type,"CONST")){
 					$$.type = concat($$.type, "declared");
 				}
-			}	
+			}
 		
 			//IR GEN
 			
