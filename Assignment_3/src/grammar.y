@@ -3437,7 +3437,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 yydebug = 1;
+	 //yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {
