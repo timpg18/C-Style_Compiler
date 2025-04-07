@@ -3054,7 +3054,7 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// For break and continue
-		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),FOR_end).c_str());
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),label3).c_str());
 		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.continue_,std::string($7.ir.code),label1).c_str());
 
 		// IR GEN
@@ -3084,7 +3084,7 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// For break and continue
-		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),FOR_end).c_str());
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),label3).c_str());
 		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.continue_,std::string($8.ir.code),label1).c_str());
 
 		// IR GEN
@@ -3112,7 +3112,7 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// For break and continue
-		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),FOR_end).c_str());
+		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.break_,std::string($7.ir.code),label3).c_str());
 		$7.ir.code = strdup($7.backpatcher->staticBackPatch(irgen.continue_,std::string($7.ir.code),label1).c_str());
 
 		// IR GEN
@@ -3140,7 +3140,7 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// For break and continue
-		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),FOR_end).c_str());
+		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.break_,std::string($8.ir.code),label3).c_str());
 		$8.ir.code = strdup($8.backpatcher->staticBackPatch(irgen.continue_,std::string($8.ir.code),label1).c_str());
 
 		// IR GEN
@@ -3333,7 +3333,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 //yydebug = 1;
+	 yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {
