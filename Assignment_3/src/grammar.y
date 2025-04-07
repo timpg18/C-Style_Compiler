@@ -347,6 +347,7 @@ postfix_expression
 	}
 	| postfix_expression '(' ')'{
 		$$.name = $1.name;
+
 		if(isPROCEDURE($1.kind)){}
 		else{
 			yyerror("called object is not a function or function pointer");
@@ -441,7 +442,7 @@ postfix_expression
 			char* to_check = extract_between_parentheses(func_kind);
 			
 			
-			if(validate_arguments(to_check, $3.type) == 1){
+			if(!eq(to_check,"")){
 				
 			}
 			else{
@@ -491,7 +492,7 @@ postfix_expression
 		
 	}
 	| postfix_expression '.' IDENTIFIER{
-		
+	
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
 		//printf("\n\n%s\n\n",$1.type);
@@ -557,7 +558,8 @@ postfix_expression
 			
 		}
 		$$.type = strdup(typ.c_str());
-		$$.name = strdup($1.name);
+		if(contains($1.type,"class")){}
+		else $$.name = strdup($1.name);
 		
 		$$.backpatcher = new BackPatcher();
 	}
