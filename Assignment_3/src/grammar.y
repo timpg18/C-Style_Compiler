@@ -36,6 +36,18 @@ std::string formatTypeChange(const std::string& type1, const std::string& type2)
     return "cast: " + lowerType1 + " -> " + lowerType2 + " \n";
 }
 
+std::string removeDeclared(const std::string& input) {
+    std::string result = input;
+    std::string toRemove = " declared";
+    size_t pos;
+
+    while ((pos = result.find(toRemove)) != std::string::npos) {
+        result.erase(pos, toRemove.length());
+    }
+
+    return result;
+}
+
 %}
 
 %code requires {
@@ -364,8 +376,8 @@ postfix_expression
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
 			
-			if(validate_arguments(to_check, "") == 1){
-				
+			std::cout<<"Nigga"<<std::endl;
+			if(!eq(to_check, "")){
 			}
 			else{
 				//match prefix with variadic
@@ -442,8 +454,6 @@ postfix_expression
 		else{
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
-			
-			
 			if(validate_arguments(to_check, $3.type) == 1){
 				
 			}
@@ -560,7 +570,11 @@ postfix_expression
 			
 		}
 		$$.type = strdup(typ.c_str());
-		$$.name = strdup($1.name);
+		if(contains($1.type, "class")){}
+		else{
+			$$.name = strdup($1.name);
+		}
+		
 		
 		$$.backpatcher = new BackPatcher();
 	}
@@ -1592,6 +1606,7 @@ declaration
 				st.declare_struct_variables(std::string($1.type),std::string($2.name));
 			}
 			// here we are changing the offset and size for declaration;
+			$2.type = strdup(removeDeclared($2.type).c_str());
 			st.updateVariableTypes(std::string($2.name),std::string($2.type));
 		}
 		else{
@@ -1625,6 +1640,7 @@ declaration
 					}
 				
 					// finally here also we we are updating the offset and size;
+
 					st.updateVariableTypes(std::string($2.name),std::string($2.type));
 				}
 				else{
@@ -2180,7 +2196,7 @@ struct_declaration
 	;
 
 specifier_qualifier_list
-	: type_specifier specifier_qualifier_list {
+	: type_specifier  specifier_qualifier_list {
 		$$.type = $1.type;
 		$$.type = concat($$.type,$2.type);
 	}
@@ -3303,9 +3319,9 @@ function_definition
 		}
 		string temp;
 		temp = irgen.concatenate(string($1.ir.code),string($2.ir.code));
-		temp = irgen.concatenate(temp,concat("func_prologue ",$2.name));
+		temp = irgen.concatenate(temp,concat("func_begin",$2.name));
 		temp = irgen.concatenate(temp,string($4.ir.code));
-		temp = irgen.concatenate(temp,concat("func_epilogue ",$2.name));
+		temp = irgen.concatenate(temp,concat("func_end",$2.name));
 		$$.ir.code = strdup(temp.c_str());
 	}
 	| declaration_specifiers   declarator  error { yyerrok; }
@@ -3336,7 +3352,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	//yydebug = 1;
+	yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {
