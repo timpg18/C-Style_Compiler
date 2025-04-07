@@ -254,6 +254,7 @@ std::string IRGen::generate_switch_cases(const std::string& dispatch_var) {
     
     // Generate if-goto for each case
     for (const auto& case_info : case_info_stack.top()) {
+        std::cout<<case_info.value<<std::endl;
         if (case_info.value == "Default") {
             // Store default label for later use
             default_label = case_info.label;
@@ -275,7 +276,7 @@ std::string IRGen::generate_switch_cases(const std::string& dispatch_var) {
         std::string goto_default = create_goto(default_label);
         result = concatenate(result, goto_default);
     }
-    end_switch();
+    
     
     return result;
 }

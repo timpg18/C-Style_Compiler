@@ -2738,6 +2738,7 @@ labeled_statement
 		std::string label = irgen.new_label();
 		std::string Case_label = irgen.add_label(label);
 		irgen.add_case_info(std::string($2.name),label);
+		std::cout<<std::string($2.name)<< "    "<<label<<"\n";
 
 		$$.ir.code = strdup(irgen.concatenate(Case_label,std::string($4.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
@@ -2750,6 +2751,7 @@ labeled_statement
 		string label = irgen.new_label();
 		string Default_label = irgen.add_label(label);
 		irgen.add_case_info("Default",label);
+		std::cout<<"Default"<< "    "<<label<<"\n";
 		$$.ir.code =strdup(irgen.concatenate(Default_label,string($3.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -2927,6 +2929,8 @@ selection_statement
 		std::string label11 = irgen.new_label();
 		std::string Switch_end = irgen.add_label(label11);
 		std::string Switch_start = irgen.generate_switch_cases(std::string($3.ir.tmp));
+		if(irgen.has_default_label() == false) Switch_start = irgen.concatenate(Switch_start,"goto " + label11);
+		irgen.end_switch();
 	
 		$$.ir.code = strdup($3.ir.code);
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_start).c_str()); 
@@ -2935,7 +2939,6 @@ selection_statement
 		$$.ir.code = strdup(irgen.concatenate(std::string($$.ir.code),Switch_end).c_str()); 
 
 		$$.backpatcher = new BackPatcher();
-		irgen.end_switch();
 	}
 	;
 
@@ -3333,7 +3336,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	 yydebug = 1;
+	//yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {
