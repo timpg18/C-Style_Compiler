@@ -1,6 +1,19 @@
+struct s1{
+    int x;
+    struct s2{
+        int y;
+        struct s3{
+            int z;
+
+
+        };
+        struct s3 t;
+    };
+    struct s2 s;
+};
+
 int main(){
-    int a[2][2][2];
-    a[0][0][0] =1;
-    int b[6];
-    a[0][0][0]=b[0];
+    struct s1 st;
+    int x = st.s.t.z;
+    return 0;
 }
