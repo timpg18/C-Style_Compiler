@@ -1918,6 +1918,7 @@ init_declarator
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
+				g += "\n";
 				g += tem;
 				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
