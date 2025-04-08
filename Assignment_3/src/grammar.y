@@ -819,7 +819,7 @@ cast_expression
 		if(!ts.contains(std::string($2.type))){
 			yyerror("the following type is not a valid type");
 		}
-		else if(contains($2.type,"enum") || contains($2.type,"class") || contains($2.type,"struct") || contains($2.type,"union")){
+		else if(contains($2.type,"enum")){
 			yyerror("the following type-conversion is not a valid type");
 		}
 		//printf("\n\n%s\n\n",$2.type);
@@ -1895,7 +1895,7 @@ init_declarator
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
 				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
-				g += tem;
+				g = irgen.concatenate(g,tem);
 				
 				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
 			}
@@ -3352,7 +3352,7 @@ void yyerror(const char *s) {
 
 
 main(int argc, char **argv) {
-	yydebug = 1;
+	//yydebug = 1;
 
 	// Check if a filename is passed
 	if (argc > 1) {

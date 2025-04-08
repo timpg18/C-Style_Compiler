@@ -819,7 +819,7 @@ cast_expression
 		if(!ts.contains(std::string($2.type))){
 			yyerror("the following type is not a valid type");
 		}
-		else if(contains($2.type,"enum") || contains($2.type,"class") || contains($2.type,"struct") || contains($2.type,"union")){
+		else if(contains($2.type,"enum")){
 			yyerror("the following type-conversion is not a valid type");
 		}
 		//printf("\n\n%s\n\n",$2.type);

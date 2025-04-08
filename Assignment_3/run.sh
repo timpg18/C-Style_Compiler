@@ -19,7 +19,7 @@ for testfile in ./testing/*.c; do
     echo "-----------------------------------"
     echo "Processing: $testfile"
     echo "-----------------------------------"
-    ./parser  "./testing/test3.c"
+    ./parser  "$testfile"
     echo -e "\n"
 done
 

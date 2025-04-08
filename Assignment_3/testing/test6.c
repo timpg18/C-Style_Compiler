@@ -1,9 +1,11 @@
 // dynamic memory allocation
-typedef int myint;
+typedef struct coordinate{
+    int x,y;
+} point;
 int main() {
     int *arr;
     int n = 5;
-    myint a =0;
+    point a;
 
     // Allocate memory for 5 integers
     arr = (int*) malloc(n * sizeof(int));
