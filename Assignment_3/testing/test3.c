@@ -17,8 +17,6 @@ int main() {
             printf("Default in inner switch\n");
             break;
         }
-        
-        
         break;
         case 2:
             printf("Case 2 in outer switch\n");

@@ -1,13 +1,28 @@
-label func_ellipses:
-	func_prologue  func_ellipses
-		$0 = a + b
-		return $0
-	func_epilogue  func_ellipses
-label add:
-	func_prologue  add
-		$1 = &k
-		return $1
-	func_epilogue  add
+glb1 = 10
+label bar:
+func_begin bar
+lcl = 10
+label while_begin1:
+if b == 0 goto while_end1
+goto @L0
+label @L0:
+$0 = b
+b = b - 1
+goto while_begin1
+label while_end1:
+$1 = a == 0
+if $1 goto @L1
+goto @L2
+label @L1:
+
+return 0
+label @L2:
+$2 = a - 1
+param $2
+$3 = a + lcl
+param $3
+$4 = call bar, 2
+func_end bar
 label main:
 	func_prologue  main
 		param 7
@@ -21,15 +36,13 @@ label main:
 		param 3
 		param 8
 		param 3
-		$2 = call func_ellipses, 11a = $2
+		$1 = call func_ellipses, 11a = $1
 		param 8
 		param 2
 		param 5
-		$3 = call func_ellipses, 3
-		a = $3
-	label func:
-	label f2:
-		$6 = &ap2 = $6
-		$7 = *p2
-		$7 = 100
+		$2 = call func_ellipses, 3
+		a = $2
+		$3 = &ap = $3
+		$4 = *p
+		$4 = 100
 	func_epilogue  main
