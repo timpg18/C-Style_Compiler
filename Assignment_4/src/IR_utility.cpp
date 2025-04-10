@@ -47,7 +47,7 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
 
 std::string IRGen::add_label(std::string f){
     std::string res;
-    res = "." + f + ":";
+    res = "label " + f + ":";
     return res;
 }
 

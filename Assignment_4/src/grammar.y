@@ -2965,12 +2965,11 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($3, irgen);
 		
 		// Declaration of all the labels to be used
-		int count = counter++;
-		std::string label1 = "while_begin" + std::to_string(count);
+		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_true = irgen.add_label(label2);
-		std::string label3 = "while_end"+ std::to_string(count);
+		std::string label3 = irgen.new_label();
 		std::string Loop_end = irgen.add_label(label3);
 		std::string goto_S_begin = irgen.create_goto(label1);
 
@@ -3000,12 +2999,11 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		int count = counter++;
-		std::string label1 = "do_while_begin"+ std::to_string(count);
+		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = "do_while_end"+ std::to_string(count);
+		std::string label3 = irgen.new_label();
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
@@ -3031,12 +3029,11 @@ iteration_statement
 		HANDLE_BOOL_EXPR_BACKPATCH_FOR_CONSTANTS($5, irgen);
 
 		// Declaration of all the labels to be used
-		int count = counter++;
-		std::string label1 = "do_until_begin"+ std::to_string(count);
+		std::string label1 = irgen.new_label();
 		std::string S_begin = irgen.add_label(label1);
 		std::string label2 = irgen.new_label();
 		std::string E_begin = irgen.add_label(label2);
-		std::string label3 = "do_until_end"+ std::to_string(count);
+		std::string label3 = irgen.new_label();
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
