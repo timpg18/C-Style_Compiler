@@ -1,12 +1,31 @@
 int main() {
     int a=0;
 
-    // Using break and continue in for loop
-    for (int i = 0; i < 5; i++) {
-        if (i == 2) {continue;}
-        // if (i == 4) {break;}
-        printf("For with break/continue: i = %d\n", i);
+    if(a<1){
+        a=10000;
+        if(a>1){
+            a=2;
+            if(a>1){
+                a++;
+            }
+            else {
+                a--;
+            }
+            a=9;
+        }
+        else{
+            a+=2;
+        }
+        a++;
     }
+    else{
+        a-=2;
+    }
+    if(a<9){
+        a+=4;
+    }
+
+    
 
     return 0;
 }

@@ -2809,22 +2809,28 @@ block_item_list
 	}
 	| block_item_list block_item{
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
-		std::vector<std::string> tmp1 = $2.backpatcher->getNextList();
-		int size = tmp1.size();
+		std::vector<std::string> tmp1 = $1.backpatcher->getNextList();
+		std::vector<std::string> tmp2 = $2.backpatcher->getNextList();
+		int size2 = tmp2.size();
+		int size1 = tmp1.size();
+		std::cout<<size1<<" "<<size2<<" "<<bpneeded<<std::endl;
 
 		// one of the spots for backpatching if the incoming has no label in newlist and no backpatching is needed
 		// Problem - must have a statement following the thing to be backpatched (solved)
-		if(size == 0 && bpneeded == 1){
+		if(size1 > 0 && bpneeded == 1){
 			std::string backpatch_label = irgen.new_label();
 			std::string S_next = irgen.add_label(backpatch_label);
 			$1.ir.code = strdup($$.backpatcher->backPatchNextList(std::string($1.ir.code),backpatch_label).c_str());
 			$1.ir.code =  strdup(irgen.concatenate(string($1.ir.code), S_next).c_str());
-			bpneeded = 0;
 		}
 		else{
-			tmp1 = $$.backpatcher->merge(tmp1,$1.backpatcher->getNextList());
-			$$.backpatcher->assignNextList(tmp1);
+			tmp2 = $$.backpatcher->merge(tmp2,$1.backpatcher->getNextList());
 		}
+		if(size1 == 0 && size2 ==0){}
+		else if(size1 >= 1 && size2 == 0){bpneeded = 0;}
+		else if(size1 == 0  && size2 >=1){bpneeded = 1;}
+		else{bpneeded = 1;}
+		$$.backpatcher->assignNextList(tmp2);
 		//std::cout<<size<<std::endl;
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), string($2.ir.code)).c_str());
 		delete $1.backpatcher;
