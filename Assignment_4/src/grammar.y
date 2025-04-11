@@ -65,6 +65,7 @@ std::string removeDeclared(const std::string& input) {
 	typedef struct{
 		char* code;
 		char* tmp;
+		char* par;
 	} irg;
 	irg ir;
 	} attribute_t;
@@ -140,7 +141,10 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
-		$$.ir.tmp = strdup(name);
+		string block_num = to_string(st.lookup(tmp)->scope_level);
+		tmp += "@block";
+		tmp += block_num;
+		$$.ir.tmp = strdup(tmp.c_str());
 		$$.ir.code = "";
 		//printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
@@ -493,9 +497,9 @@ postfix_expression
 		$$.backpatcher = new BackPatcher();
 		string tmp = irgen.new_temp();
 		string s = string($1.ir.code);
-		
-		s = irgen.concatenate(s,ext);
 		s = irgen.concatenate(s, string($3.ir.code));
+		s = irgen.concatenate(s, string($3.ir.par));
+		s = irgen.concatenate(s,ext);
 		string p = irgen.func_call(string($1.name), $3.index);
 		if(eq($1.type,"VOID") == false)p = irgen.assign(tmp,p);
 		s = irgen.concatenate(s,p);
@@ -561,14 +565,17 @@ postfix_expression
 		tem += t0;
 		tem += "]";
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),cd12).c_str());
+		
 		if(is_udt(strdup(typ.c_str())) == true){
 			//there is struct inside or any other except class inside
 			$$.ir.tmp = strdup(t0.c_str());
 		}
 		else{
+			
 			$$.ir.tmp = strdup(tem.c_str());
 			
 		}
+		
 		$$.type = strdup(typ.c_str());
 		if(contains($1.type, "class")){}
 		else{
@@ -606,7 +613,8 @@ postfix_expression
 		
 		string s = irgen.assign(temp, $1.ir.tmp);
 		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "+" , "1");
-		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		string t = irgen.concatenate(s,g);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),t).c_str());
 		$$.ir.tmp = strdup(temp.c_str());
 		$$.backpatcher = new BackPatcher();
 		
@@ -628,7 +636,8 @@ postfix_expression
 		std::string temp = irgen.new_temp();
 		string s = irgen.assign(temp, $1.ir.tmp);
 		string g = irgen.add_op(std::string($1.ir.tmp),std::string($1.ir.tmp), "-" , "1");
-		$$.ir.code = strdup(irgen.concatenate(s,g).c_str());
+		string t = irgen.concatenate(s,g);
+		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),t).c_str());
 		$$.ir.tmp = strdup(temp.c_str());
 		$$.backpatcher = new BackPatcher();
 		$$.index = 0;
@@ -640,7 +649,8 @@ argument_expression_list
 		$$.type = $1.type;
 		CONVERT_BOOL_EXPR_TO_VALUE($1);
 		string s = irgen.add_par(string($1.ir.tmp));
-		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
+		$$.ir.code = strdup($1.ir.code);
+		$$.ir.par = strdup(s.c_str());
 		$$.index = 1;
 	}
 	| argument_expression_list ',' assignment_expression{
@@ -649,8 +659,8 @@ argument_expression_list
 		CONVERT_BOOL_EXPR_TO_VALUE($3);
 		string s = string($3.ir.code);
 		string p = irgen.add_par(string($3.ir.tmp));
-		s = irgen.concatenate(s,p);
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
+		$$.ir.par = strdup(irgen.concatenate(string($1.ir.par), p).c_str());
 		$$.index = $1.index + 1;
 	}
 	;
@@ -2325,7 +2335,7 @@ declarator
 direct_declarator
 	: IDENTIFIER{
 		std::string tmp = $1.type;
-		if(st.lookup(tmp) != nullptr){
+		if(st.lookup_cur(tmp) != nullptr){
 			//THIS GIVES ERROR EVEN IF IN PARENT SCOPE... (ie conflict with parent scope)
 			std::string err = st.lookup(tmp)->name + " already declared before: ";
 			yyerror(err.c_str());

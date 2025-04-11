@@ -111,6 +111,8 @@ public:
     // To lookup a symbol in the symbol table
     Symbol* lookup(const std::string& name);
     // ENCLOSING FUNCTION FINDER (NEW)
+    Symbol* lookup_cur(const std::string& name);
+    // ENCLOSING FUNCTION FINDER (NEW)
     Symbol* get_enclosing_procedure();
     // HIERARCHY PRINTER (NEW)
     void print_hierarchy() const;

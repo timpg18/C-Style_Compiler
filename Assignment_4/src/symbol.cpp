@@ -369,6 +369,14 @@ SymbolTable::Symbol* SymbolTable::lookup(const std::string& name) {
     }
     return nullptr;
 }
+SymbolTable::Symbol* SymbolTable::lookup_cur(const std::string& name) {
+    Scope* scope = current_scope_;
+    auto it = scope->symbol_map.find(name);
+        if (it != scope->symbol_map.end()) {
+            return &(*it->second);
+        }
+    return nullptr;
+}
 
 // ENCLOSING FUNCTION FINDER (NEW)
 SymbolTable::Symbol* SymbolTable::get_enclosing_procedure() {
