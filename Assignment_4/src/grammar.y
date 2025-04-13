@@ -19,6 +19,7 @@ IRGen irgen;
 TypeSet ts;
 SymbolTable st;
 int classDef = 0;
+int block_num = 0;
 int isPub=0,isPro=0,isPri=0;
 std::string pubMem,proMem,priMem = "";
 std::string currFunc = "";
@@ -131,7 +132,7 @@ primary_expression
 		
 		char *name = strdup($1.type);
 		std::string tmp = name;
-
+		
 		if(st.lookup(tmp) == nullptr){
 			std::string err = "Undeclared Identifier: " + tmp;
     		yyerror(err.c_str());
@@ -141,9 +142,12 @@ primary_expression
 		$$.type = strdup(st.lookup(tmp)->type.c_str());
 		$$.kind = strdup(st.lookup(tmp)->kind.c_str());
 		$$.name = name;
-		string block_num = to_string(st.lookup(tmp)->scope_level);
+		int num;
+		num = st.lookup(tmp)->block_num;
+		
+		
 		tmp += "@block";
-		tmp += block_num;
+		tmp += to_string(num);
 		$$.ir.tmp = strdup(tmp.c_str());
 		$$.ir.code = "";
 		//printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
@@ -380,7 +384,6 @@ postfix_expression
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
 			
-			std::cout<<"Nigga"<<std::endl;
 			if(!eq(to_check, "")){
 			}
 			else{
@@ -1948,7 +1951,7 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' {st.push_scope("class anonymous");} class_member_list '}' 
+    : CLASS '{' {st.push_scope("class anonymous");block_num++;} class_member_list '}' 
          {	
 			if(st.current_scope_->contains_break_or_continue == true){
 				yyerror("Using continue or break inside Classes in invalid");
@@ -1965,6 +1968,7 @@ class_specifier
 			st.insert_symbol(std::string($2.type),"CLASS","USER DEFINED");
 			st.update_symbol_sizes(std::string($2.type),0);
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
+			block_num++;
 			ts.addClass(std::string($2.type));
 			if(!eq($3.name,"NULL")){
 				st.implement_inheritance(std::string(concat("class",$2.type)),std::string($3.name));
@@ -2069,6 +2073,7 @@ struct_or_union_specifier
 		else{
 			st.push_scope("union anonymous");
 		}
+		block_num++;
 	 } struct_declaration_list '}'  {
 		if(st.current_scope_->contains_break_or_continue == true){
 			yyerror("using break/continue invalid in this scope");
@@ -2110,6 +2115,7 @@ struct_or_union_specifier
 				ts.addUnion(std::string($2.type));
 			}
 			st.push_scope(s);
+			block_num++;
 			}
 			struct_declaration_list '}'  {
 			
@@ -2346,6 +2352,7 @@ direct_declarator
 		$$.kind = "IDENTIFIER";
 		$$.name = $1.type;
 			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
+			st.lookup($1.type)->block_num = block_num;
 			if(classDef==1){
 				if(isPri==1){
 					priMem += " " + std::string($1.type);
@@ -2703,7 +2710,7 @@ statement
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	|  {st.push_scope();irgen.depth_current++;} compound_statement {
+	|  {st.push_scope();irgen.depth_current++;block_num++;} compound_statement {
 		irgen.depth_current++;
 		bool x = st.current_scope_->contains_break_or_continue;
 		bool y = st.current_scope_->jump[0];
@@ -3286,7 +3293,7 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));} compound_statement {
+	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));block_num++;} compound_statement {
 		if(irgen.get_case_info_size() > 0){
 			yyerror("a case label may only be used within a switch");
 		}
@@ -3304,6 +3311,7 @@ function_definition
 		}
 	| declaration_specifiers  declarator {
 		st.push_scope(std::string(strdup($2.name)));
+		block_num++;
 		if(eq($2.name,"main")){
 			if(!eq($1.type,"INT")){
 				yyerror("main must have return type int");
@@ -3346,6 +3354,7 @@ declaration_list
 
 PushScope
 	: {st.push_scope();
+	block_num++;
     }
 	;
 

@@ -33,14 +33,15 @@ public:
         std::string type;
         std::string kind;
         int scope_level;
+        int block_num;
         int size;      // Added: size of the symbol in bytes
         int offset;    // Added: offset from scope base address
         std::vector<int> dimensions;  // Store array dimensions, empty for non-arrays
         std::unique_ptr<SymbolTable> child_table;
 
         Symbol(const std::string& n, const std::string& t, 
-            const std::string& k, int lvl, int sz = 0, int off = 0)
-            : name(n), type(t), kind(k), scope_level(lvl), size(sz), offset(off), dimensions() {}
+            const std::string& k, int lvl, int sz = 0, int off = 0, int block_n = 0)
+            : name(n), type(t), kind(k), scope_level(lvl), size(sz),block_num(block_n), offset(off), dimensions() {}
     };
 
     struct TokenEntry {
