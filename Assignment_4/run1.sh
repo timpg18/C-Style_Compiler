@@ -1,44 +1,54 @@
 #!/bin/bash
 
-# Define the directory where 3AC files are stored
+# Colors for better output
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Check if IR directory exists, if not create it
 IR_DIR="intermediate_representation"
+if [ ! -d "$IR_DIR" ]; then
+    echo -e "${GREEN}Creating directory $IR_DIR${NC}"
+    mkdir -p "$IR_DIR"
+fi
 
-# Create the directory if it doesn't exist
-mkdir -p "$IR_DIR"
-
-# Compile the C++ program
-echo "Compiling label processor..."
-g++ -o label_processor label_processor.cpp -std=c++11
+# Compile the basic block constructor
+echo -e "${GREEN}Compiling basic block constructor...${NC}"
+g++ -o basic_block_constructor basic_block_constructor.cpp -std=c++11
 
 # Check if compilation was successful
 if [ $? -ne 0 ]; then
-    echo "Compilation failed"
+    echo -e "${RED}Compilation failed!${NC}"
     exit 1
 fi
 
-echo "Compilation successful"
+echo -e "${GREEN}Compilation successful!${NC}"
 
-# Process all .3ac files in the intermediate_representation directory
-for input_file in "$IR_DIR"/*.tac; do
-    if [ -f "$input_file" ]; then
-        filename=$(basename -- "$input_file")
-        output_file="$IR_DIR/${filename%.3ac}"
-        
-        echo "Processing $filename..."
-        ./label_processor "$input_file" "$output_file"
-        
-        if [ $? -eq 0 ]; then
-            echo "Successfully processed $filename to $(basename -- "$output_file")"
-        else
-            echo "Failed to process $filename"
-        fi
+# Check if a specific file was provided
+if [ $# -eq 1 ]; then
+    # Process the specified file
+    echo -e "${GREEN}Processing $1...${NC}"
+    ./basic_block_constructor "$1"
+else
+    # If no specific file provided, look for .tac files in the IR directory
+    echo -e "${GREEN}Looking for .tac files in $IR_DIR...${NC}"
+    
+    files=("$IR_DIR"/*.tac)
+    
+    if [ ${#files[@]} -eq 0 ] || [ ! -e "${files[0]}" ]; then
+        echo -e "${RED}No .tac files found in $IR_DIR${NC}"
+        echo "Please provide a specific file path or place .tac files in the $IR_DIR directory"
+        exit 1
     fi
-done
-
-# If no .3ac files found, inform the user
-if [ ! "$(ls -A "$IR_DIR"/*.tac 2>/dev/null)" ]; then
-    echo "No .3ac files found in $IR_DIR"
-    echo "Please place your 3AC files in the $IR_DIR directory with .tac extension"
+    
+    # Process each .tac file
+    for file in "${files[@]}"; do
+        echo -e "${GREEN}Processing $file...${NC}"
+        echo -e "${GREEN}==================================${NC}"
+        ./basic_block_constructor "$file"
+        echo -e "${GREEN}==================================${NC}"
+        echo ""
+    done
 fi
 
-echo "All done!"
+echo -e "${GREEN}Done!${NC}"
