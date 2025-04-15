@@ -95,5 +95,6 @@ class IRGen{
     void generate(const std::string& code,const std::string& filename);
     void print(std::string s);
     std::string format_with_tabs(const std::string& code);
+    std::string process_consecutive_labels(const std::string& code);
 
 };

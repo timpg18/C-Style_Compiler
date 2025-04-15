@@ -103,7 +103,10 @@ std::string IRGen::create_conditional_jump(
 
 
 void IRGen::generate(const std::string& code, const std::string& filename) {
-    std::string formatted_code = format_with_tabs(code);
+    // Process consecutive labels
+    std::string processed_code = process_consecutive_labels(code);
+
+    std::string formatted_code = format_with_tabs(processed_code);
 
     // Extract number from filename using regex
     std::smatch match;
@@ -292,4 +295,101 @@ void IRGen::end_switch() {
             has_default_stack.push(false);
         }
     }
+}
+
+std::string IRGen::process_consecutive_labels(const std::string& code) {
+    // Parse the input code and identify labels
+    std::vector<std::pair<std::string, bool>> codeLines;
+    std::unordered_map<std::string, std::string> labelMap;
+    
+    std::istringstream codeStream(code);
+    std::string line;
+    
+    // Regular expressions for identifying labels and goto statements
+    std::regex labelRegex("^\\s*label\\s+(@L\\d+|\\w+):\\s*$");
+    std::regex gotoRegex("\\s*goto\\s+(@L\\d+)\\s*");
+    std::regex ifGotoRegex("\\s*if\\s+.*\\s+goto\\s+(@L\\d+)\\s*");
+    
+    // First pass: Parse the code and identify labels
+    while (std::getline(codeStream, line)) {
+        std::smatch matches;
+        bool isLabel = false;
+        std::string labelName;
+        
+        if (std::regex_match(line, matches, labelRegex)) {
+            isLabel = true;
+            labelName = matches[1].str();
+        }
+        
+        codeLines.push_back({line, isLabel});
+        if (isLabel) {
+            codeLines.back().first = labelName; // Store label name for easy access
+        }
+    }
+    
+    // Second pass: Identify consecutive labels and create mapping
+    for (size_t i = 0; i < codeLines.size(); i++) {
+        if (codeLines[i].second) { // If this is a label
+            std::string keepLabel = codeLines[i].first;
+            
+            // Look ahead for consecutive labels
+            size_t j = i + 1;
+            while (j < codeLines.size() && codeLines[j].second) {
+                // Map this label to the first label
+                labelMap[codeLines[j].first] = keepLabel;
+                j++;
+            }
+            
+            // Skip the consecutive labels in the outer loop
+            i = j - 1;
+        }
+    }
+    
+    // Third pass: Process the code with the label mapping
+    std::ostringstream processedCode;
+    bool skipLine = false;
+    
+    codeStream.clear();
+    codeStream.str(code);
+    
+    while (std::getline(codeStream, line)) {
+        std::smatch matches;
+        
+        // Check if this is a label line
+        if (std::regex_match(line, matches, labelRegex)) {
+            std::string labelName = matches[1].str();
+            
+            // Skip this line if it's a label that should be replaced
+            if (labelMap.find(labelName) != labelMap.end()) {
+                continue;
+            }
+        }
+        
+        // Replace goto statements
+        std::string processedLine = line;
+        std::smatch gotoMatches;
+        if (std::regex_search(processedLine, gotoMatches, gotoRegex)) {
+            std::string targetLabel = gotoMatches[1].str();
+            if (labelMap.find(targetLabel) != labelMap.end()) {
+                // Replace the target label with the mapped label
+                size_t pos = processedLine.find(targetLabel);
+                processedLine.replace(pos, targetLabel.length(), labelMap[targetLabel]);
+            }
+        }
+        
+        // Replace if goto statements
+        std::smatch ifGotoMatches;
+        if (std::regex_search(processedLine, ifGotoMatches, ifGotoRegex)) {
+            std::string targetLabel = ifGotoMatches[1].str();
+            if (labelMap.find(targetLabel) != labelMap.end()) {
+                // Replace the target label with the mapped label
+                size_t pos = processedLine.find(targetLabel);
+                processedLine.replace(pos, targetLabel.length(), labelMap[targetLabel]);
+            }
+        }
+        
+        processedCode << processedLine << "\n";
+    }
+    
+    return processedCode.str();
 }
