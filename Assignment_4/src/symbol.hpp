@@ -33,14 +33,15 @@ public:
         std::string type;
         std::string kind;
         int scope_level;
+        int block_num;
         int size;      // Added: size of the symbol in bytes
         int offset;    // Added: offset from scope base address
         std::vector<int> dimensions;  // Store array dimensions, empty for non-arrays
         std::unique_ptr<SymbolTable> child_table;
 
         Symbol(const std::string& n, const std::string& t, 
-            const std::string& k, int lvl, int sz = 0, int off = 0)
-            : name(n), type(t), kind(k), scope_level(lvl), size(sz), offset(off), dimensions() {}
+            const std::string& k, int lvl, int sz = 0, int off = 0, int block_n = 0)
+            : name(n), type(t), kind(k), scope_level(lvl), size(sz),block_num(block_n), offset(off), dimensions() {}
     };
 
     struct TokenEntry {
@@ -59,6 +60,7 @@ public:
         Scope* parent_scope;
         std::string scope_name;
         int scope_level;
+        int block_num;
         int total_size;// Added: total size of all symbols in this scope
         bool jump[2] = {false, false}; //0 for continue 1 for break;
         bool contains_break_or_continue = false;
@@ -70,7 +72,7 @@ public:
             : parent_scope(parent), 
               scope_name(name), 
               scope_level(level),
-              total_size(0) {}
+              total_size(0), block_num(0) {}
     };
 
     std::vector<TokenEntry> token_table_;
@@ -110,6 +112,8 @@ public:
     void update_class_types(const std::string& priMem,const std::string& pubMem,const std::string& proMem);
     // To lookup a symbol in the symbol table
     Symbol* lookup(const std::string& name);
+    // ENCLOSING FUNCTION FINDER (NEW)
+    Symbol* lookup_cur(const std::string& name);
     // ENCLOSING FUNCTION FINDER (NEW)
     Symbol* get_enclosing_procedure();
     // HIERARCHY PRINTER (NEW)

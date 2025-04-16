@@ -1,63 +1,22 @@
-int glb;
-int glb1 = 10;
+//advance features
 
-static int glb2;
-struct foo
-{
-    int a;
-    int b;
-    struct foo *next;
-};
-
-static int bar(int a, float b)
-{
-    static int lcl = 10;
-    while (b)
-    {
-        b--;
-    }
-    if (a == 0)
-        return 0;
-    //bar(--a, a + b + lcl); // what if I use a++;
-    //implicit typecast only in return and assignment
-    bar(--a, (float)(a+lcl) );
+int func_ellipses(int a, int b , ...){
+    return a +b;
 }
 
-int main()
-{
-    int a = 100, b1[20], ret;
-    for (int i = 0; i < a; i++)
-    {
-        int b = 0;
-        b += i;
-        if (b % 2 != b % 3)
-            printf("%d\n", a + b);
-        else if (b % 2 == 0)
-        {
-            switch (b)
-            {
-            case -100:
-                printf("1\n");
-                break;
-            case 1000:
-                printf("2\n");
-            default:
-                printf("2\n");
-            }
-        }
-        // b[19] = i;
-        ret = i;
-    }
-    int *c = b1 + ret; // change to *
-jump:
-    //struct foo newS[5];
-    //as per ANSI C11, declaration after label is undefined behaviour
-    //we cannot immediately declare after label. ie we can only have statements
-    //just after label. this is given in C11 grammar
-    a++;
-    struct foo newS[5];
-    printf("Final = %d", newS[3].b + ret);
-    if (*(b1 + 2) == 0)
-        goto jump;
-    bar(1, (float)(*b1));
+int** add(int *k, int l){
+    
+    return &(k);
+}
+
+int main(){
+    //int a = func_ellipses(7,2); ERROR!
+    int a = func_ellipses(7,2,3,5,6,5,4,3,3,8,3); 
+    a = func_ellipses(8,2,5);
+    int** (*func)(int *z, int p) = &add;
+    int** (**f2)(int *z1,int p1) = &func;
+
+    int *p2 =  &a;
+    (*p2) = 100;
+    
 }
