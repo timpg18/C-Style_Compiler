@@ -146,7 +146,7 @@ primary_expression
 		num = st.lookup(tmp)->block_num;
 		
 		
-		tmp += "@block";
+		tmp += "#block";
 		tmp += to_string(num);
 		$$.ir.tmp = strdup(tmp.c_str());
 		$$.ir.code = "";
