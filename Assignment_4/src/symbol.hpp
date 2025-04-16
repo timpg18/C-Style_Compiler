@@ -60,6 +60,7 @@ public:
         Scope* parent_scope;
         std::string scope_name;
         int scope_level;
+        int block_num;
         int total_size;// Added: total size of all symbols in this scope
         bool jump[2] = {false, false}; //0 for continue 1 for break;
         bool contains_break_or_continue = false;
@@ -71,7 +72,7 @@ public:
             : parent_scope(parent), 
               scope_name(name), 
               scope_level(level),
-              total_size(0) {}
+              total_size(0), block_num(0) {}
     };
 
     std::vector<TokenEntry> token_table_;

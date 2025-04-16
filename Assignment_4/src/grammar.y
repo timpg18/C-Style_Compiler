@@ -1951,7 +1951,7 @@ type_specifier
 	;
 
 class_specifier
-    : CLASS '{' {st.push_scope("class anonymous");block_num++;} class_member_list '}' 
+    : CLASS '{' {st.push_scope("class anonymous");block_num++;st.current_scope_->block_num = block_num;} class_member_list '}' 
          {	
 			if(st.current_scope_->contains_break_or_continue == true){
 				yyerror("Using continue or break inside Classes in invalid");
@@ -1969,6 +1969,7 @@ class_specifier
 			st.update_symbol_sizes(std::string($2.type),0);
 			st.push_scope( std::string("class ")+ std::string(strdup($2.type)));
 			block_num++;
+			st.current_scope_->block_num = block_num;
 			ts.addClass(std::string($2.type));
 			if(!eq($3.name,"NULL")){
 				st.implement_inheritance(std::string(concat("class",$2.type)),std::string($3.name));
@@ -2074,6 +2075,7 @@ struct_or_union_specifier
 			st.push_scope("union anonymous");
 		}
 		block_num++;
+		st.current_scope_->block_num = block_num;
 	 } struct_declaration_list '}'  {
 		if(st.current_scope_->contains_break_or_continue == true){
 			yyerror("using break/continue invalid in this scope");
@@ -2116,6 +2118,7 @@ struct_or_union_specifier
 			}
 			st.push_scope(s);
 			block_num++;
+			st.current_scope_->block_num = block_num;
 			}
 			struct_declaration_list '}'  {
 			
@@ -2710,7 +2713,7 @@ statement
 		$$.backpatcher = BackPatcher::copy($1.backpatcher);
     	delete $1.backpatcher;
 	}
-	|  {st.push_scope();irgen.depth_current++;block_num++;} compound_statement {
+	|  {st.push_scope();irgen.depth_current++;block_num++;st.current_scope_->block_num = block_num;} compound_statement {
 		irgen.depth_current++;
 		bool x = st.current_scope_->contains_break_or_continue;
 		bool y = st.current_scope_->jump[0];
@@ -3293,7 +3296,7 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));block_num++;} compound_statement {
+	: declaration_specifiers  declarator  declaration_list {st.push_scope(std::string(strdup($2.name)));block_num++;st.current_scope_->block_num = block_num;} compound_statement {
 		if(irgen.get_case_info_size() > 0){
 			yyerror("a case label may only be used within a switch");
 		}
@@ -3312,6 +3315,7 @@ function_definition
 	| declaration_specifiers  declarator {
 		st.push_scope(std::string(strdup($2.name)));
 		block_num++;
+		st.current_scope_->block_num = block_num;
 		if(eq($2.name,"main")){
 			if(!eq($1.type,"INT")){
 				yyerror("main must have return type int");
@@ -3355,6 +3359,8 @@ declaration_list
 PushScope
 	: {st.push_scope();
 	block_num++;
+	st.current_scope_->block_num = block_num;
+	cout <<block_num <<"\n";
     }
 	;
 
