@@ -836,10 +836,13 @@ cast_expression
 			yyerror("the following type-conversion is not a valid type");
 		}
 		//printf("\n\n%s\n\n",$2.type);
+		//NEW_TMP_NAME = CAST: NEW_TYPE OLD_TMP
+		string newtmp = irgen.new_temp();
+		string newcd = irgen.typecast(newtmp, $4.ir.tmp, $2.type);
 		$$.type = $2.type;
 		$$.kind = $4.kind;
-		$$.ir.tmp = strdup($4.ir.tmp);
-		$$.ir.code = strdup($4.ir.code);
+		$$.ir.tmp = strdup(newtmp.c_str());
+		$$.ir.code = strdup(irgen.concatenate($4.ir.code,newcd).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
 	| '(' type_name error cast_expression { yyerrok; }
