@@ -1904,8 +1904,12 @@ init_declarator
 				
 			}
 			else{
-				
-				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
+				string new_name = string($1.name);
+				int num;
+				num = st.lookup(new_name)->block_num;
+				new_name += "#block";
+				new_name += to_string(num);
+				std::string tem = irgen.assign(new_name, $3.ir.tmp);
 				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
 				g = irgen.concatenate(g,tem);

@@ -30,6 +30,7 @@ std::unordered_map<std::string, TypeInfo> type_map = {
     
     // Regular integer types
     {"INT",                      {TypeCategory::SIGNED_INT,   4}},
+    {"FLOAT",                    {TypeCategory::FLOAT,        4}},
     {"UNSIGNED INT",             {TypeCategory::UNSIGNED_INT, 4}},
     
     // Long integer types
@@ -44,12 +45,11 @@ std::unordered_map<std::string, TypeInfo> type_map = {
     {"UNSIGNED LONG LONG",       {TypeCategory::UNSIGNED_INT, 6}},
     {"LONG LONG INT",            {TypeCategory::SIGNED_INT,   6}},
     {"SIGNED LONG LONG INT",     {TypeCategory::SIGNED_INT,   6}},
+    {"DOUBLE",                   {TypeCategory::FLOAT,        6}},
     {"UNSIGNED LONG LONG INT",   {TypeCategory::UNSIGNED_INT, 6}},
     
     // Floating-point types
-    {"FLOAT",                    {TypeCategory::FLOAT,        7}},
-    {"DOUBLE",                   {TypeCategory::FLOAT,        8}},
-    {"LONG DOUBLE",              {TypeCategory::FLOAT,        9}}
+    {"LONG DOUBLE",              {TypeCategory::FLOAT,        7}}
 };
 
 bool isConvertible( const std::string& target,const std::string& source) {
