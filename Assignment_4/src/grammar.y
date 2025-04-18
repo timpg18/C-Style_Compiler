@@ -867,7 +867,7 @@ multiplicative_expression
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
 		}
-		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		//check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 		
 		// IR
 		CONVERT_BOOL_EXPR_TO_VALUE($1)
@@ -3323,12 +3323,14 @@ function_definition
 		st.push_scope(std::string(strdup($2.name)));
 		block_num++;
 		st.current_scope_->block_num = block_num;
+		
 		if(eq($2.name,"main")){
 			if(!eq($1.type,"INT")){
 				yyerror("main must have return type int");
 			}
 		}
 		 st.transferParametersToFunctionScope(std::string(strdup($2.name)));
+		 
 		
 	} 
 	compound_statement {

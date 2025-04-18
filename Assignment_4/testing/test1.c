@@ -1,10 +1,11 @@
-class A{
-public:{
-    int x;
-}
-};
 
-int main(){
-    class A obj;
-    class A* ptr = (class A*)malloc(sizeof(class A));
+
+// int main(){
+// int *p;
+// float *f;
+// f = p;
+// }
+
+int f(int a){
+    a = 1;
 }

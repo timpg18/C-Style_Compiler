@@ -30,7 +30,6 @@ std::unordered_map<std::string, TypeInfo> type_map = {
     
     // Regular integer types
     {"INT",                      {TypeCategory::SIGNED_INT,   4}},
-    {"FLOAT",                    {TypeCategory::FLOAT,        4}},
     {"UNSIGNED INT",             {TypeCategory::UNSIGNED_INT, 4}},
     
     // Long integer types
@@ -45,16 +44,21 @@ std::unordered_map<std::string, TypeInfo> type_map = {
     {"UNSIGNED LONG LONG",       {TypeCategory::UNSIGNED_INT, 6}},
     {"LONG LONG INT",            {TypeCategory::SIGNED_INT,   6}},
     {"SIGNED LONG LONG INT",     {TypeCategory::SIGNED_INT,   6}},
-    {"DOUBLE",                   {TypeCategory::FLOAT,        6}},
     {"UNSIGNED LONG LONG INT",   {TypeCategory::UNSIGNED_INT, 6}},
     
     // Floating-point types
-    {"LONG DOUBLE",              {TypeCategory::FLOAT,        7}}
+    {"FLOAT",                    {TypeCategory::FLOAT,        7}},
+    {"DOUBLE",                   {TypeCategory::FLOAT,        8}},
+    {"LONG DOUBLE",              {TypeCategory::FLOAT,        9}}
 };
 
-bool isConvertible( const std::string& target,const std::string& source) {
+bool isConvertible( std::string target,std::string source) {
+  
+
+
     // Check for valid types
     if (!type_map.count(source) || !type_map.count(target)) return false;
+   
     
     const auto& s = type_map[source];
     const auto& t = type_map[target];
@@ -62,38 +66,9 @@ bool isConvertible( const std::string& target,const std::string& source) {
     // Handle void and boolean cases
     if (s.category == TypeCategory::VOID || t.category == TypeCategory::VOID)
         return false;
-    if (t.category == TypeCategory::BOOL)
-        return true;
-    if (s.category == TypeCategory::BOOL)
-        return t.category != TypeCategory::VOID;
-
-    // Numeric type conversion rules
-    if (t.category == TypeCategory::FLOAT) {
-        // All numeric types can convert to float types
-        return true;
-    }
-    
-    if (s.category == TypeCategory::FLOAT) {
-        // Float can convert to any numeric type
-        return true;
-    }
-
-    // Integer-to-integer conversions
-    if (s.category == TypeCategory::SIGNED_INT) {
-        if (t.category == TypeCategory::SIGNED_INT)
-            return t.rank >= s.rank;
-        if (t.category == TypeCategory::UNSIGNED_INT)
-            return t.rank > s.rank;
-    }
-    
-    if (s.category == TypeCategory::UNSIGNED_INT) {
-        if (t.category == TypeCategory::SIGNED_INT)
-            return t.rank >= s.rank;
-        if (t.category == TypeCategory::UNSIGNED_INT)
-            return t.rank >= s.rank;
-    }
-
-    return false;
+    //else case we do true
+    //we always promote to float if possible etc, any conversion allowed
+    return true;
 }
 
 #endif
