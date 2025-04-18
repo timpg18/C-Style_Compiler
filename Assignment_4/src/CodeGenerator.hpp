@@ -25,12 +25,56 @@ private:
     std::vector<std::string> generateArithmetic(const std::string& line);
     std::vector<std::string> getReg(const std::string& line, std::vector<std::string>& assembly);
     bool isTempOrVar(const std::string& line);
+    bool isTemp(const std::string& line);
+    bool isVar(const std::string& line);
     
     // Process a single basic block
     void processBasicBlock(const BasicBlockConstructor::BasicBlock& block);
     
     // Combine the block code into the final assembly
     std::string combineBlockCode();
+
+    // type to the PTR for addressing
+    std::unordered_map<std::string, std::string> typeToAsmSize = {
+        // Character types (1 byte)
+        {"CHAR", "BYTE"},
+        {"SIGNED CHAR", "BYTE"},
+        {"UNSIGNED CHAR", "BYTE"},
+    
+        // Short integer types (2 bytes)
+        {"SHORT", "WORD"},
+        {"UNSIGNED SHORT", "WORD"},
+        {"SHORT INT", "WORD"},
+        {"SIGNED SHORT INT", "WORD"},
+        {"UNSIGNED SHORT INT", "WORD"},
+    
+        // Regular integer types (4 bytes)
+        {"INT", "DWORD"},
+        {"UNSIGNED INT", "DWORD"},
+    
+        // Long integer types (8 bytes on most modern systems)
+        {"LONG", "QWORD"},
+        {"UNSIGNED LONG", "QWORD"},
+        {"LONG INT", "QWORD"},
+        {"SIGNED LONG INT", "QWORD"},
+        {"UNSIGNED LONG INT", "QWORD"},
+    
+        // Long long integer types (8 bytes)
+        {"LONG LONG", "QWORD"},
+        {"UNSIGNED LONG LONG", "QWORD"},
+        {"LONG LONG INT", "QWORD"},
+        {"SIGNED LONG LONG INT", "QWORD"},
+        {"UNSIGNED LONG LONG INT", "QWORD"},
+    
+        // Floating point types
+        {"FLOAT", "DWORD"},         // 4 bytes
+        {"DOUBLE", "QWORD"},        // 8 bytes
+        {"LONG DOUBLE", "TBYTE"},   // 10 bytes (80 bits)
+    
+        // VOID is special – usually not directly addressable but can be mapped
+        {"VOID", "BYTE"}            // Fallback, often used as generic pointer
+    };
+    
 
 public:
     // Constructor that takes IR code and symbol table

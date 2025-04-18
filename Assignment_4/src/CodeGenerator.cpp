@@ -58,8 +58,8 @@ std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
     // Check if the line contains "func_begin"
     if (line.find("func_begin") != std::string::npos) {
         std::stringstream assembly;
-        assembly << "push    rbp\n";
-        assembly << "mov     rbp, rsp\n";
+        assembly << "push rbp\n";
+        assembly << "mov rbp, rsp\n";
         return assembly.str();
     }
     
@@ -70,7 +70,7 @@ std::string CodeGenerator::generateFunctionEnd(const std::string& line) {
     // Check if the line contains "func_end"
     if (line.find("func_end") != std::string::npos) {
         std::stringstream assembly;
-        assembly << "pop     rbp\n";
+        assembly << "pop rbp\n";
         assembly << "ret\n";
         return assembly.str();
     }
@@ -80,6 +80,14 @@ std::string CodeGenerator::generateFunctionEnd(const std::string& line) {
 
 bool CodeGenerator::isTempOrVar(const std::string& line){
     return ((line.find("$") != std::string::npos) || (line.find("#") != std::string::npos));
+}
+
+bool CodeGenerator::isTemp(const std::string& line){
+    return ((line.find("$") != std::string::npos));
+}
+
+bool CodeGenerator::isVar(const std::string& line){
+    return ((line.find("#") != std::string::npos));
 }
 
 std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vector<std::string>&assembly){
@@ -104,11 +112,27 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
             // check if the var/temp has a register already or not
             if(isTempOrVar(words[i])){
                 if(addressTable.isEmpty(words[i])){
-                    std::string reg = registerDesc.getAvailableRegister(addressTable.getType(words[i]));
+                    std::string type = addressTable.getType(words[i]);
+                    std::cout<<"HELLO WORLD "<<type<<"\n";
+                    std::string reg = registerDesc.getAvailableRegister(type);
+                    // spill in case all registers are in use
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                     }
                     std::cout<<reg<<std::endl;
+                    mapped.push_back(reg);
+                    // update address allocation table for future use
+                    addressTable.addRegisterToDescriptor(words[i],reg,"0");
+                    if(isVar(words[i])){
+                        std::cout<<words[i]<<" allocated issue\n";
+                        std::string assm = "";
+                        assm = "mov " + reg + ", " + typeToAsmSize[addressTable.getType(words[i])] + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
+                        assembly.push_back(assm);
+                    }
+                    // update the register descriptor as well
+                    std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[i])<<"\n";
+
+
                 }
                 else{
                     std::cout <<"bruh \n";
@@ -116,35 +140,10 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                     // addressTable.printTable();
                     auto it = addressTable.getRegisterDescriptor(words[i]);
                     auto it2 = it.begin();
-                    if(it.size() > 0){
-                    //return the first register descripter it has to use
-                    //can be optimised though
+                    // considering that only 1 register per address
+                    // removed because this thing is not possible
                     mapped.push_back(it2->first);
                     cannot_spill.push_back(it2->first);
-                    }
-                    else{
-                        //no register descriptor, we must add one
-                        //btw we must add mov instruction for this
-                        //we take int for now, otherwise add temp ka type
-                        std::string reg_name = registerDesc.getAvailableRegister("INT");
-                        if(reg_name != ""){
-                            if(registerDesc.allocateRegister(reg_name, words[i]) == true){
-                                mapped.push_back(reg_name);
-                                std::string mov;
-                                mov += "mov "+ reg_name + ", " + words[i] +"\n";
-                               
-                                assembly.push_back(mov);
-                                std::cout <<reg_name <<"\n";
-                            }
-                            else{
-                                std::cout <<"error! could not allocate register \n";
-                            }
-                        }
-                        else{
-                            //spill scenario
-                        }
-                    }
-    
                     std::cout <<it.size() <<"\n";
                     
                 }
@@ -185,7 +184,8 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
         //ie type a = b op c
         if(instruction_op[0] == 'i'){
             //3 operand instruction 
-            code =instruction_op + " " + registers[0] +", " + registers[1] + ", " + registers[2] + "\n";
+            code = "mov " + registers[0] + ", " + registers[1] +"\n";
+            code += instruction_op + " " + registers[0] + ", " + registers[2] + "\n";
         }
         else{
             //handle + , - etc
@@ -201,6 +201,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
     
     for (const auto& instruction : block.instructions) {
         std::string instr = instruction.text;
+        std::cout<<instr<<std::endl;
         std::vector<std::string> assembly;
         if(instr.empty() == true)continue;
         std::vector<std::string> keywords;
@@ -214,15 +215,91 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
             assembly.push_back(generateFunctionLabel(instr));
-        } else if (instr.find("func_begin") != std::string::npos) {
+        }else if (instr.find("return") != std::string::npos) {
+            // return value 
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+
+            std::string return_value = words[1];
+            if(isTemp(return_value)){
+                auto it = addressTable.getRegisterDescriptor(words[1]);
+                auto it2 = it.begin();
+                std::string reg = it2->first;
+                return_value = reg;
+            }
+            else if(isVar(return_value)){
+                if(!addressTable.isEmpty(words[1])){
+                    auto it = addressTable.getRegisterDescriptor(words[1]);
+                    auto it2 = it.begin();
+                    std::string reg = it2->first;
+                    return_value = reg;
+                }
+                else{
+                    return_value = typeToAsmSize[addressTable.getType(words[1])] + " ["+ addressTable.getVariableAddress(words[1]) +"]";
+                }
+            }
+
+            std::string assm = "mov eax, " + return_value + "\n";
+            assembly.push_back(assm);
+
+        }else if (instr.find("func_begin") != std::string::npos) {
             assembly.push_back(generateFunctionBegin(instr));
         } else if (instr.find("func_end") != std::string::npos) {
-            assembly.push_back(generateFunctionBegin(instr));
+            assembly.push_back(generateFunctionEnd(instr));
         } 
         else if(found == true){
             std::cout <<instr <<"\n";
             std::cout <<"the assembly code \n";
             assembly = generateArithmetic(instr);
+        }
+        else if(instr.find("=") != std::string::npos){
+            //assignment
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+            // assignment for variable with constant value
+            if(!isTempOrVar(words[2])){
+                std::string assm ="";
+                // if already not in the register
+                if(addressTable.isEmpty(words[0])){
+                    assm = "mov " + typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                }
+                // if already in the register
+                else{
+                    auto it = addressTable.getRegisterDescriptor(words[0]);
+                    auto it2 = it.begin();
+                    std::string reg = it2->first;
+                    assm = "mov " + reg + ", " + words[2] + "\n";
+                }
+                
+                assembly.push_back(assm);
+            }else if(isTemp(words[2])){
+                std::string assm ="";
+                auto it1 = addressTable.getRegisterDescriptor(words[2]);
+                auto it3 = it1.begin();
+                std::string regTemp = it3->first;
+                if(addressTable.isEmpty(words[0])){
+                    assm = "mov " + typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"], " + regTemp + "\n";
+                }
+                // if already in the register
+                else{
+                    auto it = addressTable.getRegisterDescriptor(words[0]);
+                    auto it2 = it.begin();
+                    std::string reg = it2->first;
+                    assm = "mov " + reg + ", " + regTemp + "\n";
+                }
+                assembly.push_back(assm);
+            }
+            
         }
         else {
             // For now, we're ignoring other instructions as requested
@@ -243,8 +320,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 std::string CodeGenerator::combineBlockCode() {
     std::stringstream finalCode;
     finalCode << "; Generated Assembly Code\n";
-    finalCode << ".text\n";
-    finalCode << ".global main\n\n";
+    finalCode << "section .text\n";
+    finalCode << "global main\n\n";
     
     // For now, just append blocks in order
     // Later, we can use the CFG to determine the correct order

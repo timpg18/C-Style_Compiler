@@ -310,12 +310,12 @@ bool AddressAllocationTable::isInRegister(const std::string& varOrTempName,const
 bool AddressAllocationTable::isEmpty(const std::string& varOrTempName) const{
     auto varIt = variables.find({varOrTempName, ""});
     if (varIt != variables.end()) {
-        return varIt->registerMap.size();
+        return (varIt->registerMap.size())==0;
     }
 
     auto tempIt = temporaries.find({varOrTempName, ""});
     if (tempIt != temporaries.end()) {
-        return tempIt->registerMap.size();
+        return (tempIt->registerMap.size())==0;
     }
 
 }

@@ -9,10 +9,24 @@ RegisterDescriptor::RegisterDescriptor() {
         "r8", "r9", "r10", "r11"
     };
     
+    std::set<std::string> all_reg = {
+        "rax", "rcx", "rdx", "rsi", "rdi", 
+        "r8", "r9", "r10", "r11", "eax", "ax", "ah", "al",
+        "ecx", "cx", "ch", "cl",
+        "edx", "dx", "dh", "dl",
+        "esi", "si", "sil",
+        "edi", "di", "dil",
+        "r8d", "r8w", "r8b",
+        "r9d", "r9w", "r9b",
+        "r10d", "r10w", "r10b",
+        "r11d", "r11w", "r11b"
+    };
+
     // Initialize register content map with empty vectors
-    for (const auto& reg : availableRegisters) {
+    for (const auto& reg : all_reg) {
         registerContent[reg] = std::vector<std::string>();
     }
+
     
     // Define related registers (different sizes of same register)
     relatedRegisters["rax"] = {"rax", "eax", "ax", "ah", "al"};
@@ -26,10 +40,10 @@ RegisterDescriptor::RegisterDescriptor() {
     relatedRegisters["r11"] = {"r11", "r11d", "r11w", "r11b"};
     
     // Define mapping from type to register size
-    typeSizeMap["INT"] = "64";     // Using 64-bit for integers
+    typeSizeMap["INT"] = "32";     // Using 64-bit for integers
     typeSizeMap["BOOL"] = "8";     // Using 8-bit for booleans
     typeSizeMap["CHAR"] = "8";     // Using 8-bit for chars
-    typeSizeMap["FLOAT"] = "64";   // Using 64-bit for floats
+    typeSizeMap["FLOAT"] = "32";   // Using 64-bit for floats
     typeSizeMap["DOUBLE"] = "64";  // Using 64-bit for doubles
     typeSizeMap["SHORT"] = "16";   // Using 16-bit for shorts
     typeSizeMap["LONG"] = "64";    // Using 64-bit for longs
