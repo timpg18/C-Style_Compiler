@@ -5,6 +5,10 @@
 #include "typeconversion.h"
 #include "IR_utility.hpp"
 #include "backPatcher.h"
+#include "AddressAllocationTable.hpp"
+#include "BasicBlockConstructor.hpp";
+#include "RegisterDescriptor.hpp"
+#include "CodeGenerator.hpp"
 #include "MACROS.hpp"
 using namespace std;
 
@@ -283,7 +287,7 @@ postfix_expression
 			
 		int index = dim.size()-stars;
 		//get the index of the next multiplier constant
-		cout <<s <<"\n";
+		//cout <<s <<"\n";
 		
 		
 		
@@ -291,7 +295,7 @@ postfix_expression
 		for(int i=typ.size()-1 ; i>=0;i--){
 			if(typ[i] == '*')ptr_cnt++;
 		}
-		std::cout <<typ <<"\n";
+		//std::cout <<typ <<"\n";
 		printf("%d %d %d \n",dim.size(), stars, ptr_cnt);
 		ptr_cnt -= dim.size();
 		//string s has bache hue type
@@ -1906,7 +1910,7 @@ init_declarator
 			else{
 				
 				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
-				std::cout<<tem<<"\n";
+				//std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
 				g = irgen.concatenate(g,tem);
 				
@@ -2159,7 +2163,7 @@ struct_or_union_specifier
 				string t = string($1.type);
 				t += " ";
 				t += string($2.type);
-				cout <<t <<"\n";
+				//cout <<t <<"\n";
 
 			for(auto &it: st.scopes_){
 				if(it->scope_name == t){
@@ -2738,9 +2742,9 @@ statement
 		std::vector<string> tmp = $$.backpatcher->getNextList();
 		int size = tmp.size();
 		//printf("\n\n\n%d\n\n\n",size);
-		for(std::string i:tmp){
+		//for(std::string i:tmp){
 			//std::cout<<i<<std::endl;
-		}
+		//}
 	}
 	| iteration_statement{
 		$$.ir.code = $1.ir.code;
@@ -2774,7 +2778,7 @@ labeled_statement
 		std::string label = irgen.new_label();
 		std::string Case_label = irgen.add_label(label);
 		irgen.add_case_info(std::string($2.name),label);
-		std::cout<<std::string($2.name)<< "    "<<label<<"\n";
+		//std::cout<<std::string($2.name)<< "    "<<label<<"\n";
 
 		$$.ir.code = strdup(irgen.concatenate(Case_label,std::string($4.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
@@ -2787,7 +2791,7 @@ labeled_statement
 		string label = irgen.new_label();
 		string Default_label = irgen.add_label(label);
 		irgen.add_case_info("Default",label);
-		std::cout<<"Default"<< "    "<<label<<"\n";
+		//std::cout<<"Default"<< "    "<<label<<"\n";
 		$$.ir.code =strdup(irgen.concatenate(Default_label,string($3.ir.code)).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -2833,7 +2837,7 @@ block_item_list
 		std::vector<std::string> tmp2 = $2.backpatcher->getNextList();
 		int size2 = tmp2.size();
 		int size1 = tmp1.size();
-		std::cout<<size1<<" "<<size2<<" "<<bpneeded<<std::endl;
+		//std::cout<<size1<<" "<<size2<<" "<<bpneeded<<std::endl;
 
 		// one of the spots for backpatching if the incoming has no label in newlist and no backpatching is needed
 		// Problem - must have a statement following the thing to be backpatched (solved)
@@ -3366,7 +3370,7 @@ PushScope
 	: {st.push_scope();
 	block_num++;
 	st.current_scope_->block_num = block_num;
-	cout <<block_num <<"\n";
+	//cout <<block_num <<"\n";
     }
 	;
 
@@ -3399,6 +3403,17 @@ st.print_all_scopes();
 if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	std::string filename = std::string(argv[1]);
+
+	// Create code generator
+	CodeGenerator codeGen(final_ir_code, st);
+
+	// Generate and print assembly code
+	std::string assemblyCode = codeGen.generateCode();
+	std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
+	
+	// Print information from all components
+	//codeGen.printComponentInfo();
+
 	irgen.generate(final_ir_code,filename);
 	//st.print_hierarchy();
 	//st.print_token_table();
