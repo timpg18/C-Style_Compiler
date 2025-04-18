@@ -82,7 +82,7 @@ bool CodeGenerator::isTempOrVar(const std::string& line){
     return ((line.find("$") != std::string::npos) || (line.find("#") != std::string::npos));
 }
 
-std::vector<std::string> CodeGenerator::getReg(const std::string& line){
+std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vector<std::string>&assembly){
     // tokenizing input
     std::istringstream iss(line);
     std::vector<std::string> words;
@@ -93,6 +93,8 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line){
 
     while (iss >> word) {
         words.push_back(word);
+        std::cout <<word <<"\n";
+        std::cout <<"each" <<"\n";
     }
 
     if(words.size()==5){
@@ -109,10 +111,42 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line){
                     std::cout<<reg<<std::endl;
                 }
                 else{
+                    std::cout <<"bruh \n";
+                    // std::cout <<words[i] <<"\n";
+                    // addressTable.printTable();
                     auto it = addressTable.getRegisterDescriptor(words[i]);
                     auto it2 = it.begin();
+                    if(it.size() > 0){
+                    //return the first register descripter it has to use
+                    //can be optimised though
                     mapped.push_back(it2->first);
                     cannot_spill.push_back(it2->first);
+                    }
+                    else{
+                        //no register descriptor, we must add one
+                        //btw we must add mov instruction for this
+                        //we take int for now, otherwise add temp ka type
+                        std::string reg_name = registerDesc.getAvailableRegister("INT");
+                        if(reg_name != ""){
+                            if(registerDesc.allocateRegister(reg_name, words[i]) == true){
+                                mapped.push_back(reg_name);
+                                std::string mov;
+                                mov += "mov "+ reg_name + ", " + words[i] +"\n";
+                               
+                                assembly.push_back(mov);
+                                std::cout <<reg_name <<"\n";
+                            }
+                            else{
+                                std::cout <<"error! could not allocate register \n";
+                            }
+                        }
+                        else{
+                            //spill scenario
+                        }
+                    }
+    
+                    std::cout <<it.size() <<"\n";
+                    
                 }
             }
             else{
@@ -126,12 +160,15 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line){
     else{
         // others
     }
+    return mapped;
+    
 }
 
-std::string CodeGenerator::generateArithmetic(const std::string& line){
+std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& line){
     std::string instruction_op;
+    std::vector<std::string> assembly;
     if (line.find("+") != std::string::npos) {
-        instruction_op = "add";;
+        instruction_op = "add";
     }else if (line.find("-") != std::string::npos) {
         instruction_op = "sub";
     }else if (line.find("*") != std::string::npos) {
@@ -139,9 +176,23 @@ std::string CodeGenerator::generateArithmetic(const std::string& line){
     }else if (line.find("/") != std::string::npos){
         instruction_op = "idiv";
     }
-    std::stringstream assembly;
-    getReg(line);
-    return "";
+    // std::stringstream assembly;
+    std::vector<std::string> registers  = getReg(line,assembly);
+    //we also push the extra instructions in getReg only
+    std::cout <<instruction_op <<"\n";
+    std::string code;
+    if(registers.size() == 3){
+        //ie type a = b op c
+        if(instruction_op[0] == 'i'){
+            //3 operand instruction 
+            code =instruction_op + " " + registers[0] +", " + registers[1] + ", " + registers[2] + "\n";
+        }
+        else{
+            //handle + , - etc
+        }
+    }
+    assembly.push_back(code);
+    return assembly;
     
 }
 
@@ -150,30 +201,38 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
     
     for (const auto& instruction : block.instructions) {
         std::string instr = instruction.text;
-        std::string assembly;
-        
+        std::vector<std::string> assembly;
+        if(instr.empty() == true)continue;
+        std::vector<std::string> keywords;
+        keywords.push_back("+");
+        keywords.push_back("*");
+        keywords.push_back("/");
+        keywords.push_back("+");
+        bool found = std::any_of(keywords.begin(),keywords.end(),[&](const std::string &keyword){
+            return instr.find(keyword) != std::string::npos;
+        });
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
-            assembly = generateFunctionLabel(instr);
+            assembly.push_back(generateFunctionLabel(instr));
         } else if (instr.find("func_begin") != std::string::npos) {
-            assembly = generateFunctionBegin(instr);
+            assembly.push_back(generateFunctionBegin(instr));
         } else if (instr.find("func_end") != std::string::npos) {
-            assembly = generateFunctionEnd(instr);
+            assembly.push_back(generateFunctionBegin(instr));
         } 
-        else if(instr.find("+") || 
-                instr.find("*") ||
-                instr.find("/") ||
-                instr.find("+")
-            ){
-            //assembly = generateArithmetic(instr);
+        else if(found == true){
+            std::cout <<instr <<"\n";
+            std::cout <<"the assembly code \n";
+            assembly = generateArithmetic(instr);
         }
         else {
             // For now, we're ignoring other instructions as requested
             continue;
         }
         
-        if (!assembly.empty()) {
-            blockCode << assembly;
+        if (assembly.size() > 0) {
+            for(auto &str: assembly){
+                blockCode << str;
+            }
         }
     }
     

@@ -34,7 +34,16 @@ RegisterDescriptor::RegisterDescriptor() {
     typeSizeMap["SHORT"] = "16";   // Using 16-bit for shorts
     typeSizeMap["LONG"] = "64";    // Using 64-bit for longs
 }
-
+bool RegisterDescriptor::isreg(const std::string& arg){
+    for(auto &it: relatedRegisters){
+        for(auto &it2: it.second){
+            if(it2 == arg){
+                return true;
+            }
+        }
+    }
+    return false;
+}
 bool RegisterDescriptor::isRegisterFree(const std::string& regName) const {
     auto it = registerContent.find(regName);
     return (it != registerContent.end() && it->second.empty());
@@ -46,12 +55,12 @@ std::vector<std::string> RegisterDescriptor::getRegisterContent(const std::strin
 }
 
 bool RegisterDescriptor::allocateRegister(const std::string& regName, const std::string& content) {
-    // Check if this register or any related register is already in use
+    //Check if this register or any related register is already in use
     if (areRelatedRegistersInUse(regName)) {
-        // We can still add content to a register that's already in use
+        //We can still add content to a register that's already in use
         auto it = registerContent.find(regName);
         if (it != registerContent.end()) {
-            // Check if the content is already in the register to avoid duplicates
+            //Check if the content is already in the register to avoid duplicates
             if (std::find(it->second.begin(), it->second.end(), content) == it->second.end()) {
                 it->second.push_back(content);
             }

@@ -21,7 +21,8 @@ private:
 
 public:
     RegisterDescriptor();
-   
+    //check if the argument is a register or not
+    bool isreg(const std::string& arg);
     // Check if a register is free
     bool isRegisterFree(const std::string& regName) const;
    

@@ -22,8 +22,8 @@ private:
     std::string generateFunctionLabel(const std::string& line);
     std::string generateFunctionBegin(const std::string& line);
     std::string generateFunctionEnd(const std::string& line);
-    std::string generateArithmetic(const std::string& line);
-    std::vector<std::string> getReg(const std::string& line);
+    std::vector<std::string> generateArithmetic(const std::string& line);
+    std::vector<std::string> getReg(const std::string& line, std::vector<std::string>& assembly);
     bool isTempOrVar(const std::string& line);
     
     // Process a single basic block
