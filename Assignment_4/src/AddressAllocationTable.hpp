@@ -64,6 +64,7 @@ public:
     const std::set<VarTempInfo>& getTemporaries() const;
     std::string getType(const std::string& Name) const ;
     void set_relop(const std::string& Name, std::string op);
+    std::string get_relop(const std::string& Name);
     std::vector<VarTempInfo> getVariablesVector() const;
     std::vector<VarTempInfo> getTemporariesVector() const;
     
