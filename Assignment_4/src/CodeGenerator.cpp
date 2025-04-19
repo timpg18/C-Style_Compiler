@@ -232,6 +232,18 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     return assembly;
 }
 
+std::map<std::string, std::string> jump_init(){
+    std::map<std::string, std::string> rel_ops_to_jumps = {
+        {"==", "je"},    // Jump if equal
+        {"!=", "jne"},   // Jump if not equal
+        {">",  "jg"},    // Jump if greater (signed)
+        {">=", "jge"},   // Jump if greater or equal (signed)
+        {"<",  "jl"},    // Jump if less (signed)
+        {"<=", "jle"}    // Jump if less or equal (signed)
+    };
+    return rel_ops_to_jumps;
+}
+
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
     
@@ -254,7 +266,35 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
             assembly.push_back(generateFunctionLabel(instr));
-        }else if (instr.find("return") != std::string::npos) {
+        }
+        else if(instr.find("goto") != std::string::npos){
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+            if(instr.find("if") != std::string::npos){
+                //get the relational op
+                //depending on relational op, jne/jeq etc to label @L1
+                std::string op = addressTable.get_relop(words[1]);
+                std::string jmp;
+                std::map<std::string,std::string> op_to_j;
+                op_to_j = jump_init();
+                jmp = op_to_j[op];
+                jmp += " " + words[3];
+                jmp += "\n";
+                assembly.push_back(jmp);
+            }
+            else{
+                std::string jmp = "jmp ";
+                jmp += words[1];
+                jmp += "\n";
+                assembly.push_back(jmp);
+            }
+        }
+        else if (instr.find("return") != std::string::npos) {
             // return value 
             std::istringstream iss(instr);
             std::vector<std::string> words;

@@ -352,8 +352,19 @@ void AddressAllocationTable::set_relop(const std::string& Name, std::string op){
     else{
         std::cout <<"TEMPORARY NOT FOUND to set_relop" <<"\n";
     }
-
 }
+
+std::string AddressAllocationTable::get_relop(const std::string& Name){
+    auto tempIt = temporaries.find({Name,""});
+    if(tempIt != temporaries.end()){
+        return tempIt->relational_op;
+    }
+    else{
+        std::cout <<"TEMPORARY NOT FOUND in get_relop \n";
+    }
+}
+
+
 void AddressAllocationTable::addRegisterToDescriptor(const std::string& varOrTempName, const std::string& regName,const std::string& value) {
     auto varIt = variables.find({varOrTempName, ""});
     if (varIt != variables.end()) {
