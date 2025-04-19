@@ -38,6 +38,8 @@ public:
     void parseIRCode(const std::string& irCode);
     void setSymbolTable(SymbolTable& st);
     void identifyFunctionParameters();
+    int getFunctionStackSize(const std::string& functionName, const std::string& irCode) const ;
+    std::vector<std::pair<std::string, int>> getFunctionParameters(const  std::string funcName);
     
     
     void addVariable(const std::string& varName);

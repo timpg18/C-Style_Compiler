@@ -36,6 +36,9 @@ private:
     // Combine the block code into the final assembly
     std::string combineBlockCode();
 
+    // type to ASM directive
+    std::string getAsmSizeDirective(const std::string& type) const;
+
     // type to the PTR for addressing
     std::unordered_map<std::string, std::string> typeToAsmSize = {
         // Character types (1 byte)

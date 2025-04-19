@@ -481,6 +481,92 @@ std::vector<VarTempInfo> AddressAllocationTable::getTemporariesVector() const {
     return {temporaries.begin(), temporaries.end()};
 }
 
+int AddressAllocationTable::getFunctionStackSize(const std::string& functionName, const std::string& irCode) const {
+    int totalSize = 0;
+    
+    // First, add size for parameters which we already know
+    auto paramIt = functionParameters.find(functionName);
+    if (paramIt != functionParameters.end()) {
+        for (const auto& param : paramIt->second) {
+            std::string type = getVariableType(param.first);
+            int typeSize = symbolTable->getTypeSize(type);
+            totalSize += typeSize;
+        }
+    }
+    
+    // Parse IR to find all variables in this function
+    std::istringstream stream(irCode);
+    std::string line;
+    bool inTargetFunction = false;
+    std::set<std::string> functionVars;  // Use a set to avoid duplicates
+    
+    while (std::getline(stream, line)) {
+        // Check for function label
+        std::regex labelPattern("label\\s+" + functionName + ":");
+        if (std::regex_search(line, labelPattern)) {
+            inTargetFunction = true;
+            continue;
+        }
+        
+        // Check for function begin
+        if (inTargetFunction && line.find("func_begin") != std::string::npos) {
+            continue;
+        }
+        
+        // Check for function end
+        if (inTargetFunction && line.find("func_end") != std::string::npos) {
+            inTargetFunction = false;
+            break;
+        }
+        
+        // If we're in the target function, collect variables
+        if (inTargetFunction) {
+            std::regex varPattern(R"((\w+#block\d+))");
+            std::sregex_iterator varIt(line.begin(), line.end(), varPattern);
+            for (; varIt != std::sregex_iterator(); ++varIt) {
+                std::string varName = (*varIt)[0];
+                functionVars.insert(varName);
+            }
+        }
+    }
+    
+    // Calculate size for all local variables
+    for (const auto& varName : functionVars) {
+        // Skip parameters as we've already counted them
+        bool isParam = false;
+        if (paramIt != functionParameters.end()) {
+            for (const auto& param : paramIt->second) {
+                if (param.first == varName) {
+                    isParam = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!isParam) {
+            std::string type = getVariableType(varName);
+            int typeSize = symbolTable->getTypeSize(type);
+            totalSize += typeSize;
+        }
+    }
+    
+    // Ensure 16-byte alignment
+    int remainder = totalSize % 16;
+    if (remainder == 0) {
+        // If already aligned, add another 16 bytes as requested
+        totalSize += 16;
+    } else {
+        // Round up to next multiple of 16
+        totalSize += (16 - remainder);
+    }
+    
+    return totalSize;
+}
+
+std::vector<std::pair<std::string, int>> AddressAllocationTable::getFunctionParameters(const  std::string funcName){
+    return functionParameters[funcName];
+}
+
 void AddressAllocationTable::printTable() const {
     std::cout << "=== Variables ===\n";
     for (const auto& var : variables) {

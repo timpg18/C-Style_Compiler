@@ -57,10 +57,45 @@ std::string CodeGenerator::generateFunctionLabel(const std::string& line) {
 
 std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
     // Check if the line contains "func_begin"
+    std::istringstream iss(line);
+    std::vector<std::string> words;
+    std::string word;
+    while (iss >> word) {
+        words.push_back(word);
+        std::cout <<word <<"\n";
+    }
+
+    int size = addressTable.getFunctionStackSize(words[1],irCode);
+    auto params = addressTable.getFunctionParameters(words[1]);
+    std::string assm = "sub rsp, " + std::to_string(size) + "\n";
     if (line.find("func_begin") != std::string::npos) {
         std::stringstream assembly;
         assembly << "push rbp\n";
         assembly << "mov rbp, rsp\n";
+        assembly << assm;
+        if(params.size() > 0){
+            for(auto param : params){
+                std::string reg ="";
+                switch (param.second) {
+                    case 1: reg = registerDesc.getRegisterForType("rdi",addressTable.getType(param.first));
+                            break;
+                    case 2: reg = registerDesc.getRegisterForType("rsi",addressTable.getType(param.first));
+                            break;
+                    case 3: reg = registerDesc.getRegisterForType("rdx",addressTable.getType(param.first));
+                            break;
+                    case 4: reg = registerDesc.getRegisterForType("rcx",addressTable.getType(param.first));
+                            break;
+                    case 5: reg = registerDesc.getRegisterForType("r8",addressTable.getType(param.first));
+                            break;
+                    case 6: reg = registerDesc.getRegisterForType("r9",addressTable.getType(param.first));
+                            break;
+                }
+                std::string to_add = "mov " + getAsmSizeDirective(param.first) + " ["+addressTable.getVariableAddress(param.first)+"]," + reg + "\n";
+                assembly << to_add;
+            }
+           
+        }
+
         return assembly.str();
     }
     
@@ -69,6 +104,7 @@ std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
 
 std::string CodeGenerator::generateFunctionEnd(const std::string& line) {
     // Check if the line contains "func_end"
+
     if (line.find("func_end") != std::string::npos) {
         std::stringstream assembly;
         assembly << "pop rbp\n";
@@ -123,7 +159,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 if(isVar(words[i])){
                     std::cout<<words[i]<<" allocated issue\n";
                     std::string assm = "";
-                    assm = "mov " + reg + ", " + typeToAsmSize[addressTable.getType(words[i])] + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
+                    assm = "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(words[i])) + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
                     assembly.push_back(assm);
                 }
                 // update the register descriptor as well
@@ -319,7 +355,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     return_value = reg;
                 }
                 else{
-                    return_value = typeToAsmSize[addressTable.getType(words[1])] + " ["+ addressTable.getVariableAddress(words[1]) +"]";
+                    return_value = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getVariableAddress(words[1]) +"]";
                 }
             }
 
@@ -357,7 +393,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::string assm ="";
                 // if already not in the register
                 if(addressTable.isEmpty(words[0])){
-                    assm = "mov " + typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                    assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
                 }
                 // if already in the register
                 else{
@@ -376,7 +412,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::string regTemp = it3->first;
                 // considering the fact that temporary will not be assigned to temporary 
                 if(addressTable.isEmpty(words[0])){
-                    assm = "mov " + typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"], " + regTemp + "\n";
+                    assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + regTemp + "\n";
                 }
                 // if already in the register
                 else{
@@ -390,7 +426,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 // first lets get the reg or address for the 2nd operand
                 std::string reg2 = "";
                 if(addressTable.isEmpty(words[2])){
-                    reg2 = typeToAsmSize[addressTable.getType(words[2])] + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                    reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
                 }
                 // if already in the register
                 else{
@@ -404,7 +440,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 // first operand may be variable
                 if(isVar(words[0])){
                     if(addressTable.isEmpty(words[0])){
-                        reg1 = typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"]";
+                        reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
                     }
                     // if already in the register
                     else{
@@ -485,4 +521,22 @@ std::string CodeGenerator::generateCode() {
     
     // Combine the blocks' code into the final assembly
     return combineBlockCode();
+}
+
+// type to asm directive
+std::string CodeGenerator::getAsmSizeDirective(const std::string& type) const {
+
+    // First check if this is a pointer type
+    if (type.find('*') != std::string::npos) {
+        // All pointers are QWORD (8 bytes) in 64-bit architecture
+        return "QWORD";
+    }
+    
+    // Check if the type exists in our mapping
+    auto it = typeToAsmSize.find(type);
+    if (it != typeToAsmSize.end()) {
+        return it->second;
+    }
+    // Default to QWORD if unknown type (safer assumption in 64-bit)
+    return "DWORD";  // Most common fallback
 }
