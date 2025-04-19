@@ -40,8 +40,8 @@ public:
         std::unique_ptr<SymbolTable> child_table;
 
         Symbol(const std::string& n, const std::string& t, 
-            const std::string& k, int lvl, int sz = 0, int off = 0, int block_n = 0)
-            : name(n), type(t), kind(k), scope_level(lvl), size(sz),block_num(block_n), offset(off), dimensions() {}
+            const std::string& k, int lvl,  int block_n = 0, int sz = 0, int off = 0)
+            : name(n), type(t), kind(k), scope_level(lvl), block_num(block_n),size(sz), offset(off), dimensions() {}
     };
 
     struct TokenEntry {

@@ -840,10 +840,13 @@ cast_expression
 			yyerror("the following type-conversion is not a valid type");
 		}
 		//printf("\n\n%s\n\n",$2.type);
+		//NEW_TMP_NAME = CAST: NEW_TYPE OLD_TMP
+		string newtmp = irgen.new_temp();
+		string newcd = irgen.typecast(newtmp, $4.ir.tmp, $2.type);
 		$$.type = $2.type;
 		$$.kind = $4.kind;
-		$$.ir.tmp = strdup($4.ir.tmp);
-		$$.ir.code = strdup($4.ir.code);
+		$$.ir.tmp = strdup(newtmp.c_str());
+		$$.ir.code = strdup(irgen.concatenate($4.ir.code,newcd).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
 	| '(' type_name error cast_expression { yyerrok; }
@@ -868,7 +871,7 @@ multiplicative_expression
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
 		}
-		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
+		//check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 		
 		// IR
 		CONVERT_BOOL_EXPR_TO_VALUE($1)
@@ -1908,9 +1911,13 @@ init_declarator
 				
 			}
 			else{
-				
-				std::string tem = irgen.assign($1.ir.tmp, $3.ir.tmp);
-				//std::cout<<tem<<"\n";
+				string new_name = string($1.name);
+				int num;
+				num = st.lookup(new_name)->block_num;
+				new_name += "#block";
+				new_name += to_string(num);
+				std::string tem = irgen.assign(new_name, $3.ir.tmp);
+				std::cout<<tem<<"\n";
 				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
 				g = irgen.concatenate(g,tem);
 				
@@ -3326,12 +3333,14 @@ function_definition
 		st.push_scope(std::string(strdup($2.name)));
 		block_num++;
 		st.current_scope_->block_num = block_num;
+		
 		if(eq($2.name,"main")){
 			if(!eq($1.type,"INT")){
 				yyerror("main must have return type int");
 			}
 		}
 		 st.transferParametersToFunctionScope(std::string(strdup($2.name)));
+		 
 		
 	} 
 	compound_statement {

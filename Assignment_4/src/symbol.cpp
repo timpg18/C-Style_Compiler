@@ -115,6 +115,9 @@ void SymbolTable::transferParametersToFunctionScope(const std::string& function_
         const std::string& name = param_pos->name;
         const std::string& type = param_pos->type;
         const std::string& kind = param_pos->kind;
+        param_pos->scope_level = current_scope_->scope_level;
+        param_pos->block_num = current_scope_->block_num;
+       
         int param_size = param_pos->size;
         std::vector<int> dims = param_pos->dimensions; // Copy dimensions vector
         
@@ -130,7 +133,7 @@ void SymbolTable::transferParametersToFunctionScope(const std::string& function_
         
         // Insert directly into current scope
         current_scope_->ordered_symbols.emplace_back(
-            name, type, kind, current_scope_->scope_level,
+            name, type, kind, current_scope_->scope_level,current_scope_->block_num,
             param_size, current_scope_->total_size);
         
         // Update symbol map with iterator to new symbol

@@ -41,6 +41,15 @@ std::string IRGen::add_unary(std::string tmp , std::string op, std::string s1){
     return res;
 }
 
+std::string IRGen::typecast(std::string new_temp, std::string old_temp ,std::string type){
+    std::string res;
+    res = new_temp + " = ";
+    res += "cast: ";
+    res += type + " ";
+    res += old_temp;
+    return res;
+}
+
 
 
 //Function definition stuff
