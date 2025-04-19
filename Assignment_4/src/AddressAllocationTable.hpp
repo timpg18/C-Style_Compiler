@@ -12,7 +12,9 @@ struct VarTempInfo {
     std::string type;
     std::string address;  // Address relative to RBP
     std::map<std::string, std::string> registerMap;  // Address descriptor
-
+    //I am adding the indicator if X = A > B, mark X as jump
+    //since it will follow if $X goto Y
+    std::string relational_op = "";
     bool operator<(const VarTempInfo& other) const {
         return name < other.name;
     }
@@ -34,6 +36,7 @@ public:
     
     void parseIRCode(const std::string& irCode);
     void setSymbolTable(SymbolTable& st);
+    
     
     void addVariable(const std::string& varName);
     void addTemporary(const std::string& tempName, const std::string& contextLine);
@@ -60,7 +63,7 @@ public:
     const std::set<VarTempInfo>& getVariables() const;
     const std::set<VarTempInfo>& getTemporaries() const;
     std::string getType(const std::string& Name) const ;
-    
+    void set_relop(const std::string& Name, std::string op);
     std::vector<VarTempInfo> getVariablesVector() const;
     std::vector<VarTempInfo> getTemporariesVector() const;
     

@@ -23,7 +23,9 @@ private:
     std::string generateFunctionBegin(const std::string& line);
     std::string generateFunctionEnd(const std::string& line);
     std::vector<std::string> generateArithmetic(const std::string& line);
-    std::vector<std::string> getReg(const std::string& line, std::vector<std::string>& assembly);
+    std::vector<std::string> generateCMP(const std::string& line, std::string op);
+    //for cmp inst
+    std::vector<std::string> getReg(const std::string& line, std::vector<std::string>& assembly, std::map<int ,int> ind);
     bool isTempOrVar(const std::string& line);
     bool isTemp(const std::string& line);
     bool isVar(const std::string& line);

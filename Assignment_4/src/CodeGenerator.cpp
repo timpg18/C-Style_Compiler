@@ -90,7 +90,7 @@ bool CodeGenerator::isVar(const std::string& line){
     return ((line.find("#") != std::string::npos));
 }
 
-std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vector<std::string>&assembly){
+std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vector<std::string>&assembly, std::map<int,int> ind){
     // tokenizing input
     std::istringstream iss(line);
     std::vector<std::string> words;
@@ -98,67 +98,70 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
     std::vector<std::string> mapped;
     std::vector<std::string> instructions;
     std::vector<std::string> cannot_spill;
-
+    //i will extract registers for mapped ind
     while (iss >> word) {
         words.push_back(word);
         std::cout <<word <<"\n";
         std::cout <<"each" <<"\n";
     }
-
-    if(words.size()==5){
-        for(int i=0;i<5;i++){
-            // skip operators
-            if(i&1)continue;
-            // check if the var/temp has a register already or not
-            if(isTempOrVar(words[i])){
-                if(addressTable.isEmpty(words[i])){
-                    std::string type = addressTable.getType(words[i]);
-                    std::cout<<"HELLO WORLD "<<type<<"\n";
-                    std::string reg = registerDesc.getAvailableRegister(type);
-                    // spill in case all registers are in use
-                    if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
-                    }
-                    std::cout<<reg<<std::endl;
-                    mapped.push_back(reg);
-                    // update address allocation table for future use
-                    addressTable.addRegisterToDescriptor(words[i],reg,"0");
-                    if(isVar(words[i])){
-                        std::cout<<words[i]<<" allocated issue\n";
-                        std::string assm = "";
-                        assm = "mov " + reg + ", " + typeToAsmSize[addressTable.getType(words[i])] + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
-                        assembly.push_back(assm);
-                    }
-                    // update the register descriptor as well
-                    std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[i])<<"\n";
-
-
+    for(auto &in: ind){
+        int i = in.first;
+        if(isTempOrVar(words[i])){
+            if(addressTable.isEmpty(words[i])){
+                std::string type = addressTable.getType(words[i]);
+                std::cout<<"HELLO WORLD "<<type<<"\n";
+                std::string reg = registerDesc.getAvailableRegister(type);
+                // spill in case all registers are in use
+                if(reg == ""){
+                    std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                 }
-                else{
-                    std::cout <<"bruh \n";
-                    // std::cout <<words[i] <<"\n";
-                    // addressTable.printTable();
-                    auto it = addressTable.getRegisterDescriptor(words[i]);
-                    auto it2 = it.begin();
-                    // considering that only 1 register per address
-                    // removed because this thing is not possible
-                    mapped.push_back(it2->first);
-                    cannot_spill.push_back(it2->first);
-                    std::cout <<it.size() <<"\n";
-                    
+                std::cout<<reg<<std::endl;
+                mapped.push_back(reg);
+                // update address allocation table for future use
+                addressTable.addRegisterToDescriptor(words[i],reg,"0");
+                if(isVar(words[i])){
+                    std::cout<<words[i]<<" allocated issue\n";
+                    std::string assm = "";
+                    assm = "mov " + reg + ", " + typeToAsmSize[addressTable.getType(words[i])] + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
+                    assembly.push_back(assm);
                 }
+                // update the register descriptor as well
+                std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[i])<<"\n";
+
+
             }
             else{
-                mapped.push_back(words[i]);
+                std::cout <<"bruh \n";
+                // std::cout <<words[i] <<"\n";
+                // addressTable.printTable();
+                auto it = addressTable.getRegisterDescriptor(words[i]);
+                auto it2 = it.begin();
+                // considering that only 1 register per address
+                // removed because this thing is not possible
+                mapped.push_back(it2->first);
+                cannot_spill.push_back(it2->first);
+                std::cout <<it.size() <<"\n";
+                
             }
         }
+        else{
+            mapped.push_back(words[i]);
+        }
     }
-    else if(words.size()==3){
-        // assignment
-    }
-    else{
-        // others
-    }
+    // if(words.size()==5){
+    //     for(int i=0;i<5;i++){
+    //         // skip operators
+    //         if(i&1)continue;
+    //         // check if the var/temp has a register already or not
+            
+    //     }
+    // }
+    // else if(words.size()==3){
+    //     // assignment
+    // }
+    // else{
+    //     // others
+    // }
     return mapped;
     
 }
@@ -176,7 +179,11 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
         instruction_op = "idiv";
     }
     // std::stringstream assembly;
-    std::vector<std::string> registers  = getReg(line,assembly);
+    std::map<int,int> req;
+    req[0] = 1;
+    req[2] = 1;
+    req[4] = 1;
+    std::vector<std::string> registers  = getReg(line,assembly, req);
     //we also push the extra instructions in getReg only
     std::cout <<instruction_op <<"\n";
     std::string code;
@@ -196,6 +203,39 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     
 }
 
+void keyword_init( std::map<std::string,std::string> &keywords){
+    
+for (const auto& op : {"+", "*", "/", "-"}) {
+    keywords[op] = "arithmetic";
+}
+
+for (const auto& op : {"<", ">", "<=", ">=", "==", "!="}) {
+    keywords[op] = "cmp";
+}
+}
+
+std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std::string op){
+    std::istringstream iss(line);
+    std::vector<std::string> words;
+    std::string word;
+    while (iss >> word) {
+        words.push_back(word);
+        std::cout <<word <<"\n";
+    }
+    std::vector<std::string> assembly;
+    //of form $x = a op b
+    //op is !=, == etc
+    std::map<int,int> req;
+    req[2] = 1;
+    req[4] = 1;
+    //handle 0 $x alag se
+    std::vector<std::string> reg = getReg(line ,assembly, req);
+    std::string cd = "cmp " + reg[0] + ", " + reg[1] + "\n";
+    assembly.push_back(cd);
+    addressTable.set_relop(words[0],op);
+    return assembly;
+}
+
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
     
@@ -204,13 +244,16 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         std::cout<<instr<<std::endl;
         std::vector<std::string> assembly;
         if(instr.empty() == true)continue;
-        std::vector<std::string> keywords;
-        keywords.push_back("+");
-        keywords.push_back("*");
-        keywords.push_back("/");
-        keywords.push_back("+");
-        bool found = std::any_of(keywords.begin(),keywords.end(),[&](const std::string &keyword){
-            return instr.find(keyword) != std::string::npos;
+        std::map<std::string,std::string> keywords;
+        keyword_init(keywords);
+        std::string type;
+        std::string op;
+        bool found = std::any_of(keywords.begin(),keywords.end(),[&](auto &p){
+            if(instr.find(p.first) != std::string::npos){
+                type = p.second;
+                op = p.first;
+                return true;
+            }
         });
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
@@ -253,9 +296,16 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             assembly.push_back(generateFunctionEnd(instr));
         } 
         else if(found == true){
-            std::cout <<instr <<"\n";
-            std::cout <<"the assembly code \n";
-            assembly = generateArithmetic(instr);
+            if(type == "arithmetic"){
+                std::cout <<instr <<"\n";
+                std::cout <<"the assembly code \n";
+                assembly = generateArithmetic(instr);
+            }
+            else if(type == "cmp"){
+                std::cout <<instr <<"\n";
+                std::cout <<"cmppp \n";
+                assembly = generateCMP(instr, op);
+            }
         }
         else if(instr.find("=") != std::string::npos){
             //assignment

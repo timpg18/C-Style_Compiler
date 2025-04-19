@@ -253,7 +253,20 @@ std::string AddressAllocationTable::getType(const std::string& Name) const {
         return tempIt->type;
     }
 }
+void AddressAllocationTable::set_relop(const std::string& Name, std::string op){
+    //always a temporary in X = a > b
+    auto tempIt = temporaries.find({Name,""});
+    if(tempIt != temporaries.end()){
+        VarTempInfo x = *(tempIt);
+        temporaries.erase(x);
+        x.relational_op = op;
+        temporaries.insert(x);
+    }
+    else{
+        std::cout <<"TEMPORARY NOT FOUND to set_relop" <<"\n";
+    }
 
+}
 void AddressAllocationTable::addRegisterToDescriptor(const std::string& varOrTempName, const std::string& regName,const std::string& value) {
     auto varIt = variables.find({varOrTempName, ""});
     if (varIt != variables.end()) {
