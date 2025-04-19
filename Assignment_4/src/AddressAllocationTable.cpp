@@ -14,6 +14,46 @@ void AddressAllocationTable::setSymbolTable(SymbolTable& st) {
     symbolTable = &st;
 }
 
+void AddressAllocationTable::identifyFunctionParameters() {
+    // if (!symbolTable) return;
+    std::cout<<"function parameters\n";
+    functionParameters.clear();
+    
+    // Iterate through all scopes
+    for (const auto& scope : symbolTable->scopes_) {
+        // Only consider function scopes
+        if (scope->scope_name != "global" && scope->parent_scope) {
+            std::string functionName = scope->scope_name;
+            std::vector<std::pair<std::string, int>> params;
+            
+            // Find parameters in this scope's symbols
+            int paramIndex = 1;
+            for (const auto& symbolPair : scope->ordered_symbols) {
+                const SymbolTable::Symbol& symbol = symbolPair;
+                if (symbol.kind == "PARAMETER") {
+                    // Format parameter as "name#blockX"
+                    std::string paramName = symbol.name + "#block" + std::to_string(scope->block_num);
+                    params.emplace_back(paramName, paramIndex++);
+                }
+            }
+            
+            // Store parameters for this function
+            if (!params.empty()) {
+                functionParameters[functionName] = params;
+            }
+        }
+    }
+    
+    // Debug: Print the parameter map
+    std::cout << "=== Function Parameters Map ===\n";
+    for (const auto& func : functionParameters) {
+        std::cout << "Function: " << func.first << "\n";
+        for (const auto& param : func.second) {
+            std::cout << "  Parameter " << param.second << ": " << param.first << "\n";
+        }
+    }
+}
+
 std::string AddressAllocationTable::getVariableType(const std::string& varName) const {
     // if (!symbolTable) return "UNKNOWN";
     
@@ -81,6 +121,17 @@ void AddressAllocationTable::parseIRCode(const std::string& irCode) {
     clear();
     if (!symbolTable) throw std::runtime_error("Symbol table not initialized");
     
+    // First, identify and add function parameters
+    identifyFunctionParameters();
+    
+    // Add all parameters to variables collection before parsing IR
+    for (const auto& funcEntry : functionParameters) {
+        for (const auto& param : funcEntry.second) {
+            addVariable(param.first);
+        }
+    }
+    
+    // Continue with regular parsing
     std::map<std::string, std::string> tempContexts;
     std::regex varPattern(R"((\w+)#block\d+)");
     std::regex tempDefPattern(R"((\$\d+)\s*=)");
@@ -170,12 +221,48 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
         }
     }
     
+    // Add parameters to functionVars if they weren't found in the IR
+    for (const auto& funcEntry : functionParameters) {
+        std::string funcName = funcEntry.first;
+        for (const auto& param : funcEntry.second) {
+            std::string paramName = param.first;
+            // Check if this parameter is already in the function's variables
+            auto& vars = functionVars[funcName];
+            if (std::find(vars.begin(), vars.end(), paramName) == vars.end()) {
+                // Parameter not found in IR, add it to function variables
+                vars.push_back(paramName);
+            }
+        }
+    }
+    
     // Calculate addresses for variables in each function
     for (const auto& funcEntry : functionVars) {
         std::string func = funcEntry.first;
         int offset = 0;
+        std::vector<std::string> varsToProcess = funcEntry.second;
+        std::vector<std::string> orderedVars;
         
-        for (const auto& varName : funcEntry.second) {
+        // First, add parameters in the correct order
+        if (functionParameters.find(func) != functionParameters.end()) {
+            // Sort parameters by their position
+            std::vector<std::pair<std::string, int>> params = functionParameters[func];
+            std::sort(params.begin(), params.end(), 
+                [](const auto& a, const auto& b) { return a.second < b.second; });
+            
+            // Add parameters to the front of the processing queue
+            for (const auto& param : params) {
+                orderedVars.push_back(param.first);
+                // Remove from the original list to avoid duplicates
+                varsToProcess.erase(std::remove(varsToProcess.begin(), varsToProcess.end(), param.first), 
+                                   varsToProcess.end());
+            }
+        }
+        
+        // Then add all other variables
+        orderedVars.insert(orderedVars.end(), varsToProcess.begin(), varsToProcess.end());
+        
+        // Now process all variables in order (parameters first, then locals)
+        for (const auto& varName : orderedVars) {
             std::string type = getVariableType(varName);
             int typeSize = symbolTable->getTypeSize(type);
             

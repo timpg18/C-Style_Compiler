@@ -14,6 +14,7 @@ CodeGenerator::CodeGenerator(const std::string& irCode, SymbolTable& symbolTable
 void CodeGenerator::initialize() {
     // Parse IR code and populate address allocation table
     addressTable.parseIRCode(irCode);
+    addressTable.printTable();
     
     // Construct basic blocks
     BasicBlockConstructor constructor;
@@ -189,14 +190,9 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     std::string code;
     if(registers.size() == 3){
         //ie type a = b op c
-        if(instruction_op[0] == 'i'){
             //3 operand instruction 
             code = "mov " + registers[0] + ", " + registers[1] +"\n";
             code += instruction_op + " " + registers[0] + ", " + registers[2] + "\n";
-        }
-        else{
-            //handle + , - etc
-        }
     }
     assembly.push_back(code);
     return assembly;
@@ -205,13 +201,13 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
 
 void keyword_init( std::map<std::string,std::string> &keywords){
     
-for (const auto& op : {"+", "*", "/", "-"}) {
-    keywords[op] = "arithmetic";
-}
+    for (const auto& op : {"+", "*", "/", "-"}) {
+        keywords[op] = "arithmetic";
+    }
 
-for (const auto& op : {"<", ">", "<=", ">=", "==", "!="}) {
-    keywords[op] = "cmp";
-}
+    for (const auto& op : {"<", ">", "<=", ">=", "==", "!="}) {
+        keywords[op] = "cmp";
+    }
 }
 
 std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std::string op){
@@ -333,10 +329,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 
                 assembly.push_back(assm);
             }else if(isTemp(words[2])){
+                // second one is temporary in this case
                 std::string assm ="";
                 auto it1 = addressTable.getRegisterDescriptor(words[2]);
                 auto it3 = it1.begin();
                 std::string regTemp = it3->first;
+                // considering the fact that temporary will not be assigned to temporary 
                 if(addressTable.isEmpty(words[0])){
                     assm = "mov " + typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"], " + regTemp + "\n";
                 }
@@ -347,6 +345,60 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string reg = it2->first;
                     assm = "mov " + reg + ", " + regTemp + "\n";
                 }
+                assembly.push_back(assm);
+            }else if(isVar(words[2])){
+                // first lets get the reg or address for the 2nd operand
+                std::string reg2 = "";
+                if(addressTable.isEmpty(words[2])){
+                    reg2 = typeToAsmSize[addressTable.getType(words[2])] + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                }
+                // if already in the register
+                else{
+                    auto it = addressTable.getRegisterDescriptor(words[2]);
+                    auto it2 = it.begin();
+                    reg2 = it2->first;
+                }
+
+                // now for the 1st operand
+                std::string reg1 = "";
+                // first operand may be variable
+                if(isVar(words[0])){
+                    if(addressTable.isEmpty(words[0])){
+                        reg1 = typeToAsmSize[addressTable.getType(words[0])] + " ["+ addressTable.getVariableAddress(words[0]) +"]";
+                    }
+                    // if already in the register
+                    else{
+                        auto it = addressTable.getRegisterDescriptor(words[0]);
+                        auto it2 = it.begin();
+                        reg1 = it2->first;
+                    }
+                }
+                // first operand may be temporary
+                else{
+                    // temporary to be assigned
+                    if(addressTable.isEmpty(words[0])){
+                        // to handle
+                        std::string type = addressTable.getType(words[0]);
+                        std::string reg = registerDesc.getAvailableRegister(type);
+                        // spill in case all registers are in use
+                        if(reg == ""){
+                            // to handle
+                        }
+                        // update address allocation table for future use
+                        addressTable.addRegisterToDescriptor(words[0],reg,"0");
+                        // update the register descriptor as well
+                        std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[0])<<" "<<reg<<"\n";
+                        reg1 = reg;
+                    }
+                    // already assigned temporary
+                    else{
+                        auto it = addressTable.getRegisterDescriptor(words[0]);
+                        auto it2 = it.begin();
+                        reg1 = it2->first;
+                    }
+                }
+
+                std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
                 assembly.push_back(assm);
             }
             

@@ -29,6 +29,7 @@ private:
     std::string getVariableType(const std::string& varName) const;
     std::string getTempType(const std::string& tempName, const std::string& contextLine) const;
     void calculateAddresses(const std::string& irCode);
+    std::map<std::string, std::vector<std::pair<std::string, int>>> functionParameters;
 
 public:
     AddressAllocationTable() : symbolTable(nullptr) {}
@@ -36,6 +37,7 @@ public:
     
     void parseIRCode(const std::string& irCode);
     void setSymbolTable(SymbolTable& st);
+    void identifyFunctionParameters();
     
     
     void addVariable(const std::string& varName);
