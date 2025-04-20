@@ -79,6 +79,11 @@ private:
         // VOID is special – usually not directly addressable but can be mapped
         {"VOID", "BYTE"}            // Fallback, often used as generic pointer
     };
+
+    // for data section
+    std::map<std::string, std::pair<std::string, std::string>> dataSectionMap; // Maps alias -> {type, value}
+    std::string processDataSectionEntries(const std::string& irCode);
+    std::string generateDataSection();
     
 
 public:

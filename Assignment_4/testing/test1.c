@@ -1,7 +1,5 @@
-int add(int a,int b){
-    return a+b;
-}
-
 int main(int argc , char** argv){
+    printf("a+b");
+  
     return 0;
 }

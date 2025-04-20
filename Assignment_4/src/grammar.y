@@ -388,7 +388,7 @@ postfix_expression
 			char* func_kind = strdup(st.lookup($1.name)->kind.c_str());
 			char* to_check = extract_between_parentheses(func_kind);
 			
-			if(!eq(to_check, "")){
+			if(eq(to_check, "")){
 			}
 			else{
 				//match prefix with variadic

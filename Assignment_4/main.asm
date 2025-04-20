@@ -1,18 +1,19 @@
+section .data
+    msg db "Value is: %d", 10, 0   ; format string with newline
+
 section .text
-global main
+    global main
+    extern printf
 
 main:
-push rbp
-mov rbp, rsp
-mov DWORD [rbp - 8], 1
-mov eax, 8
-imul eax, 7
-mov edx, DWORD [rbp - 8]
-mov ecx, edx
-add ecx, eax
-mov esi, ecx
-add esi, 20
-mov edx, esi
-mov eax, edx
-pop rbp
-ret
+    push rbp
+    mov rbp, rsp
+
+    mov edi, msg          ; 1st argument to printf (format string)
+    mov esi, 42           ; 2nd argument to printf (%d → 42)
+    xor eax, eax          ; clear rax (for variadic functions)
+    call printf           ; call printf("Value is: %d", 42)
+
+    mov eax, 0            ; return 0 from main
+    pop rbp
+    ret

@@ -5,8 +5,8 @@
 RegisterDescriptor::RegisterDescriptor() {
     // Initialize available registers for x86-64
     availableRegisters = {
-        "rax", "rcx", "rdx", "rsi", "rdi", 
-        "r8", "r9", "r10", "r11"
+        "r9","r8","rcx","rdx","rsi","rdi",
+        "r10", "r11","rax" 
     };
     
     std::set<std::string> all_reg = {
@@ -47,6 +47,7 @@ RegisterDescriptor::RegisterDescriptor() {
     typeSizeMap["DOUBLE"] = "64";  // Using 64-bit for doubles
     typeSizeMap["SHORT"] = "16";   // Using 16-bit for shorts
     typeSizeMap["LONG"] = "64";    // Using 64-bit for longs
+    typeSizeMap["CHAR*"] = "64";    // Using 64-bit for string pointers
 }
 bool RegisterDescriptor::isreg(const std::string& arg){
     for(auto &it: relatedRegisters){

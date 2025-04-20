@@ -13,12 +13,16 @@ CodeGenerator::CodeGenerator(const std::string& irCode, SymbolTable& symbolTable
 
 void CodeGenerator::initialize() {
     // Parse IR code and populate address allocation table
-    addressTable.parseIRCode(irCode);
+    // Process data section entries first
+    std::string processedIR = processDataSectionEntries(irCode);
+    
+    // Parse the processed IR code and populate address allocation table
+    addressTable.parseIRCode(processedIR);
     addressTable.printTable();
     
-    // Construct basic blocks
+    // Construct basic blocks with processed IR
     BasicBlockConstructor constructor;
-    basicBlocks = constructor.constructBasicBlocks(irCode);
+    basicBlocks = constructor.constructBasicBlocks(processedIR);
 }
 
 void CodeGenerator::printComponentInfo() const {
@@ -282,7 +286,7 @@ std::map<std::string, std::string> jump_init(){
 
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
-    
+    int paramNumber=1;
     for (const auto& instruction : block.instructions) {
         std::string instr = instruction.text;
         std::cout<<instr<<std::endl;
@@ -302,8 +306,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
             assembly.push_back(generateFunctionLabel(instr));
-        }
-        else if(instr.find("goto") != std::string::npos){
+        }else if(instr.find("goto") != std::string::npos){
             std::istringstream iss(instr);
             std::vector<std::string> words;
             std::string word;
@@ -329,8 +332,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 jmp += "\n";
                 assembly.push_back(jmp);
             }
-        }
-        else if (instr.find("return") != std::string::npos) {
+        }else if (instr.find("return") != std::string::npos) {
             // return value 
             std::istringstream iss(instr);
             std::vector<std::string> words;
@@ -364,10 +366,13 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 
         }else if (instr.find("func_begin") != std::string::npos) {
             assembly.push_back(generateFunctionBegin(instr));
-        } else if (instr.find("func_end") != std::string::npos) {
+        }else if (instr.find("func_end") != std::string::npos) {
             assembly.push_back(generateFunctionEnd(instr));
-        } 
-        else if(found == true){
+        }else if(instr.find("param") != std::string::npos){
+
+        }else if(instr.find("call") != std::string::npos){
+
+        }else if(found == true){
             if(type == "arithmetic"){
                 std::cout <<instr <<"\n";
                 std::cout <<"the assembly code \n";
@@ -378,8 +383,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::cout <<"cmppp \n";
                 assembly = generateCMP(instr, op);
             }
-        }
-        else if(instr.find("=") != std::string::npos){
+        }else if(instr.find("=") != std::string::npos){
             //assignment
             std::istringstream iss(instr);
             std::vector<std::string> words;
@@ -478,8 +482,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 assembly.push_back(assm);
             }
             
-        }
-        else {
+        }else{
             // For now, we're ignoring other instructions as requested
             continue;
         }
@@ -498,11 +501,18 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 std::string CodeGenerator::combineBlockCode() {
     std::stringstream finalCode;
     finalCode << "; Generated Assembly Code\n";
-    finalCode << "section .text\n";
-    finalCode << "global main\n\n";
     
-    // For now, just append blocks in order
-    // Later, we can use the CFG to determine the correct order
+    // Add data section
+    std::string dataSection = generateDataSection();
+    if (!dataSection.empty()) {
+        finalCode << dataSection << "\n";
+    }
+    
+    finalCode << "section .text\n";
+    finalCode << "global main\n";
+    finalCode << "extern printf\n\n";  // Add external declaration for printf
+    
+    // Append blocks in order
     for (const auto& entry : blockCodeMap) {
         finalCode << entry.second;
     }
@@ -539,4 +549,74 @@ std::string CodeGenerator::getAsmSizeDirective(const std::string& type) const {
     }
     // Default to QWORD if unknown type (safer assumption in 64-bit)
     return "DWORD";  // Most common fallback
+}
+
+std::string CodeGenerator::generateDataSection() {
+    std::stringstream dataSection;
+    
+    if (dataSectionMap.empty()) {
+        return ""; // No data section needed
+    }
+    
+    dataSection << "section .data\n";
+    
+    for (const auto& [alias, data] : dataSectionMap) {
+        const std::string& type = data.first;
+        const std::string& value = data.second;
+        
+        if (type == "CHAR*") {
+            // String literal - remove the surrounding quotes from the literal
+            std::string content = value.substr(1, value.length() - 2);
+            dataSection << alias << " db \"" << content << "\", 0\n";
+        }
+        // Add other data types as needed
+        // For example:
+        // else if (type == "INT") {
+        //     dataSection << alias << " dd " << value << "\n";
+        // }
+    }
+    
+    return dataSection.str();
+}
+
+std::string CodeGenerator::processDataSectionEntries(const std::string& irCode) {
+    std::string processedCode = irCode;
+    std::regex stringPattern("\"([^\"]*)\"");
+    std::smatch match;
+    std::string::const_iterator searchStart(irCode.cbegin());
+    int literalCount = 0;
+    
+    while (std::regex_search(searchStart, irCode.cend(), match, stringPattern)) {
+        std::string stringLiteral = match[0]; // The complete string with quotes
+        
+        // Check if we've already created an entry for this string literal
+        bool found = false;
+        std::string alias;
+        
+        for (const auto& entry : dataSectionMap) {
+            if (entry.second.second == stringLiteral) {
+                found = true;
+                alias = entry.first;
+                break;
+            }
+        }
+        
+        if (!found) {
+            // Create new alias for this string
+            alias = "str" + std::to_string(++literalCount);
+            dataSectionMap[alias] = {"CHAR*", stringLiteral};
+            
+        }
+        
+        // Move search position
+        searchStart = match.suffix().first;
+        
+        // Replace this occurrence in the code
+        size_t pos = processedCode.find(stringLiteral);
+        if (pos != std::string::npos) {
+            processedCode.replace(pos, stringLiteral.length(), alias);
+        }
+    }
+    
+    return processedCode;
 }
