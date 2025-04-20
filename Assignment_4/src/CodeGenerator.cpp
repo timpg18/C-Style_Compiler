@@ -420,7 +420,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 type = it->second.first;
             }
             else{
-                type = addressTable.getType(words[1]);
+                if(isTempOrVar(words[1]))type = addressTable.getType(words[1]);
+                else{
+                    //currently considering int operand;
+                    type = "INT";
+                }
             }
             switch (paramNumber) {
                 case 1: reg = registerDesc.getRegisterForType("rdi",type);
@@ -660,15 +664,27 @@ std::string CodeGenerator::generateDataSection() {
         const std::string& value = data.second;
         
         if (type == "CHAR*") {
-            // String literal - remove the surrounding quotes from the literal
-            std::string content = value.substr(1, value.length() - 2);
-            dataSection << alias << " db \"" << content << "\", 0\n";
+            // Parse string with escape sequences
+            std::vector<std::string> parts = parseStringWithEscapeSequences(value);
+            
+            dataSection << alias << " db ";
+            
+            // Join parts with commas
+            for (size_t i = 0; i < parts.size(); i++) {
+                dataSection << parts[i];
+                if (i < parts.size() - 1) {
+                    dataSection << ", ";
+                }
+            }
+            
+            // Add null terminator if not already there
+            if (parts.empty() || parts.back() != "0") {
+                dataSection << ", 0";
+            }
+            
+            dataSection << "\n";
         }
         // Add other data types as needed
-        // For example:
-        // else if (type == "INT") {
-        //     dataSection << alias << " dd " << value << "\n";
-        // }
     }
     
     return dataSection.str();
@@ -714,4 +730,53 @@ std::string CodeGenerator::processDataSectionEntries(const std::string& irCode) 
     }
     
     return processedCode;
+}
+
+std::vector<std::string> CodeGenerator::parseStringWithEscapeSequences(const std::string& str) {
+    std::vector<std::string> parts;
+    std::string currentPart;
+    
+    // Remove surrounding quotes
+    std::string content = str.substr(1, str.length() - 2);
+    
+    for (size_t i = 0; i < content.length(); i++) {
+        if (content[i] == '\\' && i + 1 < content.length()) {
+            // If we have a non-empty current part, add it
+            if (!currentPart.empty()) {
+                parts.push_back("\"" + currentPart + "\"");
+                currentPart.clear();
+            }
+            
+            // Handle the escape sequence
+            char escapeChar = content[i + 1];
+            int asciiValue;
+            
+            switch (escapeChar) {
+                case 'n': asciiValue = 10; break;  // Newline
+                case 't': asciiValue = 9; break;   // Tab
+                case 'r': asciiValue = 13; break;  // Carriage return
+                case '0': asciiValue = 0; break;   // Null character
+                case '\\': asciiValue = 92; break; // Backslash
+                case '\"': asciiValue = 34; break; // Double quote
+                case '\'': asciiValue = 39; break; // Single quote
+                case 'a': asciiValue = 7; break;   // Bell
+                case 'b': asciiValue = 8; break;   // Backspace
+                case 'f': asciiValue = 12; break;  // Form feed
+                case 'v': asciiValue = 11; break;  // Vertical tab
+                default: asciiValue = escapeChar;  // Just use the character
+            }
+            
+            parts.push_back(std::to_string(asciiValue));
+            i++; // Skip the escape sequence
+        } else {
+            currentPart += content[i];
+        }
+    }
+    
+    // Add any remaining part
+    if (!currentPart.empty()) {
+        parts.push_back("\"" + currentPart + "\"");
+    }
+    
+    return parts;
 }

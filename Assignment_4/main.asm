@@ -1,5 +1,5 @@
 section .data
-str1 db "fdsgsdgsg %d\n",10, "fsdhk", 0
+str1 db "hekllo world i am despacito ", 10, " %d ", 10, 0
 
 section .text
 global _start
@@ -18,7 +18,7 @@ push rbp
 mov rbp, rsp
 sub rsp, 16
 mov rdi, str1
-mov esi, 100
+mov esi, 1923
 call printf
 leave
 ret

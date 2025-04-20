@@ -85,6 +85,7 @@ private:
     // for data section
     std::map<std::string, std::pair<std::string, std::string>> dataSectionMap; // Maps alias -> {type, value}
     std::string processDataSectionEntries(const std::string& irCode);
+    std::vector<std::string> parseStringWithEscapeSequences(const std::string& str);
     std::string generateDataSection();
     
 
