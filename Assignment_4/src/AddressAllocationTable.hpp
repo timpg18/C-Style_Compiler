@@ -22,7 +22,7 @@ struct VarTempInfo {
 
 class AddressAllocationTable {
 private:
-    std::set<VarTempInfo> variables;
+    
     std::set<VarTempInfo> temporaries;
     SymbolTable* symbolTable;
 
@@ -32,6 +32,7 @@ private:
     std::map<std::string, std::vector<std::pair<std::string, int>>> functionParameters;
 
 public:
+    std::set<VarTempInfo> variables;
     AddressAllocationTable() : symbolTable(nullptr) {}
     explicit AddressAllocationTable(const std::string& irCode, SymbolTable& st);
     

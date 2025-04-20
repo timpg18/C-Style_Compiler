@@ -7,8 +7,7 @@
 
 class RegisterDescriptor {
 private:
-    // Maps register name to variables/temporaries it holds (allows multiples)
-    std::map<std::string, std::vector<std::string>> registerContent;
+    
    
     // List of available registers (in order of preference)
     std::vector<std::string> availableRegisters;
@@ -20,6 +19,8 @@ private:
     std::map<std::string, std::string> typeSizeMap;
 
 public:
+    // Maps register name to variables/temporaries it holds (allows multiples)
+    std::map<std::string, std::vector<std::string>> registerContent;
     RegisterDescriptor();
     //check if the argument is a register or not
     bool isreg(const std::string& arg);
