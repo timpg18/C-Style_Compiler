@@ -280,6 +280,38 @@ std::map<std::string, std::string> jump_init(){
     return rel_ops_to_jumps;
 }
 
+
+std::vector<std::string> CodeGenerator::write_reg(){
+    std::vector<std::string> assembly;
+    std::vector<std::pair<std::string,std::string>> rem;
+    for(auto &p: registerDesc.registerContent){
+        //p.first is reg.name
+        //p.second is vector of string of variables it has
+        for(auto &s: p.second){
+            //s is string of var
+            auto varIt = addressTable.variables.find({s, ""});
+            if(varIt != addressTable.variables.end()){
+                //just write the reg val onto memory. now it'll be consistent
+                std::string cd = "mov ";
+                cd += "DWORD ["+ varIt->address + "]";
+                cd +=", ";
+                cd += p.first + "\n";
+                assembly.push_back(cd);
+                rem.push_back({p.first, s});
+            }
+        }
+    }
+    for(auto &p : rem){
+        addressTable.removeRegisterFromDescriptor(p.second, p.first);
+        //also remove register in var table
+        registerDesc.freeRegister(p.first);
+        //free the register completely? var is written and temp no need to preserve
+    }
+    
+    return assembly;
+}
+
+
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
     
@@ -304,6 +336,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             assembly.push_back(generateFunctionLabel(instr));
         }
         else if(instr.find("goto") != std::string::npos){
+
             std::istringstream iss(instr);
             std::vector<std::string> words;
             std::string word;
@@ -311,6 +344,9 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 words.push_back(word);
                 std::cout <<word <<"\n";
             }
+            //first write/store all variables to their address
+            //from registers
+            assembly = write_reg();
             if(instr.find("if") != std::string::npos){
                 //get the relational op
                 //depending on relational op, jne/jeq etc to label @L1
