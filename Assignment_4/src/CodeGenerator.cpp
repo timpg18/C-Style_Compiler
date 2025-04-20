@@ -111,7 +111,7 @@ std::string CodeGenerator::generateFunctionEnd(const std::string& line) {
 
     if (line.find("func_end") != std::string::npos) {
         std::stringstream assembly;
-        assembly << "pop rbp\n";
+        assembly << "leave\n";
         assembly << "ret\n";
         return assembly.str();
     }
@@ -405,8 +405,60 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         }else if (instr.find("func_end") != std::string::npos) {
             assembly.push_back(generateFunctionEnd(instr));
         }else if(instr.find("param") != std::string::npos){
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+            std::string reg = "";
+            std::string type = "";
+            std::string assm1 = "";
+            auto it = dataSectionMap.find(words[1]);
+            if(it != dataSectionMap.end()){
+                type = it->second.first;
+            }
+            else{
+                type = addressTable.getType(words[1]);
+            }
+            switch (paramNumber) {
+                case 1: reg = registerDesc.getRegisterForType("rdi",type);
+                        break;
+                case 2: reg = registerDesc.getRegisterForType("rsi",type);
+                        break;
+                case 3: reg = registerDesc.getRegisterForType("rdx",type);
+                        break;
+                case 4: reg = registerDesc.getRegisterForType("rcx",type);
+                        break;
+                case 5: reg = registerDesc.getRegisterForType("r8",type);
+                        break;
+                case 6: reg = registerDesc.getRegisterForType("r9",type);
+                        break;
+            }
+            if(assm1 != "")assembly.push_back(assm1);
+            paramNumber++;
+            std::string assm2 = "mov " + reg + ", " + words[1] +"\n";
+            assembly.push_back(assm2);
 
         }else if(instr.find("call") != std::string::npos){
+            paramNumber = 1;
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+
+            std::string funcName = words[3];
+            std::string assm = "";
+            if(funcName == "printf"){
+                assm = "mov eax, 0\n";
+            }
+            funcName.pop_back();
+            assm += "call " + funcName + "\n";
+            assembly.push_back(assm);
 
         }else if(found == true){
             if(type == "arithmetic"){
@@ -545,8 +597,15 @@ std::string CodeGenerator::combineBlockCode() {
     }
     
     finalCode << "section .text\n";
-    finalCode << "global main\n";
+    finalCode << "global _start\n";
     finalCode << "extern printf\n\n";  // Add external declaration for printf
+    finalCode << "extern exit\n\n";  // Add external declaration for exit
+    finalCode << "_start:\n";
+    finalCode << "and rsp, 0xfffffffffffffff0\n";
+    finalCode << "call main\n";
+    finalCode << "mov rdi, rax\n";
+    finalCode << "call exit\n\n";
+
     
     // Append blocks in order
     for (const auto& entry : blockCodeMap) {

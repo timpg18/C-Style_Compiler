@@ -1,33 +1,25 @@
 section .data
-    msg db "Value is: %d", 10, 0   ; format string with newline
+str1 db "fdsgsdgsg %d\n",10, "fsdhk", 0
 
 section .text
-    global main
-    extern printf
+global _start
+extern printf
+
+extern exit
+
+_start:
+and rsp, 0xfffffffffffffff0
+call main
+mov rdi, rax
+call exit
 
 main:
 push rbp
 mov rbp, rsp
-mov DWORD [rbp - 8], 1
-@L0:
-mov eax, DWORD [rbp - 8]
-cmp eax, 10
-mov DWORD [rbp - 8], eax
-jl @L1
-jmp @L2
-@L1:
-mov ecx, DWORD [rbp - 4]
-mov edx, DWORD [rbp - 8]
-mov eax, ecx
-add eax, edx
-mov ecx, eax
-mov esi, edx
-add esi, 1
-mov edx, esi
-mov DWORD [rbp - 4], ecx
-mov DWORD [rbp - 8], edx
-jmp @L0
-@L2:
-mov eax, DWORD [rbp - 4]
-pop rbp
+sub rsp, 16
+mov rdi, str1
+mov esi, 100
+call printf
+leave
 ret
+

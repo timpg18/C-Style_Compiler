@@ -7,8 +7,6 @@
 
 class RegisterDescriptor {
 private:
-    
-   
     // List of available registers (in order of preference)
     std::vector<std::string> availableRegisters;
    

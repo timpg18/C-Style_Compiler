@@ -1,4 +1,6 @@
 nasm -f elf64 main.asm -o main.o
-gcc -no-pie main.o -o main
-./main
+ld -m elf_x86_64 \
+   --dynamic-linker /lib64/ld-linux-x86-64.so.2 \
+   -lc main.o -o main
+ ./main
 echo $?

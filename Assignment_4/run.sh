@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Navigate to script directory (ensure it runs from the correct location)
-cd "$(dirname "$0")"
+# Navigate to the script's directory
+cd "$(dirname "$0")" || exit 1
 
 # Step 1: Build the parser
 echo "Building the Parser..."
@@ -19,7 +19,7 @@ for testfile in ./testing/*.c; do
     echo "-----------------------------------"
     echo "Processing: $testfile"
     echo "-----------------------------------"
-    ./parser  "$testfile"
+    ./parser "$testfile"
     echo -e "\n"
 done
 
