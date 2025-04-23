@@ -1467,7 +1467,7 @@ assignment_expression
 	| unary_expression assignment_operator assignment_expression {
 		// the left of the declarator muse be lvalue;
 		lvalueError($1.kind);
-		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+		
 		// If a procedure then must be called procedure
 		if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
 
@@ -1526,6 +1526,39 @@ assignment_expression
 				}
 			}
 			else{
+				
+					
+					int stars = 0;
+					
+					std::string typ = $3.type;
+					int ptr_cnt = 0;
+					std::string tot;
+					int index = 0;
+					if(st.lookup($3.name) != nullptr){
+						tot = st.lookup($3.name)->type;
+						vector<int> dim = st.lookup($3.name)->dimensions;
+						index = dim.size();
+						for(int i=tot.size()-1;i>=0;i--){
+						if(tot[i] == '*')ptr_cnt++;
+					}
+					}
+					
+					for(int i=typ.size()-1;i>=0;i--){
+						if(typ[i] == '*')stars++;
+					}
+					
+					
+		
+		
+		//get the index of the next multiplier constant
+		//cout <<s <<"\n";
+		//std::cout <<typ <<"\n";
+		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+		
+		if(stars > ptr_cnt - index){
+			//bt 
+			yyerror("assignment involves array on right or has incorrent dereferencing");
+		}
 				if(!isConvertible(std::string($1.type),std::string($3.type))){
 					char* s1 = "incompatible type expression involved in";
 					s1 = concat(s1,$2.type);
@@ -1533,9 +1566,11 @@ assignment_expression
 					check_type($1.type, $3.type,s1);
 				}
 				else{
-					if(!eq($1.type,$3.type)){
+				
+		if(!eq($1.type,$3.type)){
 						type_change_statement = formatTypeChange(type2,s);
 					}
+					
 
 				}
 				
