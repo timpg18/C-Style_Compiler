@@ -1,3 +1,5 @@
 int main(){
-    printf("hekllo world i am despacito \n %d \n",1923);
+    float b = 1.0 +1.2 +1.4;
+    float a = b ;
+    return 0;
 }

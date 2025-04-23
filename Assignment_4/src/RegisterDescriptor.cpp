@@ -1,3 +1,4 @@
+// RegisterDescriptor.cpp changes
 #include "RegisterDescriptor.hpp"
 #include <iostream>
 #include <algorithm>
@@ -7,6 +8,12 @@ RegisterDescriptor::RegisterDescriptor() {
     availableRegisters = {
         "r9","r8","rcx","rdx","rsi","rdi",
         "r10", "r11","rax" 
+    };
+    
+    // Initialize available floating point registers for x86-64 (priority from 7 to 0)
+    availableFloatRegisters = {
+        "xmm7", "xmm6", "xmm5", "xmm4", 
+        "xmm3", "xmm2", "xmm1", "xmm0"
     };
     
     std::set<std::string> all_reg = {
@@ -19,7 +26,9 @@ RegisterDescriptor::RegisterDescriptor() {
         "r8d", "r8w", "r8b",
         "r9d", "r9w", "r9b",
         "r10d", "r10w", "r10b",
-        "r11d", "r11w", "r11b"
+        "r11d", "r11w", "r11b",
+        "xmm0", "xmm1", "xmm2", "xmm3",
+        "xmm4", "xmm5", "xmm6", "xmm7"
     };
 
     // Initialize register content map with empty vectors
@@ -39,16 +48,27 @@ RegisterDescriptor::RegisterDescriptor() {
     relatedRegisters["r10"] = {"r10", "r10d", "r10w", "r10b"};
     relatedRegisters["r11"] = {"r11", "r11d", "r11w", "r11b"};
     
+    // Define single-element sets for XMM registers (no size variants)
+    relatedRegisters["xmm0"] = {"xmm0"};
+    relatedRegisters["xmm1"] = {"xmm1"};
+    relatedRegisters["xmm2"] = {"xmm2"};
+    relatedRegisters["xmm3"] = {"xmm3"};
+    relatedRegisters["xmm4"] = {"xmm4"};
+    relatedRegisters["xmm5"] = {"xmm5"};
+    relatedRegisters["xmm6"] = {"xmm6"};
+    relatedRegisters["xmm7"] = {"xmm7"};
+    
     // Define mapping from type to register size
-    typeSizeMap["INT"] = "32";     // Using 64-bit for integers
+    typeSizeMap["INT"] = "32";     // Using 32-bit for integers
     typeSizeMap["BOOL"] = "8";     // Using 8-bit for booleans
     typeSizeMap["CHAR"] = "8";     // Using 8-bit for chars
-    typeSizeMap["FLOAT"] = "32";   // Using 64-bit for floats
-    typeSizeMap["DOUBLE"] = "64";  // Using 64-bit for doubles
+    typeSizeMap["FLOAT"] = "128";  // Using 128-bit XMM for floats
+    typeSizeMap["DOUBLE"] = "128"; // Using 128-bit XMM for doubles
     typeSizeMap["SHORT"] = "16";   // Using 16-bit for shorts
     typeSizeMap["LONG"] = "64";    // Using 64-bit for longs
-    typeSizeMap["CHAR*"] = "64";    // Using 64-bit for string pointers
+    typeSizeMap["CHAR*"] = "64";   // Using 64-bit for string pointers
 }
+
 bool RegisterDescriptor::isreg(const std::string& arg){
     for(auto &it: relatedRegisters){
         for(auto &it2: it.second){
@@ -59,6 +79,11 @@ bool RegisterDescriptor::isreg(const std::string& arg){
     }
     return false;
 }
+
+bool RegisterDescriptor::isFloatRegister(const std::string& regName) const {
+    return regName.substr(0, 3) == "xmm";
+}
+
 bool RegisterDescriptor::isRegisterFree(const std::string& regName) const {
     auto it = registerContent.find(regName);
     return (it != registerContent.end() && it->second.empty());
@@ -101,8 +126,34 @@ void RegisterDescriptor::freeRegister(const std::string& regName) {
 }
 
 std::vector<std::string> RegisterDescriptor::spillRegister(const std::vector<std::string>& protectedRegisters) {
-    // Find a register to spill (one that is not in the protected list)
+    // First try to spill a general purpose register
     for (const auto& reg : availableRegisters) {
+        // Skip if this register is protected
+        if (std::find(protectedRegisters.begin(), protectedRegisters.end(), reg) != protectedRegisters.end()) {
+            continue;
+        }
+        
+        // Skip if this register is empty
+        auto it = registerContent.find(reg);
+        if (it == registerContent.end() || it->second.empty()) {
+            continue;
+        }
+        
+        // This register can be spilled
+        std::vector<std::string> result;
+        result.push_back(reg);  // First element is the register name
+        
+        // Add all variables/temporaries in the register
+        result.insert(result.end(), it->second.begin(), it->second.end());
+        
+        // Clear the register after spilling
+        it->second.clear();
+        
+        return result;
+    }
+
+    // If no general purpose register could be spilled, try floating point registers
+    for (const auto& reg : availableFloatRegisters) {
         // Skip if this register is protected
         if (std::find(protectedRegisters.begin(), protectedRegisters.end(), reg) != protectedRegisters.end()) {
             continue;
@@ -132,10 +183,20 @@ std::vector<std::string> RegisterDescriptor::spillRegister(const std::vector<std
 }
 
 std::string RegisterDescriptor::getAvailableRegister(const std::string& type) {
-    // Try to find a free register
-    for (const auto& reg : availableRegisters) {
-        if (isRegisterFree(reg) && !areRelatedRegistersInUse(reg)) {
-            return getRegisterForType(reg, type);
+    // Check if we need a floating point register
+    if (type == "FLOAT" || type == "DOUBLE") {
+        // Try to find a free XMM register
+        for (const auto& reg : availableFloatRegisters) {
+            if (isRegisterFree(reg) && !areRelatedRegistersInUse(reg)) {
+                return reg;
+            }
+        }
+    } else {
+        // Try to find a free general purpose register
+        for (const auto& reg : availableRegisters) {
+            if (isRegisterFree(reg) && !areRelatedRegistersInUse(reg)) {
+                return getRegisterForType(reg, type);
+            }
         }
     }
     return ""; // No register available
@@ -169,6 +230,14 @@ std::string RegisterDescriptor::getRegisterForType(const std::string& regBase, c
     // Get the size based on type
     auto sizeIt = typeSizeMap.find(type);
     std::string size = (sizeIt != typeSizeMap.end()) ? sizeIt->second : "64"; // Default to 64-bit
+    
+    // For floating point types, return an XMM register
+    if (type == "FLOAT" || type == "DOUBLE") {
+        if (isFloatRegister(regBase)) {
+            return regBase;
+        }
+        return ""; // Not a floating point register
+    }
     
     // Find the base register group
     auto relatedRegsIt = relatedRegisters.find(regBase);
@@ -210,7 +279,19 @@ std::string RegisterDescriptor::getRegisterForType(const std::string& regBase, c
 
 void RegisterDescriptor::printDescriptor() const {
     std::cout << "=== Register Descriptor ===\n";
+    std::cout << "General Purpose Registers:\n";
     for (const auto& reg : availableRegisters) {
+        std::cout << reg << " : [";
+        const auto& contents = registerContent.at(reg);
+        for (size_t i = 0; i < contents.size(); ++i) {
+            if (i > 0) std::cout << ", ";
+            std::cout << contents[i];
+        }
+        std::cout << "]\n";
+    }
+    
+    std::cout << "Floating Point Registers:\n";
+    for (const auto& reg : availableFloatRegisters) {
         std::cout << reg << " : [";
         const auto& contents = registerContent.at(reg);
         for (size_t i = 0; i < contents.size(); ++i) {

@@ -82,6 +82,7 @@ std::string AddressAllocationTable::getVariableType(const std::string& varName) 
 }
 
 std::string AddressAllocationTable::getTempType(const std::string& tempName, const std::string& contextLine) const {
+    // Check for explicit cast
     if (contextLine.find("cast :") != std::string::npos) {
         size_t castPos = contextLine.find("cast :");
         size_t typeEnd = contextLine.find(' ', castPos + 6);
@@ -89,18 +90,28 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
         return contextLine.substr(castPos + 6, typeEnd - (castPos + 6));
     }
     
+    // Check for relational operators which result in boolean
     const std::vector<std::string> relops = {"<", ">", "<=", ">=", "==", "!="};
     for (const auto& op : relops) {
         if (contextLine.find(op) != std::string::npos) {
             return "BOOL";
         }
     }
+    std::cout<<contextLine<<std::endl;
+    // Check for floating point constants in the context line
+    std::regex floatPattern(R"(\b\d+\.\d*|\.\d+\b)");
+    if (std::regex_search(contextLine, floatPattern)) {
+        return "FLOAT";  // Or "DOUBLE" depending on your default floating point type
+    }
     
+    // Try to infer type from other operands
     std::regex operandPattern(R"((?:^|\s)(\$?\d+|[a-zA-Z_][\w#]*))");
     std::sregex_iterator it(contextLine.begin(), contextLine.end(), operandPattern);
     
     for (; it != std::sregex_iterator(); ++it) {
         std::string operand = it->str();
+        operand = std::regex_replace(operand, std::regex("^\\s+"), ""); // Remove leading whitespace
+        
         if (operand == tempName) continue;
         
         if (operand[0] == '$') {
@@ -114,6 +125,7 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
         }
     }
     
+    // Default to INT if no other type can be determined
     return "INT";
 }
 
@@ -180,8 +192,9 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
     std::string currentFunction;
     std::map<std::string, int> offsetMap;  // Track offset within each function
     std::map<std::string, std::vector<std::string>> functionVars;  // Variables in each function
+    std::map<std::string, std::vector<std::string>> functionTemps;  // Temporaries in each function
     
-    // First, identify function boundaries and variables within each function
+    // First, identify function boundaries and variables/temporaries within each function
     bool inFunction = false;
     while (std::getline(stream, line)) {
         // Check for function labels
@@ -206,8 +219,9 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
             continue;
         }
         
-        // Collect variables in the current function
+        // Collect variables and temporaries in the current function
         if (inFunction) {
+            // Collect variables
             std::regex varPattern(R"((\w+#block\d+))");
             std::sregex_iterator varIt(line.begin(), line.end(), varPattern);
             for (; varIt != std::sregex_iterator(); ++varIt) {
@@ -216,6 +230,18 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
                               functionVars[currentFunction].end(), 
                               varName) == functionVars[currentFunction].end()) {
                     functionVars[currentFunction].push_back(varName);
+                }
+            }
+            
+            // Collect temporaries
+            std::regex tempPattern(R"((\$\d+))");
+            std::sregex_iterator tempIt(line.begin(), line.end(), tempPattern);
+            for (; tempIt != std::sregex_iterator(); ++tempIt) {
+                std::string tempName = (*tempIt)[0];
+                if (std::find(functionTemps[currentFunction].begin(), 
+                              functionTemps[currentFunction].end(), 
+                              tempName) == functionTemps[currentFunction].end()) {
+                    functionTemps[currentFunction].push_back(tempName);
                 }
             }
         }
@@ -235,7 +261,7 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
         }
     }
     
-    // Calculate addresses for variables in each function
+    // Calculate addresses for variables and temporaries in each function
     for (const auto& funcEntry : functionVars) {
         std::string func = funcEntry.first;
         int offset = 0;
@@ -266,11 +292,38 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
             std::string type = getVariableType(varName);
             int typeSize = symbolTable->getTypeSize(type);
             
+            // Add padding if necessary to align to 4-byte boundary
+            int padding = (4 - (offset % 4)) % 4;
+            offset += padding;
+            
             offset += typeSize;
             std::string address = "rbp - " + std::to_string(offset);
             
             // Update the variable's address
             setVariableAddress(varName, address);
+        }
+        
+        // Next, process all temporaries for this function (after variables)
+        auto tempIt = functionTemps.find(func);
+        if (tempIt != functionTemps.end()) {
+            for (const auto& tempName : tempIt->second) {
+                // Find the temporary in our set
+                auto tempInfoIt = temporaries.find({tempName, ""});
+                if (tempInfoIt != temporaries.end()) {
+                    std::string type = tempInfoIt->type;
+                    int typeSize = symbolTable->getTypeSize(type);
+                    
+                    // Add padding if necessary to align to 4-byte boundary
+                    int padding = (4 - (offset % 4)) % 4;
+                    offset += padding;
+                    
+                    offset += typeSize;
+                    std::string address = "rbp - " + std::to_string(offset);
+                    
+                    // Update the temporary's address
+                    setTemporaryAddress(tempName, address);
+                }
+            }
         }
     }
 }
@@ -494,11 +547,12 @@ int AddressAllocationTable::getFunctionStackSize(const std::string& functionName
         }
     }
     
-    // Parse IR to find all variables in this function
+    // Parse IR to find all variables and temporaries in this function
     std::istringstream stream(irCode);
     std::string line;
     bool inTargetFunction = false;
     std::set<std::string> functionVars;  // Use a set to avoid duplicates
+    std::set<std::string> functionTemps; // Set for temporaries
     
     while (std::getline(stream, line)) {
         // Check for function label
@@ -519,13 +573,22 @@ int AddressAllocationTable::getFunctionStackSize(const std::string& functionName
             break;
         }
         
-        // If we're in the target function, collect variables
+        // If we're in the target function, collect variables and temporaries
         if (inTargetFunction) {
+            // Collect variables
             std::regex varPattern(R"((\w+#block\d+))");
             std::sregex_iterator varIt(line.begin(), line.end(), varPattern);
             for (; varIt != std::sregex_iterator(); ++varIt) {
                 std::string varName = (*varIt)[0];
                 functionVars.insert(varName);
+            }
+            
+            // Collect temporaries
+            std::regex tempPattern(R"((\$\d+))");
+            std::sregex_iterator tempIt(line.begin(), line.end(), tempPattern);
+            for (; tempIt != std::sregex_iterator(); ++tempIt) {
+                std::string tempName = (*tempIt)[0];
+                functionTemps.insert(tempName);
             }
         }
     }
@@ -545,6 +608,16 @@ int AddressAllocationTable::getFunctionStackSize(const std::string& functionName
         
         if (!isParam) {
             std::string type = getVariableType(varName);
+            int typeSize = symbolTable->getTypeSize(type);
+            totalSize += typeSize;
+        }
+    }
+    
+    // Calculate size for all temporaries
+    for (const auto& tempName : functionTemps) {
+        auto tempInfoIt = temporaries.find({tempName, ""});
+        if (tempInfoIt != temporaries.end()) {
+            std::string type = tempInfoIt->type;
             int typeSize = symbolTable->getTypeSize(type);
             totalSize += typeSize;
         }
