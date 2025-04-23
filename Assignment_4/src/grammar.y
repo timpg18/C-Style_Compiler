@@ -153,6 +153,7 @@ primary_expression
 		tmp += "#block";
 		tmp += to_string(num);
 		$$.ir.tmp = strdup(tmp.c_str());
+		//$$.name=  strdup(tmp.c_str());
 		$$.ir.code = "";
 		//printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
@@ -307,8 +308,11 @@ postfix_expression
 	
 		
 		
+		printf("%s %s YOO\n",$1.ir.tmp, $1.name);
+		//easier check is if tmp does not contain a $, since x#block1 and x are different here
+		std::string g = $1.ir.tmp;
 		
-		if(eq($1.ir.tmp,$1.name)){
+		if(g.find("$") == std::string::npos){
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
@@ -317,7 +321,7 @@ postfix_expression
 			if(stars > 0)$$.ir.tmp = strdup(temp.c_str());
 			else{
 				string newtemp;
-				newtemp += string($1.name);
+				newtemp += string($1.ir.tmp);
 			newtemp += "[";
 			newtemp += temp;
 			newtemp += "]";
@@ -340,6 +344,7 @@ postfix_expression
 			string temp = irgen.new_temp();
 			
 			string cd1 = irgen.add_op(temp, $1.ir.tmp, "+" , $3.ir.tmp); //t1 = told + i
+			std::cout <<cd1 <<"BROTHER\n";
 			string temp2 = irgen.new_temp();
 			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
 			string cd2 = irgen.add_op(temp2, temp, "*" , ss);
@@ -350,6 +355,10 @@ postfix_expression
 			else{
 				string newtemp;
 				newtemp += string($1.name);
+					int num;
+		num = st.lookup(string($1.name))->block_num;
+		newtemp += "#block";
+		newtemp += to_string(num);
 				newtemp += "[";
 			newtemp += temp2;
 			newtemp += "]";
@@ -1458,7 +1467,7 @@ assignment_expression
 	| unary_expression assignment_operator assignment_expression {
 		// the left of the declarator muse be lvalue;
 		lvalueError($1.kind);
-
+		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
 		// If a procedure then must be called procedure
 		if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
 
@@ -3417,8 +3426,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	CodeGenerator codeGen(final_ir_code, st);
 
 	// Generate and print assembly code
-	std::string assemblyCode = codeGen.generateCode();
-	std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
+	//std::string assemblyCode = codeGen.generateCode();
+	//std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
 	
 	// Print information from all components
 	//codeGen.printComponentInfo();

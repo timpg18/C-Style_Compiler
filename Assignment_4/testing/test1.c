@@ -1,3 +1,12 @@
 int main(){
-    printf("hekllo world i am despacito \n %d \n",1923);
+    int x[5];
+    x[3] = 1;
+    int y[10][20];
+    y[4][1] = 10;
+    y[4] = x;
+    int z[10][20][30];
+    z[10][20] = x;
+    int* t[10];
+    int *p;
+    t[5] = p;
 }

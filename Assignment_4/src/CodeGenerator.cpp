@@ -315,6 +315,15 @@ std::vector<std::string> CodeGenerator::write_reg(){
     return assembly;
 }
 
+bool contains_sq(std::string s){
+    for(auto &i: s){
+        if(i == '['){
+            return true;
+        }
+    }
+    return false;
+}
+
 
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
@@ -477,6 +486,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
         }else if(instr.find("=") != std::string::npos){
             //assignment
+           
             std::istringstream iss(instr);
             std::vector<std::string> words;
             std::string word;
@@ -485,22 +495,30 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::cout <<word <<"\n";
             }
             // assignment for variable with constant value
+            // a = b
             if(!isTempOrVar(words[2])){
+                std::cout  <<"BRUH BRO" <<"\n";
                 std::string assm ="";
                 // if already not in the register
-                if(addressTable.isEmpty(words[0])){
-                    assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                if(contains_sq(words[0]) == false){
+                    if(addressTable.isEmpty(words[0])){
+                        assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                    }
+                    // if already in the register
+                    else{
+                        auto it = addressTable.getRegisterDescriptor(words[0]);
+                        auto it2 = it.begin();
+                        std::string reg = it2->first;
+                        assm = "mov " + reg + ", " + words[2] + "\n";
+                    }
+                    
                 }
-                // if already in the register
                 else{
-                    auto it = addressTable.getRegisterDescriptor(words[0]);
-                    auto it2 = it.begin();
-                    std::string reg = it2->first;
-                    assm = "mov " + reg + ", " + words[2] + "\n";
+                    
                 }
-                
                 assembly.push_back(assm);
             }else if(isTemp(words[2])){
+                std::cout  <<"BRUH CRAZY" <<"\n";
                 // second one is temporary in this case
                 std::string assm ="";
                 auto it1 = addressTable.getRegisterDescriptor(words[2]);
@@ -519,6 +537,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 }
                 assembly.push_back(assm);
             }else if(isVar(words[2])){
+                std::cout  <<"BRUH THO" <<"\n";
                 // first lets get the reg or address for the 2nd operand
                 std::string reg2 = "";
                 if(addressTable.isEmpty(words[2])){
@@ -575,6 +594,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             
         }else{
+            std::cout  <<"BRUH WUT" <<"\n";
             // For now, we're ignoring other instructions as requested
             continue;
         }
