@@ -87,6 +87,8 @@ private:
     std::string processDataSectionEntries(const std::string& irCode);
     std::vector<std::string> parseStringWithEscapeSequences(const std::string& str);
     std::string generateDataSection();
+    std::string replaceCharConstants(const std::string& irCode);
+    std::string processFloatConstants(const std::string& irCode);
     
 
 public:

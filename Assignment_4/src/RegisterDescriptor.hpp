@@ -9,6 +9,9 @@ class RegisterDescriptor {
 private:
     // List of available registers (in order of preference)
     std::vector<std::string> availableRegisters;
+    
+    // List of available floating point registers (in order of preference)
+    std::vector<std::string> availableFloatRegisters;
    
     // Sets of related registers (different sizes of the same register)
     std::map<std::string, std::set<std::string>> relatedRegisters;
@@ -54,5 +57,8 @@ public:
    
     // Clear the descriptor
     void clear();
+
+    // Check if register is a floating point register
+    bool isFloatRegister(const std::string& regName) const;
 };
 #endif // REGISTER_DESCRIPTOR_HPP

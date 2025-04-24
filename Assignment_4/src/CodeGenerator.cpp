@@ -14,10 +14,12 @@ CodeGenerator::CodeGenerator(const std::string& irCode, SymbolTable& symbolTable
 void CodeGenerator::initialize() {
     // Parse IR code and populate address allocation table
     // Process data section entries first
-    std::string processedIR = processDataSectionEntries(irCode);
+    std::string processedIR1 = processDataSectionEntries(irCode);
+    std::string processedIR2 = replaceCharConstants(processedIR1);
+    std::string processedIR = processFloatConstants(processedIR2);
     
     // Parse the processed IR code and populate address allocation table
-    addressTable.parseIRCode(processedIR);
+    addressTable.parseIRCode(irCode);
     addressTable.printTable();
     
     // Construct basic blocks with processed IR
@@ -145,8 +147,8 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
         std::cout <<word <<"\n";
         std::cout <<"each" <<"\n";
     }
-    for(auto &in: ind){
-        int i = in.first;
+    for(auto in = ind.rbegin(); in != ind.rend(); ++in){
+        int i = in->first;
         if(isTempOrVar(words[i])){
             if(addressTable.isEmpty(words[i])){
                 std::string type = addressTable.getType(words[i]);
@@ -160,12 +162,28 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 mapped.push_back(reg);
                 // update address allocation table for future use
                 addressTable.addRegisterToDescriptor(words[i],reg,"0");
+                std::cout<<words[i]<<" allocated issue\n";
+                std::string assm = "";
                 if(isVar(words[i])){
-                    std::cout<<words[i]<<" allocated issue\n";
-                    std::string assm = "";
                     assm = "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(words[i])) + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
-                    assembly.push_back(assm);
+                    if(type=="FLOAT"){
+                        assm = "movss " + reg + "," + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
+                    }
+                    if(type=="DOUBLE"){
+                        assm = "movsd " + reg + "," + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
+                    }
                 }
+                else{
+                    assm = "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(words[i])) + " ["+ addressTable.getTemporaryAddress(words[i]) +"]\n";
+                    if(type=="FLOAT"){
+                        assm = "movss " + reg + "," + " ["+ addressTable.getTemporaryAddress(words[i]) +"]\n";
+                    }
+                    if(type=="DOUBLE"){
+                        assm = "movsd " + reg + "," + " ["+ addressTable.getTemporaryAddress(words[i]) +"]\n";
+                    }
+                }
+                
+                assembly.push_back(assm);
                 // update the register descriptor as well
                 std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[i])<<"\n";
 
@@ -182,6 +200,9 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 mapped.push_back(it2->first);
                 cannot_spill.push_back(it2->first);
                 std::cout <<it.size() <<"\n";
+
+                // now doing some optimization - if the temporary is used on the right side then it wont be used further so lets delete it form the address table adn register table.
+
                 
             }
         }
@@ -189,20 +210,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
             mapped.push_back(words[i]);
         }
     }
-    // if(words.size()==5){
-    //     for(int i=0;i<5;i++){
-    //         // skip operators
-    //         if(i&1)continue;
-    //         // check if the var/temp has a register already or not
-            
-    //     }
-    // }
-    // else if(words.size()==3){
-    //     // assignment
-    // }
-    // else{
-    //     // others
-    // }
+    std::reverse(mapped.begin(),mapped.end());
     return mapped;
     
 }
@@ -231,8 +239,41 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     if(registers.size() == 3){
         //ie type a = b op c
             //3 operand instruction 
-            code = "mov " + registers[0] + ", " + registers[1] +"\n";
-            code += instruction_op + " " + registers[0] + ", " + registers[2] + "\n";
+            std::string mov_ins = "mov ";
+            std::string reg1 = registers[0];
+            std::string reg2 = registers[1];
+            std::string reg3 = registers[2];
+            if(reg1.find("xmm") != std::string::npos){
+                mov_ins = "movss ";
+                if(instruction_op == "add"){
+                    instruction_op = "addss";
+                }
+                else if(instruction_op == "sub"){
+                    instruction_op = "subss ";
+                }
+                else if( instruction_op == "imul"){
+                    instruction_op = "mulss";
+                }
+                else if(instruction_op == "idiv"){
+                    instruction_op = "divss";
+                }
+            }
+            auto it1 = dataSectionMap.find(reg2);
+            auto it2 = dataSectionMap.find(reg3);
+            if(it1!= dataSectionMap.end()){
+                if(it1->first == "FLOAT"){
+                    reg2 = "[" + reg2 + "]";
+                }
+            }
+            if(it2!= dataSectionMap.end()) {
+                if(it2->first == "FLOAT"){
+                    reg3 = "[" + reg3 + "]";
+                }
+            }           
+            
+
+            code = mov_ins + reg1 + ", " + reg2 +"\n";
+            code += instruction_op + " " + reg1 + ", " + reg2 + "\n";
     }
     assembly.push_back(code);
     return assembly;
@@ -289,6 +330,7 @@ std::vector<std::string> CodeGenerator::write_reg(){
     std::vector<std::string> assembly;
     std::vector<std::pair<std::string,std::string>> rem;
     for(auto &p: registerDesc.registerContent){
+        // need to add for float
         //p.first is reg.name
         //p.second is vector of string of variables it has
         for(auto &s: p.second){
@@ -298,6 +340,16 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 //just write the reg val onto memory. now it'll be consistent
                 std::string cd = "mov ";
                 cd += "DWORD ["+ varIt->address + "]";
+                cd +=", ";
+                cd += p.first + "\n";
+                assembly.push_back(cd);
+                rem.push_back({p.first, s});
+            }
+            auto varIt1 = addressTable.temporaries.find({s,""});
+            if(varIt1 != addressTable.variables.end()){
+                //just write the reg val onto memory. now it'll be consistent
+                std::string cd = "mov ";
+                cd += "DWORD ["+ varIt1->address + "]";
                 cd +=", ";
                 cd += p.first + "\n";
                 assembly.push_back(cd);
@@ -414,6 +466,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         }else if (instr.find("func_end") != std::string::npos) {
             assembly.push_back(generateFunctionEnd(instr));
         }else if(instr.find("param") != std::string::npos){
+            // need to handle floats/doubles
             std::istringstream iss(instr);
             std::vector<std::string> words;
             std::string word;
@@ -451,7 +504,25 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             if(assm1 != "")assembly.push_back(assm1);
             paramNumber++;
-            std::string assm2 = "mov " + reg + ", " + words[1] +"\n";
+            std::string reg2 = words[1];
+            if(isTempOrVar(words[1])){
+                if(addressTable.isEmpty(words[1])){
+                    if(isVar(words[1])){
+                        reg2 = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getVariableAddress(words[1]) +"]";
+                    }
+                    else{
+                        reg2 = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getTemporaryAddress(words[1]) +"]";
+                    }
+                    
+                }
+                // if already in the register
+                else{
+                    auto it = addressTable.getRegisterDescriptor(words[1]);
+                    auto it2 = it.begin();
+                    reg2 = it2->first;
+                }
+            } 
+            std::string assm2 = "mov " + reg + ", " + reg2 +"\n";
             assembly.push_back(assm2);
 
         }else if(instr.find("call") != std::string::npos){
@@ -472,6 +543,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             funcName.pop_back();
             assm += "call " + funcName + "\n";
             assembly.push_back(assm);
+
+        }else if(instr.find("cast") != std::string::npos){
 
         }else if(found == true){
             if(type == "arithmetic"){
@@ -500,48 +573,54 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::cout  <<"BRUH BRO" <<"\n";
                 std::string assm ="";
                 // if already not in the register
-                if(contains_sq(words[0]) == false){
-                    if(addressTable.isEmpty(words[0])){
-                        assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
-                    }
-                    // if already in the register
-                    else{
-                        auto it = addressTable.getRegisterDescriptor(words[0]);
-                        auto it2 = it.begin();
-                        std::string reg = it2->first;
-                        assm = "mov " + reg + ", " + words[2] + "\n";
-                    }
-                    
-                }
-                else{
-                    
-                }
-                assembly.push_back(assm);
-            }else if(isTemp(words[2])){
-                std::cout  <<"BRUH CRAZY" <<"\n";
-                // second one is temporary in this case
-                std::string assm ="";
-                auto it1 = addressTable.getRegisterDescriptor(words[2]);
-                auto it3 = it1.begin();
-                std::string regTemp = it3->first;
-                // considering the fact that temporary will not be assigned to temporary 
+                std::string type = addressTable.getType(words[0]);
                 if(addressTable.isEmpty(words[0])){
-                    assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + regTemp + "\n";
+                    if(isVar(words[0])){
+                        assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                        if(type == "FLOAT" ){
+                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                        }
+                        
+                    }
+                    else{
+                        assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + words[2] + "\n";
+                        if(addressTable.getType(words[0]) == "FLOAT" ){
+                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                        }
+                    }
+                    
                 }
                 // if already in the register
                 else{
                     auto it = addressTable.getRegisterDescriptor(words[0]);
                     auto it2 = it.begin();
                     std::string reg = it2->first;
-                    assm = "mov " + reg + ", " + regTemp + "\n";
+                    assm = "mov " + reg + ", " + words[2] + "\n";
+                    if(isVar(words[0])){
+                        if(type == "FLOAT" ){
+                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                        }
+                    }
+                    else{
+                        if(addressTable.getType(words[0]) == "FLOAT" ){
+                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                        }
+                    }
                 }
+                
                 assembly.push_back(assm);
-            }else if(isVar(words[2])){
-                std::cout  <<"BRUH THO" <<"\n";
+            }
+            else{
                 // first lets get the reg or address for the 2nd operand
                 std::string reg2 = "";
                 if(addressTable.isEmpty(words[2])){
-                    reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                    if(isVar(words[2])){
+                        reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                    }
+                    else{
+                        reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                    }
+                    
                 }
                 // if already in the register
                 else{
@@ -552,41 +631,20 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 
                 // now for the 1st operand
                 std::string reg1 = "";
-                // first operand may be variable
-                if(isVar(words[0])){
-                    if(addressTable.isEmpty(words[0])){
+                // first operand
+                if(addressTable.isEmpty(words[0])){
+                    if(isVar(words[0])){
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
                     }
-                    // if already in the register
                     else{
-                        auto it = addressTable.getRegisterDescriptor(words[0]);
-                        auto it2 = it.begin();
-                        reg1 = it2->first;
+                        reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
                     }
                 }
-                // first operand may be temporary
+                // if already in the register
                 else{
-                    // temporary to be assigned
-                    if(addressTable.isEmpty(words[0])){
-                        // to handle
-                        std::string type = addressTable.getType(words[0]);
-                        std::string reg = registerDesc.getAvailableRegister(type);
-                        // spill in case all registers are in use
-                        if(reg == ""){
-                            // to handle
-                        }
-                        // update address allocation table for future use
-                        addressTable.addRegisterToDescriptor(words[0],reg,"0");
-                        // update the register descriptor as well
-                        std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[0])<<" "<<reg<<"\n";
-                        reg1 = reg;
-                    }
-                    // already assigned temporary
-                    else{
-                        auto it = addressTable.getRegisterDescriptor(words[0]);
-                        auto it2 = it.begin();
-                        reg1 = it2->first;
-                    }
+                    auto it = addressTable.getRegisterDescriptor(words[0]);
+                    auto it2 = it.begin();
+                    reg1 = it2->first;
                 }
 
                 std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
@@ -622,7 +680,7 @@ std::string CodeGenerator::combineBlockCode() {
     
     finalCode << "section .text\n";
     finalCode << "global _start\n";
-    finalCode << "extern printf\n\n";  // Add external declaration for printf
+    finalCode << "extern printf\n";  // Add external declaration for printf
     finalCode << "extern exit\n\n";  // Add external declaration for exit
     finalCode << "_start:\n";
     finalCode << "and rsp, 0xfffffffffffffff0\n";
@@ -703,6 +761,10 @@ std::string CodeGenerator::generateDataSection() {
             }
             
             dataSection << "\n";
+        }
+        else if (type == "FLOAT") {
+            // For floating point values
+            dataSection << alias << " dd " << value << "\n";
         }
         // Add other data types as needed
     }
@@ -799,4 +861,108 @@ std::vector<std::string> CodeGenerator::parseStringWithEscapeSequences(const std
     }
     
     return parts;
+}
+
+std::string CodeGenerator::replaceCharConstants(const std::string& irCode) {
+    std::istringstream stream(irCode);
+    std::string line;
+    std::ostringstream result;
+    
+    std::regex charConstantPattern(R"('(.)')");  // Basic pattern for single char
+    std::regex escapedCharPattern(R"('(\\[nrt\'\"\\])')");  // Pattern for escaped chars
+    
+    while (std::getline(stream, line)) {
+        std::string processedLine = line;
+        
+        // First handle escaped characters
+        auto startEsc = std::sregex_iterator(processedLine.begin(), processedLine.end(), escapedCharPattern);
+        auto endEsc = std::sregex_iterator();
+        
+        // Process matches from end to start to avoid invalidating positions
+        std::vector<std::pair<std::smatch, int>> escapedMatches;
+        for (auto it = startEsc; it != endEsc; ++it) {
+            escapedMatches.push_back({*it, 0});
+        }
+        
+        // Process from end to start
+        for (int i = escapedMatches.size() - 1; i >= 0; i--) {
+            std::smatch match = escapedMatches[i].first;
+            std::string escapedChar = match[1];
+            int asciiValue = 0;
+            
+            if (escapedChar == "\\n") asciiValue = 10;      // newline
+            else if (escapedChar == "\\r") asciiValue = 13; // carriage return
+            else if (escapedChar == "\\t") asciiValue = 9;  // tab
+            else if (escapedChar == "\\'") asciiValue = 39; // single quote
+            else if (escapedChar == "\\\"") asciiValue = 34; // double quote
+            else if (escapedChar == "\\\\") asciiValue = 92; // backslash
+            
+            processedLine.replace(match.position(), match.length(), std::to_string(asciiValue));
+        }
+        
+        // Then handle regular characters
+        auto start = std::sregex_iterator(processedLine.begin(), processedLine.end(), charConstantPattern);
+        auto end = std::sregex_iterator();
+        
+        // Process matches from end to start to avoid invalidating positions
+        std::vector<std::pair<std::smatch, int>> matches;
+        for (auto it = start; it != end; ++it) {
+            matches.push_back({*it, 0});
+        }
+        
+        // Process from end to start
+        for (int i = matches.size() - 1; i >= 0; i--) {
+            std::smatch match = matches[i].first;
+            char c = match[1].str()[0];
+            int asciiValue = static_cast<int>(c);
+            
+            processedLine.replace(match.position(), match.length(), std::to_string(asciiValue));
+        }
+        
+        result << processedLine << "\n";
+    }
+    
+    return result.str();
+}
+
+std::string CodeGenerator::processFloatConstants(const std::string& irCode) {
+    std::string processedCode = irCode;
+    // Regular expression to match floating point numbers (e.g., 1.0, 12.23, .5, etc.)
+    std::regex floatPattern(R"((\d+\.\d*|\.\d+)([eE][+-]?\d+)?)");
+    std::smatch match;
+    std::string::const_iterator searchStart(irCode.cbegin());
+    int floatCount = 0;
+    
+    while (std::regex_search(searchStart, irCode.cend(), match, floatPattern)) {
+        std::string floatLiteral = match[0]; // The complete float value
+        
+        // Check if we've already created an entry for this float literal
+        bool found = false;
+        std::string alias;
+        
+        for (const auto& entry : dataSectionMap) {
+            if (entry.second.second == floatLiteral) {
+                found = true;
+                alias = entry.first;
+                break;
+            }
+        }
+        
+        if (!found) {
+            // Create new alias for this float
+            alias = "float" + std::to_string(++floatCount);
+            dataSectionMap[alias] = {"FLOAT", floatLiteral};
+        }
+        
+        // Move search position
+        searchStart = match.suffix().first;
+        
+        // Replace all occurrences in the code that are standalone literals
+        // (Not part of variable names or other identifiers)
+        std::string pattern = "\\b" + std::regex_replace(floatLiteral, std::regex("\\."), "\\.") + "\\b";
+        std::regex replacePattern(pattern);
+        processedCode = std::regex_replace(processedCode, replacePattern, alias);
+    }
+    
+    return processedCode;
 }
