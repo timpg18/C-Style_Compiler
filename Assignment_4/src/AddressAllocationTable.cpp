@@ -73,8 +73,29 @@ std::string AddressAllocationTable::getVariableType(const std::string& varName) 
             std::cout<<scope->scope_name<<std::endl;
             if (it != scope->symbol_map.end()) {
                 std::string fullType = it->second->type;
-                size_t lastSpace = fullType.rfind(' ');
-                return (lastSpace != std::string::npos) ? fullType.substr(lastSpace + 1) : fullType;
+                // List of type qualifiers to remove
+                std::vector<std::string> qualifiers = {"CONST", "volatile", "static", "register", "extern"};
+
+                for (const auto& qualifier : qualifiers) {
+                    std::string qualifierWithSpace = qualifier + " ";
+                    size_t pos = fullType.find(qualifierWithSpace);
+                    if (pos != std::string::npos) {
+                        fullType.erase(pos, qualifierWithSpace.length());
+                    }
+                }
+
+                if (!it->second->dimensions.empty()) {
+                    // Remove stars based on dimension count
+                    // For each dimension, remove one '*' from the end
+                    for (size_t i = 0; i < it->second->dimensions.size(); i++) {
+                        // Remove one '*' from the end for each dimension
+                        if (fullType.back() == '*') {
+                            fullType.pop_back();
+                        }
+                    }
+                }
+
+                return fullType;
             }
         }
     }
@@ -291,6 +312,33 @@ void AddressAllocationTable::calculateAddresses(const std::string& irCode) {
         for (const auto& varName : orderedVars) {
             std::string type = getVariableType(varName);
             int typeSize = symbolTable->getTypeSize(type);
+
+            // Parse variable name to get base name and block number
+            size_t hashPos = varName.find('#');
+            if (hashPos != std::string::npos) {
+                std::string baseName = varName.substr(0, hashPos);
+                std::string blockPart = varName.substr(hashPos + 1);
+                
+                if (blockPart.substr(0, 5) == "block") {
+                    int blockNum = std::stoi(blockPart.substr(5));
+                    
+                    // Find the variable in the symbol table to get dimensions
+                    for (const auto& scope : symbolTable->scopes_) {
+                        if (scope->block_num == blockNum) {
+                            auto it = scope->symbol_map.find(baseName);
+                            if (it != scope->symbol_map.end() && !it->second->dimensions.empty()) {
+                                // Calculate total size for array: type size * product of dimensions
+                                int totalSize = typeSize;
+                                for (const auto& dim : it->second->dimensions) {
+                                    totalSize *= dim;
+                                }
+                                typeSize = totalSize;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
             
             // Add padding if necessary to align to 4-byte boundary
             int padding = (4 - (offset % 4)) % 4;
