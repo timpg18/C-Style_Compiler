@@ -1,7 +1,3 @@
-; Generated Assembly Code
-section .data
-str1 db "dsd", 0
-
 section .text
 global _start
 extern printf
@@ -16,10 +12,22 @@ call exit
 main:
 push rbp
 mov rbp, rsp
-sub rsp, 16
-mov rdi, str1
-call printf
-mov eax, 0
+sub rsp, 48
+mov r9d, DWORD [rbp - 912]
+mov r9d, 4
+imul r9d, 4
+mov r8d, DWORD [rbp - 916]
+mov r8d, 4
+imul r8d, 20
+mov ecx, DWORD [rbp - 920]
+mov ecx, r8d
+add ecx, 1
+mov edx, DWORD [rbp - 924]
+mov edx, ecx
+imul edx, 4
+mov esi, DWORD [rbp - 928]
+mov esi, 5
+imul esi, 10
+mov , QWORD [rbp - 908]
 leave
 ret
-

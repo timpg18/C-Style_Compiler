@@ -229,6 +229,7 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     }
     // std::stringstream assembly;
     std::map<int,int> req;
+    
     req[0] = 1;
     req[2] = 1;
     req[4] = 1;
@@ -273,7 +274,7 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
             
 
             code = mov_ins + reg1 + ", " + reg2 +"\n";
-            code += instruction_op + " " + reg1 + ", " + reg2 + "\n";
+            code += instruction_op + " " + reg1 + ", " + reg3 + "\n";
     }
     assembly.push_back(code);
     return assembly;
@@ -374,6 +375,25 @@ bool contains_sq(std::string s){
         }
     }
     return false;
+}
+
+std::vector<std::string> splitIndexedAccess(const std::string& input) {
+    std::vector<std::string> result;
+
+    size_t openBracket = input.find('[');
+    size_t closeBracket = input.find(']');
+
+    if (openBracket != std::string::npos && closeBracket != std::string::npos && closeBracket > openBracket) {
+        std::string base = input.substr(0, openBracket);                         // before '['
+        std::string index = input.substr(openBracket + 1, closeBracket - openBracket - 1); // between '[' and ']'
+
+        result.push_back(base);
+        result.push_back(index);
+    } else {
+        result.push_back(input); // fallback: return input as is
+    }
+
+    return result;
 }
 
 
@@ -559,7 +579,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
         }else if(instr.find("=") != std::string::npos){
             //assignment
-           
+            
             std::istringstream iss(instr);
             std::vector<std::string> words;
             std::string word;
@@ -569,69 +589,156 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             // assignment for variable with constant value
             // a = b
+            
             if(!isTempOrVar(words[2])){
-                std::cout  <<"BRUH BRO" <<"\n";
+                //rhs is const
+                std::cout <<"WSSSS" <<"\n";
+                std::cout <<addressTable.isEmpty(words[0])<<" \n" <<words[0] <<"\n" <<"YOO";
                 std::string assm ="";
                 // if already not in the register
+                //do ARRAY HANDLING FOR WORDS[0]
                 std::string type = addressTable.getType(words[0]);
-                if(addressTable.isEmpty(words[0])){
-                    if(isVar(words[0])){
-                        assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
-                        if(type == "FLOAT" ){
-                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                if(contains_sq(words[0])){
+                    std::vector<std::string> str = splitIndexedAccess(words[0]);
+                    //x#block1 , second is $0
+                    //i need to store at rbp - X + $0
+                    std::string add = addressTable.getVariableAddress(str[0]);
+                    std::cout <<str[0] <<"\n" <<add <<"\n";
+                    ///rhs is const
+                    //dont do getreg, it sends const i need address.
+                   std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                    std::string reg = registerDesc.getAvailableRegister(type);
+                    std::vector<std::string> cannot_spill;
+                    
+                    // spill in case all registers are in use
+                    if(reg == ""){
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    }
+                    addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                    std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
+                    cannot_spill.push_back(reg);
+                    std::string reg1 = reg;
+                    reg = registerDesc.getAvailableRegister(type);
+                    if(reg == ""){
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    }
+                    //the final temporary will always have a register since it is being written just above.
+                    auto it = addressTable.getRegisterDescriptor(str[1]);
+                    auto it2 = it.begin();
+                    addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                    cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                    cd1 += "mov " +  getAsmSizeDirective(addressTable.getType(str[0])) + " [" + reg + "] , " + words[2] +"\n";
+                    assm = cd1;
+
+
+                    //NOW , for reg 
+                }
+                else{
+                    if(addressTable.isEmpty(words[0])){
+                        if(isVar(words[0])){
+                            assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
+                            if(type == "FLOAT" ){
+                                assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                            }
+                            
+                        }
+                        else{
+                            assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + words[2] + "\n";
+                            if(addressTable.getType(words[0]) == "FLOAT" ){
+                                assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                            }
                         }
                         
                     }
                     else{
-                        assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + words[2] + "\n";
-                        if(addressTable.getType(words[0]) == "FLOAT" ){
-                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                        
+                            // if already in the register
+                        auto it = addressTable.getRegisterDescriptor(words[0]);
+                        auto it2 = it.begin();
+                        std::string reg = it2->first;
+                        assm = "mov " + reg + ", " + words[2] + "\n";
+                        if(isVar(words[0])){
+                            if(type == "FLOAT" ){
+                                assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                            }
                         }
-                    }
-                    
-                }
-                // if already in the register
-                else{
-                    auto it = addressTable.getRegisterDescriptor(words[0]);
-                    auto it2 = it.begin();
-                    std::string reg = it2->first;
-                    assm = "mov " + reg + ", " + words[2] + "\n";
-                    if(isVar(words[0])){
-                        if(type == "FLOAT" ){
-                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
-                        }
-                    }
-                    else{
-                        if(addressTable.getType(words[0]) == "FLOAT" ){
-                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                        else{
+                            if(addressTable.getType(words[0]) == "FLOAT" ){
+                                assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                            }
                         }
                     }
                 }
                 
+                
                 assembly.push_back(assm);
             }
             else{
+                //rhs is var too
                 // first lets get the reg or address for the 2nd operand
+                std::vector<std::string> cannot_spill;
                 std::string reg2 = "";
-                if(addressTable.isEmpty(words[2])){
-                    if(isVar(words[2])){
-                        reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                if(contains_sq(words[2]) == false){
+                    //isme p chudh gaya p#block1
+                    if(addressTable.isEmpty(words[2])){
+                        if(isVar(words[2])){
+                        
+                            reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                        }
+                        else{
+                            reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                        }
+                        
                     }
+                    // if already in the register
                     else{
-                        reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                        auto it = addressTable.getRegisterDescriptor(words[2]);
+                        auto it2 = it.begin();
+                        reg2 = it2->first;
                     }
-                    
+                    std::cout <<reg2 <<"\n WUTTHE \n";
                 }
-                // if already in the register
                 else{
-                    auto it = addressTable.getRegisterDescriptor(words[2]);
+                    //indexin case
+                    std::vector<std::string> str = splitIndexedAccess(words[2]);
+                    //x#block1 , second is $0
+                    //i need to store at rbp - X + $0
+                    std::string add = addressTable.getVariableAddress(str[0]);
+                    std::cout <<str[0] <<"\n" <<add <<"\n";
+                    
+                    ///rhs is const
+                    //dont do getreg, it sends const i need address.
+                   std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                    std::string reg = registerDesc.getAvailableRegister(type);
+                    
+                    // spill in case all registers are in use
+                    if(reg == ""){
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    }
+                    addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                    std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
+                    cannot_spill.push_back(reg);
+                    std::string reg1 = reg;
+                    reg = registerDesc.getAvailableRegister(type);
+                    if(reg == ""){
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    }
+                    //the final temporary will always have a register since it is being written just above.
+                    auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
-                    reg2 = it2->first;
+                    addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                    cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                    cannot_spill.push_back(reg);
+                    //reg contains effective address of opn
+                    assembly.push_back(cd1);
+                    reg2 = reg;
                 }
-
+               
+                
                 // now for the 1st operand
                 std::string reg1 = "";
-                // first operand
+                if(contains_sq(words[0]) == false){
+                    // first operand
                 if(addressTable.isEmpty(words[0])){
                     if(isVar(words[0])){
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
@@ -646,9 +753,50 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it2 = it.begin();
                     reg1 = it2->first;
                 }
-
                 std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
                 assembly.push_back(assm);
+               
+                }
+                else{
+                    //first is indexed
+                     //indexin case
+                     std::vector<std::string> str = splitIndexedAccess(words[0]);
+                     //x#block1 , second is $0
+                     //i need to store at rbp - X + $0
+                     std::string add = addressTable.getVariableAddress(str[0]);
+                     std::cout <<str[0] <<"\n" <<add <<"\n";
+                     
+                     ///rhs is const
+                     //dont do getreg, it sends const i need address.
+                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                     std::string reg = registerDesc.getAvailableRegister(type);
+                     // spill in case all registers are in use
+                     if(reg == ""){
+                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                     }
+                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
+                     cannot_spill.push_back(reg);
+                     std::string reg1 = reg;
+                     reg = registerDesc.getAvailableRegister(type);
+                     if(reg == ""){
+                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                     }
+                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
+                     //the final temporary will always have a register since it is being written just above.
+                     auto it = addressTable.getRegisterDescriptor(str[1]);
+                     auto it2 = it.begin();
+                     cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                     //reg contains effective address of opn
+                     cd1 += "mov " + getAsmSizeDirective(addressTable.getType(str[0])) + " ["+ reg +"], " + reg2 +"\n";
+                     assembly.push_back(cd1);
+                     reg1 = reg;
+                }
+                
+                
+                //if case of array, i think you should write in memaddress immediately
+                //ie in the above else, just write it completely inside.
+               
             }
             
         }else{

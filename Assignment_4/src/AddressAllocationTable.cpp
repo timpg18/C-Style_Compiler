@@ -522,6 +522,7 @@ bool AddressAllocationTable::isInRegister(const std::string& varOrTempName,const
 bool AddressAllocationTable::isEmpty(const std::string& varOrTempName) const{
     auto varIt = variables.find({varOrTempName, ""});
     if (varIt != variables.end()) {
+        std::cout <<varOrTempName <<" \n" <<varIt->registerMap.size() <<"\n" <<"upd \n";
         return (varIt->registerMap.size())==0;
     }
 

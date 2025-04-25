@@ -318,7 +318,7 @@ postfix_expression
 			int n = st.getTypeSize(s);
 			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
 			string cd1 = irgen.add_op(temp, $3.ir.tmp, "*", ss);
-			if(stars > 0)$$.ir.tmp = strdup(temp.c_str());
+			if(stars > ptr_cnt)$$.ir.tmp = strdup(temp.c_str());
 			else{
 				string newtemp;
 				newtemp += string($1.ir.tmp);
@@ -351,7 +351,7 @@ postfix_expression
 			cd1 += "\n";
 			cd1 += cd2;
 			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
-			if(stars > 0)$$.ir.tmp = strdup(temp2.c_str());
+			if(stars > ptr_cnt)$$.ir.tmp = strdup(temp2.c_str());
 			else{
 				string newtemp;
 				newtemp += string($1.name);
@@ -3493,8 +3493,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	CodeGenerator codeGen(final_ir_code, st);
 
 	// Generate and print assembly code
-	//std::string assemblyCode = codeGen.generateCode();
-	//std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
+	std::string assemblyCode = codeGen.generateCode();
+	std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
 	
 	// Print information from all components
 	//codeGen.printComponentInfo();
