@@ -1,6 +1,11 @@
+int fac(int n){
+    if(n==1){return 1;}
+    else{
+        return fac(n-1) * n;
+    }
+}
+
 int main(){
-    float a = 9.0;
-    printf("this is a float = %f",9.0);
-    
-    return 0;
+    int ans = fac(3);
+    return ans;
 }

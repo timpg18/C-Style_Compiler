@@ -71,6 +71,7 @@ public:
     std::string get_relop(const std::string& Name);
     std::vector<VarTempInfo> getVariablesVector() const;
     std::vector<VarTempInfo> getTemporariesVector() const;
+    std::string getSymbolType(const std::string& name);
     
     void printTable() const;
     void clear();

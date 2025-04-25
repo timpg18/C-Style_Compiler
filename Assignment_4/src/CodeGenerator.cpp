@@ -346,7 +346,7 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 rem.push_back({p.first, s});
             }
             auto varIt1 = addressTable.temporaries.find({s,""});
-            if(varIt1 != addressTable.variables.end()){
+            if(varIt1 != addressTable.temporaries.end()){
                 //just write the reg val onto memory. now it'll be consistent
                 std::string cd = "mov ";
                 cd += "DWORD ["+ varIt1->address + "]";
@@ -458,6 +458,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         }else if (instr.find("func_end") != std::string::npos) {
             assembly.push_back(generateFunctionEnd(instr));
         }else if(instr.find("param") != std::string::npos){
+            assembly = write_reg();
             // need to handle floats/doubles
             std::istringstream iss(instr);
             std::vector<std::string> words;
@@ -503,10 +504,6 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 if(floatParamCount == -1) floatParamCount = 0;
                 reg = "xmm" + std::to_string(floatParamCount++);
                 isfloat = true;
-            }
-
-            if(!registerDesc.isRegisterFree(reg) || registerDesc.areRelatedRegistersInUse(reg)){
-
             }
 
             paramNumber++;
@@ -555,6 +552,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 
             std::string funcName = words[3];
             std::string assm = "";
+            // need to free eax
+            if(!registerDesc.isRegisterFree("eax") || registerDesc.areRelatedRegistersInUse("eax")){
+            
+            }
             // for var args we need to specify the no.of float operands
             funcName.pop_back();
             if((funcName == "printf") && (floatParamCount != -1)){
@@ -562,6 +563,14 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             floatParamCount = -1;
             assm += "call " + funcName + "\n";
+            // return value to temporary assignment
+            // first is always temporary and second is always related to eax (for INT)
+            std::string returnType = addressTable.getSymbolType(funcName);
+            if(returnType != "VOID"){
+                std::string returnReg = registerDesc.getRegisterForType("rax",returnType);
+                assm += "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + returnReg + "\n"; 
+            }
+            
             assembly.push_back(assm);
 
         }else if(instr.find("cast") != std::string::npos){
@@ -679,11 +688,20 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     }
                 }
                 std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
+                
                 if(float_){
                     assm = "movss " + reg1 + ", " + reg2 + "\n";
                     if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                         assm = "movss xmm7, " + reg2 +"\n";
                         assm += "movss " + reg1 +", xmm7 \n";
+                    }
+                }
+                else{
+                    if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                        std::string type = addressTable.getType(words[2]);
+                        std::string regused = registerDesc.getRegisterForType("r11",type);
+                        assm = "mov " + regused + ", " + reg2 +"\n";
+                        assm += "mov " + reg1 +", " + regused + "\n";
                     }
                 }
                 assembly.push_back(assm);
@@ -716,14 +734,14 @@ std::string CodeGenerator::combineBlockCode() {
     }
     
     finalCode << "section .text\n";
-    finalCode << "global _start\n";
-    finalCode << "extern printf\n";  // Add external declaration for printf
-    finalCode << "extern exit\n\n";  // Add external declaration for exit
+    finalCode << "\tglobal _start\n";
+    finalCode << "\textern printf\n";  // Add external declaration for printf
+    finalCode << "\textern exit\n\n";  // Add external declaration for exit
     finalCode << "_start:\n";
-    finalCode << "and rsp, 0xfffffffffffffff0\n";
-    finalCode << "call main\n";
-    finalCode << "mov rdi, rax\n";
-    finalCode << "call exit\n\n";
+    finalCode << "\tand rsp, 0xfffffffffffffff0\n";
+    finalCode << "\tcall main\n";
+    finalCode << "\tmov rdi, rax\n";
+    finalCode << "\tcall exit\n\n";
 
     
     // Append blocks in order
@@ -1003,3 +1021,4 @@ std::string CodeGenerator::processFloatConstants(const std::string& irCode) {
     
     return processedCode;
 }
+

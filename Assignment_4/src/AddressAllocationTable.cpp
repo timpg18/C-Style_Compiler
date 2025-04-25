@@ -722,3 +722,18 @@ void AddressAllocationTable::clear() {
     variables.clear();
     temporaries.clear();
 }
+
+std::string AddressAllocationTable::getSymbolType(const std::string& name) {
+    // Search through all scopes in the symbol table
+    for (const auto& scope_ptr : (*symbolTable).scopes_) {
+        // Use the symbol_map for faster lookup
+        auto it = scope_ptr->symbol_map.find(name);
+        if (it != scope_ptr->symbol_map.end()) {
+            // Found the symbol - return its type
+            return it->second->type;
+        }
+    }
+    
+    // Symbol not found in any scope
+    return ""; // Or return a specific string indicating "not found"
+}

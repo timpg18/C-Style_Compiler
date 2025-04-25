@@ -6,8 +6,9 @@
 RegisterDescriptor::RegisterDescriptor() {
     // Initialize available registers for x86-64
     availableRegisters = {
+        // will use r11 for moving values
         "r9","r8","rcx","rdx","rsi","rdi",
-        "r10", "r11","rax" 
+        "r10","rax" 
     };
     
     // Initialize available floating point registers for x86-64 (priority from 7 to 0)
@@ -19,7 +20,7 @@ RegisterDescriptor::RegisterDescriptor() {
     
     std::set<std::string> all_reg = {
         "rax", "rcx", "rdx", "rsi", "rdi", 
-        "r8", "r9", "r10", "r11", "eax", "ax", "ah", "al",
+        "r8", "r9", "r10", "eax", "ax", "ah", "al",
         "ecx", "cx", "ch", "cl",
         "edx", "dx", "dh", "dl",
         "esi", "si", "sil",
@@ -27,7 +28,6 @@ RegisterDescriptor::RegisterDescriptor() {
         "r8d", "r8w", "r8b",
         "r9d", "r9w", "r9b",
         "r10d", "r10w", "r10b",
-        "r11d", "r11w", "r11b",
         "xmm0", "xmm1", "xmm2", "xmm3",
         "xmm4", "xmm5", "xmm6", "xmm7"
     };
