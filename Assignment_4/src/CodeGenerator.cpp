@@ -676,20 +676,21 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if(isVar(words[0])){
                             assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
                             if(type == "FLOAT" ){
-                                assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                                assm = "movss xmm7, [" + words[2] + "]" + "\n";
+                                assm += "movss [" + addressTable.getVariableAddress(words[0]) +"], " + "xmm7" + "\n";
                             }
                             
                         }
                         else{
                             assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + words[2] + "\n";
                             if(addressTable.getType(words[0]) == "FLOAT" ){
-                                assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                                assm = "movss xmm7, [" + words[2] + "]" + "\n";
+                                assm += "movss [" + addressTable.getTemporaryAddress(words[0]) +"], " + "xmm7" + "\n";
                             }
                         }
                         
                     }
                     else{
-                        
                             // if already in the register
                         auto it = addressTable.getRegisterDescriptor(words[0]);
                         auto it2 = it.begin();
@@ -714,25 +715,30 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             else{
                 //rhs is var too
                 // first lets get the reg or address for the 2nd operand
+                bool float_ = false;
                 std::vector<std::string> cannot_spill;
                 std::string reg2 = "";
                 if(contains_sq(words[2]) == false){
                     //isme p chudh gaya p#block1
                     if(addressTable.isEmpty(words[2])){
+                        std::string type = addressTable.getType(words[2]);
                         if(isVar(words[2])){
-                        
-                            reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                            reg2 = getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                            if(type == "FLOAT")float_ = true;
                         }
                         else{
                             reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                            if(type == "FLOAT")float_ = true;
                         }
-                        
                     }
                     // if already in the register
                     else{
                         auto it = addressTable.getRegisterDescriptor(words[2]);
                         auto it2 = it.begin();
                         reg2 = it2->first;
+                        if(reg2.find("xmm") != std::string::npos){
+                            float_ = true;
+                        }
                     }
                     std::cout <<reg2 <<"\n WUTTHE \n";
                 }
@@ -746,7 +752,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
-                   std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
                     std::string reg = registerDesc.getAvailableRegister(type);
                     
                     // spill in case all registers are in use
@@ -776,24 +782,44 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 // now for the 1st operand
                 std::string reg1 = "";
                 if(contains_sq(words[0]) == false){
-                    // first operand
-                if(addressTable.isEmpty(words[0])){
-                    if(isVar(words[0])){
-                        reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
+                    if(addressTable.isEmpty(words[0])){
+                        std::string type = addressTable.getType(words[0]);
+                        if(isVar(words[0])){
+                            reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
+                            if(type == "FLOAT")float_ = true;
+                        }
+                        else{
+                            reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
+                            if(type == "FLOAT")float_ = true;
+                        }
+                    }
+                    // if already in the register
+                    else{
+                        auto it = addressTable.getRegisterDescriptor(words[0]);
+                        auto it2 = it.begin();
+                        reg1 = it2->first;
+                        if(reg1.find("xmm") != std::string::npos){
+                            float_ = true;
+                        }
+                    }
+                    std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
+                
+                    if(float_){
+                        assm = "movss " + reg1 + ", " + reg2 + "\n";
+                        if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                            assm = "movss xmm7, " + reg2 +"\n";
+                            assm += "movss " + reg1 +", xmm7 \n";
+                        }
                     }
                     else{
-                        reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
+                        if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                            std::string type = addressTable.getType(words[2]);
+                            std::string regused = registerDesc.getRegisterForType("r11",type);
+                            assm = "mov " + regused + ", " + reg2 +"\n";
+                            assm += "mov " + reg1 +", " + regused + "\n";
+                        }
                     }
-                }
-                // if already in the register
-                else{
-                    auto it = addressTable.getRegisterDescriptor(words[0]);
-                    auto it2 = it.begin();
-                    reg1 = it2->first;
-                }
-                std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
-                assembly.push_back(assm);
-               
+                    assembly.push_back(assm);
                 }
                 else{
                     //first is indexed
@@ -803,7 +829,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
                     std::cout <<str[0] <<"\n" <<add <<"\n";
-                    
+                    std::string type = addressTable.getType(str[0]);
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
                     std::cout <<" \n TEMPPPP " + str[1] +"\n";
@@ -825,10 +851,17 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
                     cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
-                    //reg contains effective address of opn
-                    cd1 += "mov " + getAsmSizeDirective(addressTable.getType(str[0])) + " ["+ reg +"], " + reg2 +"\n";
                     assembly.push_back(cd1);
+                    //reg contains effective address of opn
+                    reg = getAsmSizeDirective(addressTable.getType(str[0])) + " ["+ reg +"]";
+                    std::string assm = "mov " + reg+", " + reg2 +"\n";
                     reg1 = reg;
+                    if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                        std::string regused = registerDesc.getRegisterForType("r11",type);
+                        assm = "mov " + regused + ", " + reg2 +"\n";
+                        assm += "mov " + reg1 +", " + regused + "\n";
+                    }
+                    assembly.push_back(assm);
                 }
                 
                 
