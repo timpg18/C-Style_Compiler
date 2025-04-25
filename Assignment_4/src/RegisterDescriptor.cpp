@@ -12,7 +12,8 @@ RegisterDescriptor::RegisterDescriptor() {
     
     // Initialize available floating point registers for x86-64 (priority from 7 to 0)
     availableFloatRegisters = {
-        "xmm7", "xmm6", "xmm5", "xmm4", 
+        // will be using xmm7 for moving scalers
+        "xmm6", "xmm5", "xmm4", 
         "xmm3", "xmm2", "xmm1", "xmm0"
     };
     

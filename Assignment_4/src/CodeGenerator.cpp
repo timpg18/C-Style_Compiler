@@ -261,19 +261,19 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
             auto it1 = dataSectionMap.find(reg2);
             auto it2 = dataSectionMap.find(reg3);
             if(it1!= dataSectionMap.end()){
-                if(it1->first == "FLOAT"){
+                if(it1->second.first == "FLOAT"){
                     reg2 = "[" + reg2 + "]";
                 }
             }
             if(it2!= dataSectionMap.end()) {
-                if(it2->first == "FLOAT"){
+                if(it2->second.first == "FLOAT"){
                     reg3 = "[" + reg3 + "]";
                 }
             }           
             
 
             code = mov_ins + reg1 + ", " + reg2 +"\n";
-            code += instruction_op + " " + reg1 + ", " + reg2 + "\n";
+            code += instruction_op + " " + reg1 + ", " + reg3 + "\n";
     }
     assembly.push_back(code);
     return assembly;
@@ -566,14 +566,16 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     if(isVar(words[0])){
                         assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
                         if(type == "FLOAT" ){
-                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                            assm = "movss xmm7, [" + words[2] + "]" + "\n";
+                            assm += "movss [" + addressTable.getVariableAddress(words[0]) +"], " + "xmm7" + "\n";
                         }
                         
                     }
                     else{
                         assm = "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + words[2] + "\n";
                         if(addressTable.getType(words[0]) == "FLOAT" ){
-                            assm = "movss [" + type +"], " + "[" + words[2] + "]" + "\n";
+                            assm = "movss xmm7, [" + words[2] + "]" + "\n";
+                            assm += "movss [" + addressTable.getTemporaryAddress(words[0]) +"], " + "xmm7" + "\n";
                         }
                     }
                     
@@ -586,12 +588,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     assm = "mov " + reg + ", " + words[2] + "\n";
                     if(isVar(words[0])){
                         if(type == "FLOAT" ){
-                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                            assm = "movss " + reg  + ", [" + words[2] + "]" + "\n";
                         }
                     }
                     else{
                         if(addressTable.getType(words[0]) == "FLOAT" ){
-                            assm = "movss " + reg  + "[" + words[2] + "]" + "\n";
+                            assm = "movss " + reg  + ", [" + words[2] + "]" + "\n";
                         }
                     }
                 }
@@ -600,13 +602,23 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             else{
                 // first lets get the reg or address for the 2nd operand
+                bool float_ = false;
                 std::string reg2 = "";
                 if(addressTable.isEmpty(words[2])){
+                    std::string type = addressTable.getType(words[2]);
                     if(isVar(words[2])){
-                        reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                        reg2 = getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
+                        if(type == "FLOAT"){
+                            reg2 = "["+ addressTable.getVariableAddress(words[2]) +"]";
+                            float_ = true;
+                        }
                     }
                     else{
                         reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                        if(type == "FLOAT"){
+                            reg2 = "["+ addressTable.getTemporaryAddress(words[2]) +"]";
+                            float_ = true;
+                        }
                     }
                     
                 }
@@ -615,17 +627,29 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it = addressTable.getRegisterDescriptor(words[2]);
                     auto it2 = it.begin();
                     reg2 = it2->first;
+                    if(reg2.find("xmm") != std::string::npos){
+                        float_ = true;
+                    }
                 }
 
                 // now for the 1st operand
                 std::string reg1 = "";
                 // first operand
                 if(addressTable.isEmpty(words[0])){
+                    std::string type = addressTable.getType(words[0]);
                     if(isVar(words[0])){
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
+                        if(type == "FLOAT"){
+                            reg1 = "["+ addressTable.getVariableAddress(words[0]) +"]";
+                            float_ = true;
+                        }
                     }
                     else{
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
+                        if(type == "FLOAT"){
+                            reg1 = "["+ addressTable.getVariableAddress(words[0]) +"]";
+                            float_ = true;
+                        }
                     }
                 }
                 // if already in the register
@@ -633,9 +657,18 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it = addressTable.getRegisterDescriptor(words[0]);
                     auto it2 = it.begin();
                     reg1 = it2->first;
+                    if(reg1.find("xmm") != std::string::npos){
+                        float_ = true;
+                    }
                 }
-
                 std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
+                if(float_){
+                    assm = "movss " + reg1 + ", " + reg2 + "\n";
+                    if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                        assm = "movss xmm7, " + reg2 +"\n";
+                        assm += "movss " + reg1 +", xmm7 \n";
+                    }
+                }
                 assembly.push_back(assm);
             }
             

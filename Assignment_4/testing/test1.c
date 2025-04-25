@@ -1,6 +1,5 @@
 int main(){
-    long a =1;
-    int arr[20][3];
-    arr[1][2]=4;
+    float a = 9.0 + 9.8 *7.6;
+    
     return 0;
 }

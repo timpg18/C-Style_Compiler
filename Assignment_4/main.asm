@@ -1,6 +1,6 @@
 ; Generated Assembly Code
 section .data
-str1 db "dsd", 0
+float1 dd 9.0
 
 section .text
 global _start
@@ -17,9 +17,15 @@ main:
 push rbp
 mov rbp, rsp
 sub rsp, 16
-mov rdi, str1
-call printf
+movss xmm7, [float1]
+movss [rbp - 4], xmm7
+movss xmm7, [rbp - 4]
+movss [rbp - 8], xmm7
+movss xmm6, [rbp - 4]
+movss xmm5, [rbp - 12]
+movss xmm5, xmm6
+addss xmm5, [float1]
+movss [rbp - 8], xmm5
 mov eax, 0
 leave
 ret
-
