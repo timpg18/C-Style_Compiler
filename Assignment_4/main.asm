@@ -1,6 +1,7 @@
 ; Generated Assembly Code
 section .data
 float1 dd 9.0
+str1 db "this is a float = %f", 0
 
 section .text
 global _start
@@ -19,13 +20,11 @@ mov rbp, rsp
 sub rsp, 16
 movss xmm7, [float1]
 movss [rbp - 4], xmm7
-movss xmm7, [rbp - 4]
-movss [rbp - 8], xmm7
-movss xmm6, [rbp - 4]
-movss xmm5, [rbp - 12]
-movss xmm5, xmm6
-addss xmm5, [float1]
-movss [rbp - 8], xmm5
+mov rdi, str1
+cvtss2sd xmm0, [float1]
+mov eax, 1
+call printf
 mov eax, 0
 leave
 ret
+

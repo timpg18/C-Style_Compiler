@@ -371,6 +371,7 @@ std::vector<std::string> CodeGenerator::write_reg(){
 void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& block) {
     std::stringstream blockCode;
     int paramNumber=1;
+    int floatParamCount = -1 ;
     for (const auto& instruction : block.instructions) {
         std::string instr = instruction.text;
         std::cout<<instr<<std::endl;
@@ -468,6 +469,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string reg = "";
             std::string type = "";
             std::string assm1 = "";
+            bool isfloat = false;
+            // for float types and data section members
             auto it = dataSectionMap.find(words[1]);
             if(it != dataSectionMap.end()){
                 type = it->second.first;
@@ -475,10 +478,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             else{
                 if(isTempOrVar(words[1]))type = addressTable.getType(words[1]);
                 else{
-                    //currently considering int operand;
+                    //currently considering int operand; addition - floats will be in data section 
                     type = "INT";
                 }
             }
+
+            // parameter no to regsiter for that call
             switch (paramNumber) {
                 case 1: reg = registerDesc.getRegisterForType("rdi",type);
                         break;
@@ -493,7 +498,17 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 case 6: reg = registerDesc.getRegisterForType("r9",type);
                         break;
             }
-            if(assm1 != "")assembly.push_back(assm1);
+            // if the reg is comming empty then its sure that it should be a floating reg
+            if(reg == ""){
+                if(floatParamCount == -1) floatParamCount = 0;
+                reg = "xmm" + std::to_string(floatParamCount++);
+                isfloat = true;
+            }
+
+            if(!registerDesc.isRegisterFree(reg) || registerDesc.areRelatedRegistersInUse(reg)){
+
+            }
+
             paramNumber++;
             std::string reg2 = words[1];
             if(isTempOrVar(words[1])){
@@ -512,8 +527,20 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it2 = it.begin();
                     reg2 = it2->first;
                 }
-            } 
-            std::string assm2 = "mov " + reg + ", " + reg2 +"\n";
+            }else{
+                if(it != dataSectionMap.end()){
+                    // handling for float
+                    if(it->second.first =="FLOAT"){
+                        reg2 = "[" + reg2 + "]";
+                    }
+                }   
+                else{
+                    // else for not in data section
+                }
+            }
+            std::string moveop = "mov ";
+            if(type == "FLOAT") moveop ="cvtss2sd ";
+            std::string assm2 = moveop + reg + ", " + reg2 +"\n";
             assembly.push_back(assm2);
 
         }else if(instr.find("call") != std::string::npos){
@@ -528,10 +555,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 
             std::string funcName = words[3];
             std::string assm = "";
-            if(funcName == "printf"){
-                assm = "mov eax, 0\n";
-            }
+            // for var args we need to specify the no.of float operands
             funcName.pop_back();
+            if((funcName == "printf") && (floatParamCount != -1)){
+                assm = "mov eax, " + std::to_string(floatParamCount) + "\n";
+            }
+            floatParamCount = -1;
             assm += "call " + funcName + "\n";
             assembly.push_back(assm);
 
@@ -608,17 +637,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string type = addressTable.getType(words[2]);
                     if(isVar(words[2])){
                         reg2 = getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
-                        if(type == "FLOAT"){
-                            reg2 = "["+ addressTable.getVariableAddress(words[2]) +"]";
-                            float_ = true;
-                        }
+                        if(type == "FLOAT")float_ = true;
                     }
                     else{
                         reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
-                        if(type == "FLOAT"){
-                            reg2 = "["+ addressTable.getTemporaryAddress(words[2]) +"]";
-                            float_ = true;
-                        }
+                        if(type == "FLOAT")float_ = true;
                     }
                     
                 }
@@ -639,17 +662,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string type = addressTable.getType(words[0]);
                     if(isVar(words[0])){
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
-                        if(type == "FLOAT"){
-                            reg1 = "["+ addressTable.getVariableAddress(words[0]) +"]";
-                            float_ = true;
-                        }
+                        if(type == "FLOAT")float_ = true;
                     }
                     else{
                         reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
-                        if(type == "FLOAT"){
-                            reg1 = "["+ addressTable.getVariableAddress(words[0]) +"]";
-                            float_ = true;
-                        }
+                        if(type == "FLOAT")float_ = true;
                     }
                 }
                 // if already in the register
