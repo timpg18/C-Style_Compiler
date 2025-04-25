@@ -153,6 +153,7 @@ primary_expression
 		tmp += "#block";
 		tmp += to_string(num);
 		$$.ir.tmp = strdup(tmp.c_str());
+		//$$.name=  strdup(tmp.c_str());
 		$$.ir.code = "";
 		//printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
@@ -307,17 +308,20 @@ postfix_expression
 	
 		
 		
+		printf("%s %s YOO\n",$1.ir.tmp, $1.name);
+		//easier check is if tmp does not contain a $, since x#block1 and x are different here
+		std::string g = $1.ir.tmp;
 		
-		if(eq($1.ir.tmp,$1.name)){
+		if(g.find("$") == std::string::npos){
 			//we are just starting array, set t = i*dim;
 			string temp = irgen.new_temp();
 			int n = st.getTypeSize(s);
 			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
 			string cd1 = irgen.add_op(temp, $3.ir.tmp, "*", ss);
-			if(stars > 0)$$.ir.tmp = strdup(temp.c_str());
+			if(stars > ptr_cnt)$$.ir.tmp = strdup(temp.c_str());
 			else{
 				string newtemp;
-				newtemp += string($1.name);
+				newtemp += string($1.ir.tmp);
 			newtemp += "[";
 			newtemp += temp;
 			newtemp += "]";
@@ -340,16 +344,21 @@ postfix_expression
 			string temp = irgen.new_temp();
 			
 			string cd1 = irgen.add_op(temp, $1.ir.tmp, "+" , $3.ir.tmp); //t1 = told + i
+			std::cout <<cd1 <<"BROTHER\n";
 			string temp2 = irgen.new_temp();
 			string ss = (stars > 0 ? std::to_string(dim[index]):std::to_string(st.getTypeSize(s)) );
 			string cd2 = irgen.add_op(temp2, temp, "*" , ss);
 			cd1 += "\n";
 			cd1 += cd2;
 			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),cd1).c_str());
-			if(stars > 0)$$.ir.tmp = strdup(temp2.c_str());
+			if(stars > ptr_cnt)$$.ir.tmp = strdup(temp2.c_str());
 			else{
 				string newtemp;
 				newtemp += string($1.name);
+					int num;
+		num = st.lookup(string($1.name))->block_num;
+		newtemp += "#block";
+		newtemp += to_string(num);
 				newtemp += "[";
 			newtemp += temp2;
 			newtemp += "]";
@@ -1458,7 +1467,7 @@ assignment_expression
 	| unary_expression assignment_operator assignment_expression {
 		// the left of the declarator muse be lvalue;
 		lvalueError($1.kind);
-
+		
 		// If a procedure then must be called procedure
 		if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
 
@@ -1471,7 +1480,38 @@ assignment_expression
 		$1.type = strdup(s.c_str());
 
 		std::string type_change_statement = "";
-
+			
+					int stars = 0;
+					
+					std::string typ = $3.type;
+					int ptr_cnt = 0;
+					std::string tot;
+					int index = 0;
+					if(st.lookup($3.name) != nullptr){
+						tot = st.lookup($3.name)->type;
+						vector<int> dim = st.lookup($3.name)->dimensions;
+						index = dim.size();
+						for(int i=tot.size()-1;i>=0;i--){
+						if(tot[i] == '*')ptr_cnt++;
+					}
+					}
+					
+					for(int i=typ.size()-1;i>=0;i--){
+						if(typ[i] == '*')stars++;
+					}
+					
+					
+		
+		
+		//get the index of the next multiplier constant
+		//cout <<s <<"\n";
+		//std::cout <<typ <<"\n";
+		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+		
+		if(stars > ptr_cnt - index){
+			//bt 
+			yyerror("assignment involves array on right or has incorrent dereferencing");
+		}
 		if(eq($2.type,"&=")||eq($2.type,"^=")||eq($2.type,"|=") || eq($2.type,"<<=") || eq($2.type,">>=")){
 			if(eq($1.type, "INT") == false || eq($3.type, "INT")==false){
 				char *err = "both operands must be int, int in ";
@@ -1517,6 +1557,8 @@ assignment_expression
 				}
 			}
 			else{
+				
+				
 				if(!isConvertible(std::string($1.type),std::string($3.type))){
 					char* s1 = "incompatible type expression involved in";
 					s1 = concat(s1,$2.type);
@@ -1524,9 +1566,11 @@ assignment_expression
 					check_type($1.type, $3.type,s1);
 				}
 				else{
-					if(!eq($1.type,$3.type)){
+				
+		if(!eq($1.type,$3.type)){
 						type_change_statement = formatTypeChange(type2,s);
 					}
+					
 
 				}
 				
@@ -1773,10 +1817,40 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
-		
+			
 		// the left of the declarator muse be lvalue;
 			lvalueError($1.kind);
-			
+					int stars = 0;
+					
+					std::string typ = $3.type;
+					int ptr_cnt = 0;
+					std::string tot;
+					int index = 0;
+					if(st.lookup($3.name) != nullptr){
+						tot = st.lookup($3.name)->type;
+						vector<int> dim = st.lookup($3.name)->dimensions;
+						index = dim.size();
+						for(int i=tot.size()-1;i>=0;i--){
+						if(tot[i] == '*')ptr_cnt++;
+					}
+					}
+					
+					for(int i=typ.size()-1;i>=0;i--){
+						if(typ[i] == '*')stars++;
+					}
+					
+					
+		
+		
+		//get the index of the next multiplier constant
+		//cout <<s <<"\n";
+		//std::cout <<typ <<"\n";
+		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+		
+		if(stars > ptr_cnt - index){
+			//bt 
+			yyerror("assignment involves array on right or has incorrent dereferencing");
+		}
 			// If a procedure then must be called procedure
 			if(isPROCEDURE($3.kind)){yyerror("Cannot assign function to a variable");}
 
@@ -1853,6 +1927,8 @@ init_declarator
 						yyerror(err);
 					}
 					else{
+						
+				
 						if(!eq(matchingType2,matchingType1)){
 							type_change_statement = formatTypeChange(std::string(matchingType2),std::string(matchingType1));
 						}

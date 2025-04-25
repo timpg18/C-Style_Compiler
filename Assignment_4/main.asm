@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 ; Generated Assembly Code
+=======
+>>>>>>> origin/IR2
 section .text
         global _start
         extern printf
@@ -45,6 +48,7 @@ ret
 main:
 push rbp
 mov rbp, rsp
+<<<<<<< HEAD
 sub rsp, 16
 mov DWORD [rbp - 20], ecx
 mov DWORD [rbp - 16], r8d
@@ -57,3 +61,24 @@ mov DWORD [rbp - 4], r11d
 mov eax, DWORD [rbp - 4]
 leave
 ret
+=======
+sub rsp, 48
+mov r9d, DWORD [rbp - 912]
+mov r9d, 4
+imul r9d, 4
+mov r8d, DWORD [rbp - 916]
+mov r8d, 4
+imul r8d, 20
+mov ecx, DWORD [rbp - 920]
+mov ecx, r8d
+add ecx, 1
+mov edx, DWORD [rbp - 924]
+mov edx, ecx
+imul edx, 4
+mov esi, DWORD [rbp - 928]
+mov esi, 5
+imul esi, 10
+mov , QWORD [rbp - 908]
+leave
+ret
+>>>>>>> origin/IR2
