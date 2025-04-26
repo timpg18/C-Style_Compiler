@@ -1,6 +1,7 @@
-int main(){
-    int a = 1;
-    a = 2.0;
 
-    return 9.7;
+int main(){
+    int x[5];
+    x[1] = 2;
+    int y = x[1];
+   
 }

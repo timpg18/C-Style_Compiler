@@ -68,6 +68,8 @@ bool isConvertible( std::string target,std::string source) {
         return false;
     //else case we do true
     //we always promote to float if possible etc, any conversion allowed
+    //always convert to higher type in operations, do type demotion only in assignments
+    
     return true;
 }
 
