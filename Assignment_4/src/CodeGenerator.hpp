@@ -14,6 +14,7 @@ private:
     RegisterDescriptor registerDesc;
     std::vector<BasicBlockConstructor::BasicBlock> basicBlocks;
     std::string irCode;
+    int exit_count = 1;
     
     // Maps to store generated code for each block
     std::map<int, std::string> blockCodeMap;
@@ -51,9 +52,6 @@ private:
         // Short integer types (2 bytes)
         {"SHORT", "WORD"},
         {"UNSIGNED SHORT", "WORD"},
-        {"SHORT INT", "WORD"},
-        {"SIGNED SHORT INT", "WORD"},
-        {"UNSIGNED SHORT INT", "WORD"},
     
         // Regular integer types (4 bytes)
         {"INT", "DWORD"},
@@ -62,21 +60,11 @@ private:
         // Long integer types (8 bytes on most modern systems)
         {"LONG", "QWORD"},
         {"UNSIGNED LONG", "QWORD"},
-        {"LONG INT", "QWORD"},
-        {"SIGNED LONG INT", "QWORD"},
-        {"UNSIGNED LONG INT", "QWORD"},
-    
-        // Long long integer types (8 bytes)
-        {"LONG LONG", "QWORD"},
-        {"UNSIGNED LONG LONG", "QWORD"},
-        {"LONG LONG INT", "QWORD"},
-        {"SIGNED LONG LONG INT", "QWORD"},
-        {"UNSIGNED LONG LONG INT", "QWORD"},
+
     
         // Floating point types
         {"FLOAT", "DWORD"},         // 4 bytes
         {"DOUBLE", "QWORD"},        // 8 bytes
-        {"LONG DOUBLE", "TBYTE"},   // 10 bytes (80 bits)
     
         // VOID is special – usually not directly addressable but can be mapped
         {"VOID", "BYTE"}            // Fallback, often used as generic pointer

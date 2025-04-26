@@ -6,6 +6,7 @@
 #include <set>
 #include <vector>
 #include <map>
+#include <cctype>    
 
 struct VarTempInfo {
     std::string name;
@@ -25,7 +26,7 @@ private:
     
     SymbolTable* symbolTable;
     std::string getVariableType(const std::string& varName) const;
-    std::string getTempType(const std::string& tempName, const std::string& contextLine) const;
+    std::string getTempType(const std::string& tempName, const std::string& contextLine);
     void calculateAddresses(const std::string& irCode);
     std::map<std::string, std::vector<std::pair<std::string, int>>> functionParameters;
 

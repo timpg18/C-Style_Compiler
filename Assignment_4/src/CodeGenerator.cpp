@@ -110,11 +110,20 @@ std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
 
 std::string CodeGenerator::generateFunctionEnd(const std::string& line) {
     // Check if the line contains "func_end"
-
+    std::vector<std::string> wr_reg(0);
     if (line.find("func_end") != std::string::npos) {
+        wr_reg = write_reg();
+        std::string written_reg ="";
+        for(auto& i : wr_reg){
+            written_reg += i;
+        }
         std::stringstream assembly;
+        std::string exit_label = "@E" + std::to_string(exit_count) + ":" + "\n";
+        assembly << exit_label;
+        assembly << written_reg;
         assembly << "leave\n";
         assembly << "ret\n";
+        exit_count++;
         return assembly.str();
     }
     
@@ -340,6 +349,9 @@ std::vector<std::string> CodeGenerator::write_reg(){
             if(varIt != addressTable.variables.end()){
                 //just write the reg val onto memory. now it'll be consistent
                 std::string cd = "mov ";
+                if((p.first).find("xmm") != std::string::npos){
+                    cd = "movss ";
+                }
                 cd += "DWORD ["+ varIt->address + "]";
                 cd +=", ";
                 cd += p.first + "\n";
@@ -350,6 +362,9 @@ std::vector<std::string> CodeGenerator::write_reg(){
             if(varIt1 != addressTable.temporaries.end()){
                 //just write the reg val onto memory. now it'll be consistent
                 std::string cd = "mov ";
+                if((p.first).find("xmm") != std::string::npos){
+                    cd = "movss ";
+                }
                 cd += "DWORD ["+ varIt1->address + "]";
                 cd +=", ";
                 cd += p.first + "\n";
@@ -410,6 +425,17 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         keyword_init(keywords);
         std::string type;
         std::string op;
+
+        // doing this since * is used for both multiplication and dereferencing so if size if 5 then it is multiplication
+        // and if size is 3 then it is dereferencing
+        std::istringstream iss(instr);
+        std::vector<std::string> precheck;
+        std::string word;
+        while (iss >> word) {
+            precheck.push_back(word);
+            std::cout <<word <<"\n";
+        }
+
         bool found = std::any_of(keywords.begin(),keywords.end(),[&](auto &p){
             if(instr.find(p.first) != std::string::npos){
                 type = p.second;
@@ -417,6 +443,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 return true;
             }
         });
+        if(precheck.size() == 3)found = false;
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
             assembly.push_back(generateFunctionLabel(instr));
@@ -451,6 +478,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 assembly.push_back(jmp);
             }
         }else if (instr.find("return") != std::string::npos) {
+            
             // return value 
             std::istringstream iss(instr);
             std::vector<std::string> words;
@@ -459,28 +487,41 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 words.push_back(word);
                 std::cout <<word <<"\n";
             }
-
-            std::string return_value = words[1];
-            if(isTemp(return_value)){
-                auto it = addressTable.getRegisterDescriptor(words[1]);
-                auto it2 = it.begin();
-                std::string reg = it2->first;
-                return_value = reg;
+            // first only return is written (void)
+            if(words.size() == 1){
+                std::string assm = "";
+                assm+= "jmp @E" + std::to_string(exit_count) + "\n";
+                assembly.push_back(assm);
             }
-            else if(isVar(return_value)){
-                if(!addressTable.isEmpty(words[1])){
-                    auto it = addressTable.getRegisterDescriptor(words[1]);
-                    auto it2 = it.begin();
-                    std::string reg = it2->first;
-                    return_value = reg;
+            // other cases are handled here
+            else{
+                std::string return_value = words[1];
+                if(!isTempOrVar(return_value)){
+                    // directly return the value
                 }
-                else{
-                    return_value = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getVariableAddress(words[1]) +"]";
+                else {
+                    if(!addressTable.isEmpty(words[1])){
+                        auto it = addressTable.getRegisterDescriptor(words[1]);
+                        auto it2 = it.begin();
+                        std::string reg = it2->first;
+                        return_value = reg;
+                    }
+                    else{
+                        if(isVar(return_value)){
+                            return_value = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getVariableAddress(words[1]) +"]";
+                        }
+                        else{
+                            return_value = getAsmSizeDirective(addressTable.getType(words[1])) + " ["+ addressTable.getTemporaryAddress(words[1]) +"]";
+                        }
+                    }
                 }
+    
+                std::string assm = "mov eax, " + return_value + "\n";
+                assm+= "jmp @E" + std::to_string(exit_count) + "\n";
+                assembly.push_back(assm);
             }
 
-            std::string assm = "mov eax, " + return_value + "\n";
-            assembly.push_back(assm);
+           
 
         }else if (instr.find("func_begin") != std::string::npos) {
             assembly.push_back(generateFunctionBegin(instr));
@@ -534,8 +575,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 reg = "xmm" + std::to_string(floatParamCount++);
                 isfloat = true;
             }
-
-            paramNumber++;
+            else{
+                paramNumber++;
+            }
+            
             std::string reg2 = words[1];
             if(isTempOrVar(words[1])){
                 if(addressTable.isEmpty(words[1])){
@@ -633,18 +676,17 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::cout <<"WSSSS" <<"\n";
                 std::cout <<addressTable.isEmpty(words[0])<<" \n" <<words[0] <<"\n" <<"YOO";
                 std::string assm ="";
-                // if already not in the register
-                //do ARRAY HANDLING FOR WORDS[0]
-                std::string type = addressTable.getType(words[0]);
+                // if its an array type opearnd
                 if(contains_sq(words[0])){
                     std::vector<std::string> str = splitIndexedAccess(words[0]);
                     //x#block1 , second is $0
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
                     std::cout <<str[0] <<"\n" <<add <<"\n";
+                    std::string type = addressTable.getType(str[0]);
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
-                   std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
                     std::string reg = registerDesc.getAvailableRegister(type);
                     std::vector<std::string> cannot_spill;
                     
@@ -672,6 +714,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //NOW , for reg 
                 }
                 else{
+                    std::string type = addressTable.getType(words[0]);
+                    // if already not in the register
                     if(addressTable.isEmpty(words[0])){
                         if(isVar(words[0])){
                             assm = "mov " + getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[0]) +"], " + words[2] + "\n";
@@ -719,8 +763,42 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::vector<std::string> cannot_spill;
                 std::string reg2 = "";
                 if(contains_sq(words[2]) == false){
-                    //isme p chudh gaya p#block1
-                    if(addressTable.isEmpty(words[2])){
+                    // isme p chudh gaya p#block1
+                    // new addition
+                    // handling the case for address assignment only in case of variables
+                    // first check if assigning an address(assuming that we will not assign the pointer address with array operand for now)
+                    if(words[2].find("&") != std::string::npos){
+                        std::string actual_variable = words[2].substr(1,words[2].length()-1);
+                        std::string type1 = addressTable.getType(actual_variable);
+                        std::string command_ = "";
+                        if(isVar(words[2])){
+                            command_ = "lea r11, [" + addressTable.getVariableAddress(actual_variable) + "]\n";
+                        }
+                        else{
+                            command_ = "lea r11, [" + addressTable.getTemporaryAddress(actual_variable) + "]\n";
+                        }
+                        assembly.push_back(command_);
+                        reg2 = "r11";
+                        
+                    }
+                    else if(words[2].find("*") != std::string::npos){
+                        std::cout<<"POINTER \n";
+                        std::string actual_word = words[2].substr(1,words[2].length()-1);
+                        std::string type1 = addressTable.getType(actual_word);
+                        std::string command_ = "";
+                        if(isVar(words[2])){
+                            command_ = "mov r11, QWORD [" + addressTable.getVariableAddress(actual_word) + "]\n";
+                        }
+                        else{
+                            command_ = "mov r11, QWORD [" + addressTable.getTemporaryAddress(actual_word) + "]\n";
+                        }
+                        assembly.push_back(command_);
+
+                        type1.pop_back();
+                        std::string asmType = getAsmSizeDirective((type1));
+                        reg2 = asmType+" [r11]";
+                    }
+                    else if(addressTable.isEmpty(words[2])){
                         std::string type = addressTable.getType(words[2]);
                         if(isVar(words[2])){
                             reg2 = getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
@@ -900,6 +978,9 @@ std::string CodeGenerator::combineBlockCode() {
     finalCode << "section .text\n";
     finalCode << "\tglobal _start\n";
     finalCode << "\textern printf\n";  // Add external declaration for printf
+    finalCode << "\textern scanf\n";   // Add external declaration for scanf
+    finalCode << "\textern free\n";    // Add external declaration for free
+    finalCode << "\textern malloc\n";  // Add external declaration for malloc
     finalCode << "\textern exit\n\n";  // Add external declaration for exit
     finalCode << "_start:\n";
     finalCode << "\tand rsp, 0xfffffffffffffff0\n";

@@ -38,7 +38,7 @@ std::string formatTypeChange(const std::string& type1, const std::string& type2)
     std::transform(lowerType1.begin(), lowerType1.end(), lowerType1.begin(), ::tolower);
     std::transform(lowerType2.begin(), lowerType2.end(), lowerType2.begin(), ::tolower);
 
-    return "cast: " + lowerType1 + " -> " + lowerType2 + " \n";
+    return "cast: " + lowerType1 + " -> " + lowerType2 + " ";
 }
 
 std::string removeDeclared(const std::string& input) {
@@ -233,11 +233,13 @@ BOOLEAN
 
 string
 	: STRING_LIT{
+		$$.name = $1.type;
 		$$.type = "CHAR*";
 		$$.kind = "IDENTIFIER";
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}
 	| CHAR_LIT {
+		$$.name = $1.type;
 		$$.type = "CHAR";
 		$$.kind = "IDENTIFIER";
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
@@ -1492,8 +1494,8 @@ assignment_expression
 						vector<int> dim = st.lookup($3.name)->dimensions;
 						index = dim.size();
 						for(int i=tot.size()-1;i>=0;i--){
-						if(tot[i] == '*')ptr_cnt++;
-					}
+							if(tot[i] == '*')ptr_cnt++;
+						}
 					}
 					
 					for(int i=typ.size()-1;i>=0;i--){
@@ -1507,7 +1509,7 @@ assignment_expression
 		//cout <<s <<"\n";
 		//std::cout <<typ <<"\n";
 		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
-		
+		printf("%d, %d, %d \n",stars,index, ptr_cnt);
 		if(stars > ptr_cnt - index){
 			//bt 
 			yyerror("assignment involves array on right or has incorrent dereferencing");
@@ -1566,12 +1568,9 @@ assignment_expression
 					check_type($1.type, $3.type,s1);
 				}
 				else{
-				
-		if(!eq($1.type,$3.type)){
+					if(!eq($1.type,$3.type)){
 						type_change_statement = formatTypeChange(type2,s);
 					}
-					
-
 				}
 				
 			}
@@ -1579,14 +1578,26 @@ assignment_expression
 		}
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
 		string tem;
+		std::string new_temp = irgen.new_temp();
 		if(eq($2.type,"=") == true){
-			tem = irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp));
+			if(type_change_statement == ""){
+				tem = irgen.assign(string($1.ir.tmp) ,string($3.ir.tmp));
+			}
+			else{
+				tem = irgen.assign(string($1.ir.tmp) ,new_temp);
+			}
 			
 		}
 		else{
 			std::string s = $2.type;
 			s.pop_back();
-			tem = (irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)));
+			if(type_change_statement == ""){
+				tem = (irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,string($3.ir.tmp)));
+			}
+			else{
+				tem = (irgen.add_op(string($1.ir.tmp), string($1.ir.tmp),s ,new_temp));
+			}
+			
 		}
 		std::vector<std::string> tmpcheck = $3.backpatcher->getTrueList();
 		int size = tmpcheck.size();
@@ -1594,8 +1605,17 @@ assignment_expression
 			HANDLE_BOOL_RESULT_ASSIGN($1, $$, $3, irgen);
 		}
 		else{
-			std::string ss = irgen.concatenate(irgen.concatenate(string($$.ir.code),type_change_statement),tem);
-			$$.ir.code = strdup(ss.c_str());
+			if(type_change_statement == ""){
+				std::string ss = irgen.concatenate(irgen.concatenate(string($$.ir.code),type_change_statement),tem);
+				$$.ir.code = strdup(ss.c_str());
+			}
+			else{
+				std::string type_change_used = new_temp + " = " + type_change_statement + string($3.ir.tmp);
+				std::string ss = irgen.concatenate(irgen.concatenate(string($$.ir.code),type_change_used),tem);
+				$$.ir.code = strdup(ss.c_str());
+			}
+			
+			
 		}
 		$$.ir.tmp = strdup($1.ir.tmp);
 		$$.type = original ;
@@ -1817,7 +1837,6 @@ init_declarator_list
 
 init_declarator
 	: declarator '=' initializer {
-			
 		// the left of the declarator muse be lvalue;
 			lvalueError($1.kind);
 					int stars = 0;
@@ -1838,7 +1857,6 @@ init_declarator
 					for(int i=typ.size()-1;i>=0;i--){
 						if(typ[i] == '*')stars++;
 					}
-					
 					
 		
 		
@@ -1992,12 +2010,23 @@ init_declarator
 				num = st.lookup(new_name)->block_num;
 				new_name += "#block";
 				new_name += to_string(num);
-				std::string tem = irgen.assign(new_name, $3.ir.tmp);
-				std::cout<<tem<<"\n";
-				std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
-				g = irgen.concatenate(g,tem);
+				if(type_change_statement != ""){
+					std::string new_temp = irgen.new_temp();
+					std::string tem =  irgen.assign(new_name, new_temp);
+					std::string use_type_change = new_temp + " = " + type_change_statement + std::string($3.ir.tmp);
+					std::string g = irgen.concatenate(std::string($3.ir.code),use_type_change);
+					g = irgen.concatenate(g,tem);
+					$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
+				}
+				else{
+					std::string tem = irgen.assign(new_name, $3.ir.tmp);
+					std::cout<<tem<<"\n";
+					std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
+					g = irgen.concatenate(g,tem);
+					
+					$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
+				}
 				
-				$$.ir.code =strdup(irgen.concatenate(std::string(""),std::string(g)).c_str());
 			}
 				
 				
@@ -3349,15 +3378,22 @@ jump_statement
 				}
 			}
 		}
-		string temp = string($2.ir.tmp);
-		string cd = string($2.ir.code);
-		cd += "\n";
-		cd += irgen.return_val(temp);
 		if(type_change_statement != ""){
-			type_change_statement+=cd;
-			cd=type_change_statement;
+			string temp = irgen.new_temp();
+			string cd = string($2.ir.code);
+			cd +=  temp + " = " + type_change_statement + std::string($2.ir.tmp);
+			cd += "\n";
+			cd += irgen.return_val(temp);
+			$$.ir.code = strdup(cd.c_str());
+
 		}
-		$$.ir.code = strdup(cd.c_str());
+		else{
+			string temp = string($2.ir.tmp);
+			string cd = string($2.ir.code);
+			cd += "\n";
+			cd += irgen.return_val(temp);
+			$$.ir.code = strdup(cd.c_str());
+		}
 		$$.backpatcher = new BackPatcher();
 	}
 	;
@@ -3489,6 +3525,8 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	printf("LEX and Parsing Success\n");
 	std::string filename = std::string(argv[1]);
 
+	irgen.generate(final_ir_code,filename);
+
 	// Create code generator
 	CodeGenerator codeGen(final_ir_code, st);
 
@@ -3499,7 +3537,6 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	// Print information from all components
 	//codeGen.printComponentInfo();
 
-	irgen.generate(final_ir_code,filename);
 	//st.print_hierarchy();
 	//st.print_token_table();
 	

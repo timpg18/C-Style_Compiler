@@ -102,46 +102,93 @@ std::string AddressAllocationTable::getVariableType(const std::string& varName) 
     return "UNKNOWN";
 }
 
-std::string AddressAllocationTable::getTempType(const std::string& tempName, const std::string& contextLine) const {
+std::string AddressAllocationTable::getTempType(const std::string& tempName, const std::string& contextLine){
     // Check for explicit cast
-    if (contextLine.find("cast :") != std::string::npos) {
-        size_t castPos = contextLine.find("cast :");
-        size_t typeEnd = contextLine.find(' ', castPos + 6);
-        if (typeEnd == std::string::npos) typeEnd = contextLine.length();
-        return contextLine.substr(castPos + 6, typeEnd - (castPos + 6));
+    std::string line =contextLine;
+    if (line.find("cast:") != std::string::npos) {
+        size_t arrowPos = line.find("->");
+        if (arrowPos != std::string::npos) {
+            size_t typeStart = arrowPos + 2;
+            while (typeStart < line.size() && line[typeStart] == ' ') typeStart++; // skip spaces
+            size_t typeEnd = line.find(' ', typeStart);
+            if (typeEnd == std::string::npos) typeEnd = line.length();
+            std::string type = line.substr(typeStart, typeEnd - typeStart);
+            
+            // Convert type to uppercase
+            std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) {
+                return std::toupper(c);
+            });
+            
+            return type;
+        }
     }
+    
     
     // Check for relational operators which result in boolean
     const std::vector<std::string> relops = {"<", ">", "<=", ">=", "==", "!="};
     for (const auto& op : relops) {
-        if (contextLine.find(op) != std::string::npos) {
+        if (line.find(op) != std::string::npos) {
             return "BOOL";
         }
     }
-    std::cout<<contextLine<<std::endl;
+    std::cout<<line<<std::endl;
     // Check for floating point constants in the context line
     std::regex floatPattern(R"(\b\d+\.\d*|\.\d+\b)");
-    if (std::regex_search(contextLine, floatPattern)) {
+    if (std::regex_search(line, floatPattern)) {
         return "FLOAT";  // Or "DOUBLE" depending on your default floating point type
     }
     
     // Try to infer type from other operands
     std::regex operandPattern(R"((?:^|\s)(\$?\d+|[a-zA-Z_][\w#]*))");
-    std::sregex_iterator it(contextLine.begin(), contextLine.end(), operandPattern);
-    
+    std::sregex_iterator it(line.begin(), line.end(), operandPattern);
+    bool isAddress = false;
+    bool isPointer = false;
+    if(line.find("&") != std::string::npos){
+        isAddress = true;
+        line = std::regex_replace(line, std::regex("&"), "");
+
+    }
+    if(line.find("*") != std::string::npos){
+        isPointer = true;
+        line = std::regex_replace(line, std::regex("\\*"), "");
+    }
     for (; it != std::sregex_iterator(); ++it) {
         std::string operand = it->str();
         operand = std::regex_replace(operand, std::regex("^\\s+"), ""); // Remove leading whitespace
+        std::cout<<"finding temp types"<<operand<<"  "<<tempName<<std::endl;
         
         if (operand == tempName) continue;
-        
+        std::cout<<"finding temp types"<<operand<<"  "<<tempName<<std::endl;
         if (operand[0] == '$') {
             for (const auto& tmp : temporaries) {
-                if (tmp.name == operand) return tmp.type;
+                if (tmp.name == operand) {
+                    if(isPointer == true){
+                        std::string type = tmp.type;
+                        type.pop_back(); // Remove the last '*'
+                        return type;
+                    }
+                    if(isAddress == true){
+                        std::string type = tmp.type + "*";
+                        return type;
+                    }
+                    return tmp.type;
+                }
             }
         } else {
             for (const auto& var : variables) {
-                if (var.name == operand) return var.type;
+                if (var.name == operand){ 
+                    
+                    if(isPointer == true){
+                        std::string type = var.type;
+                        type.pop_back(); // Remove the last '*'
+                        return type;
+                    }
+                    if(isAddress == true){
+                        std::string type = var.type + "*";
+                        return type;
+                    }
+                    return var.type;
+                }
             }
         }
     }

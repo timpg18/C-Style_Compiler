@@ -23,13 +23,11 @@ public:
         types = {
             "VOID",
             "CHAR", "SIGNED CHAR", "UNSIGNED CHAR",
-            "SHORT", "UNSIGNED SHORT", "SHORT INT", "SIGNED SHORT INT" , "UNSIGNED SHORT INT",
+            "SHORT", "UNSIGNED SHORT",
             "INT", "UNSIGNED INT",
-            "LONG", "UNSIGNED LONG", "LONG INT", "SIGNED LONG INT" ,"UNSIGNED LONG INT",
-            "LONG LONG", "UNSIGNED LONG LONG", "SIGNED LONG LONG",
-            "LONG LONG INT", "UNSIGNED LONG LONG INT", "SIGNED LONG LONG INT",
-            "FLOAT", "DOUBLE", "LONG DOUBLE",
-            "BOOL","auto"
+            "LONG", "UNSIGNED LONG",
+            "FLOAT", "DOUBLE",
+            "BOOL"
         };
     }
 

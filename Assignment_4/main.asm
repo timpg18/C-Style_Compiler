@@ -1,10 +1,13 @@
-<<<<<<< HEAD
 ; Generated Assembly Code
-=======
->>>>>>> origin/IR2
+section .data
+str1 db "%f", 0
+
 section .text
         global _start
         extern printf
+        extern scanf
+        extern free
+        extern malloc
         extern exit
 
 _start:
@@ -13,72 +16,23 @@ _start:
         mov rdi, rax
         call exit
 
-fac:
-push rbp
-mov rbp, rsp
-sub rsp, 32
-mov DWORD [rbp - 4],edi
-mov r9d, DWORD [rbp - 4]
-cmp r9d, 1
-mov DWORD [rbp - 4], r9d
-je @L0
-jmp @L1
-@L0:
-mov eax, 1
-jmp @L2
-@L1:
-mov r9d, DWORD [rbp - 4]
-mov r8d, DWORD [rbp - 12]
-mov r8d, r9d
-sub r8d, 1
-mov DWORD [rbp - 12], r8d
-mov DWORD [rbp - 4], r9d
-mov edi, DWORD [rbp - 12]
-call fac
-mov DWORD [rbp - 16], eax
-mov r9d, DWORD [rbp - 4]
-mov r8d, DWORD [rbp - 16]
-mov ecx, DWORD [rbp - 20]
-mov ecx, r8d
-imul ecx, r9d
-mov eax, ecx
-@L2:
-leave
-ret
 main:
 push rbp
 mov rbp, rsp
-<<<<<<< HEAD
-sub rsp, 16
-mov DWORD [rbp - 20], ecx
-mov DWORD [rbp - 16], r8d
-mov DWORD [rbp - 4], r9d
-mov edi, 6
-call fac
-mov DWORD [rbp - 8], eax
-mov r11d, DWORD [rbp - 8]
-mov DWORD [rbp - 4], r11d
-mov eax, DWORD [rbp - 4]
+sub rsp, 32
+lea r11, [rbp - 4]
+mov QWORD [rbp - 12], r11
+mov rdi, str1
+mov rsi, QWORD [rbp - 12]
+call scanf
+mov DWORD [rbp - 16], eax
+mov rdi, str1
+cvtss2sd xmm0, DWORD [rbp - 4]
+mov eax, 1
+call printf
+mov DWORD [rbp - 20], eax
+mov eax, 0
+jmp @E1
+@E1:
 leave
 ret
-=======
-sub rsp, 48
-mov r9d, DWORD [rbp - 912]
-mov r9d, 4
-imul r9d, 4
-mov r8d, DWORD [rbp - 916]
-mov r8d, 4
-imul r8d, 20
-mov ecx, DWORD [rbp - 920]
-mov ecx, r8d
-add ecx, 1
-mov edx, DWORD [rbp - 924]
-mov edx, ecx
-imul edx, 4
-mov esi, DWORD [rbp - 928]
-mov esi, 5
-imul esi, 10
-mov , QWORD [rbp - 908]
-leave
-ret
->>>>>>> origin/IR2
