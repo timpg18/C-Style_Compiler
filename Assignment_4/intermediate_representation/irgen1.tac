@@ -1,7 +1,10 @@
 label main:
 	func_begin main
-		$1 = 0 + 5
-		$2 = $1 + 4
-		$3 = cast: int -> float 1
-		obj1#block6[$2] = $3
+		$0 = 0 * 4
+		arr#block1[$0] = 2
+		$2 = 0 * 4
+		x#block1 = arr#block1[$2]
+		param "%d"
+		param x#block1
+		$3 = call printf, 2
 	func_end main

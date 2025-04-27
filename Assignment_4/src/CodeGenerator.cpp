@@ -778,10 +778,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string add = addressTable.getVariableAddress(str[0]);
                     std::cout <<str[0] <<"\n" <<add <<"\n";
                     std::string type = addressTable.getType(str[0]);
+                    std::cout <<type <<"\n" <<"AMOGUS" <<"\n";
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
                     std::cout <<" \n TEMPPPP " + str[1] +"\n";
-                    std::string reg = registerDesc.getAvailableRegister(type);
+                    std::string reg = registerDesc.getAvailableRegister("LONG");
+                    //use 8byte reg for address calc.
                     std::vector<std::string> cannot_spill;
                     
                     // spill in case all registers are in use
@@ -792,7 +794,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
                     cannot_spill.push_back(reg);
                     std::string reg1 = reg;
-                    reg = registerDesc.getAvailableRegister(type);
+                    reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                     }
@@ -928,7 +930,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
                     std::cout <<" \n TEMPPPP " + str[1] +"\n";
-                    std::string reg = registerDesc.getAvailableRegister(type);
+                    std::string reg = registerDesc.getAvailableRegister("LONG");
                     
                     // spill in case all registers are in use
                     if(reg == ""){
@@ -938,7 +940,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
                     cannot_spill.push_back(reg);
                     std::string reg1 = reg;
-                    reg = registerDesc.getAvailableRegister(type);
+                    reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                     }
@@ -951,7 +953,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //reg contains effective address of opn
                     
                     std::string reg3 = reg;
-                    reg = registerDesc.getAvailableRegister(type);
+                    std::string type = addressTable.getType(str[0]);
+                    reg = registerDesc.getAvailableRegister("LONG");
+
+                    //assume rhs is 8byte and it'll adapt to any size of LHS.
                     std::cout <<"CRAZY CLOWNN \n";
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
@@ -1028,7 +1033,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
                     std::cout <<" \n TEMPPPP " + str[1] +"\n";
-                    std::string reg = registerDesc.getAvailableRegister(type);
+                    std::string reg = registerDesc.getAvailableRegister("LONG");
                     // spill in case all registers are in use
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
@@ -1037,7 +1042,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
                     cannot_spill.push_back(reg);
                     std::string reg1 = reg;
-                    reg = registerDesc.getAvailableRegister(type);
+                    reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                     }

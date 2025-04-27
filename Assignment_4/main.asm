@@ -1,6 +1,6 @@
 ; Generated Assembly Code
 section .data
-str1 db "%ld", 0
+str1 db "%d", 0
 
 section .text
         global _start
@@ -20,17 +20,25 @@ main:
 push rbp
 mov rbp, rsp
 sub rsp, 32
-mov r11d, 50
-movsx r11, r11d
-mov QWORD [rbp - 16],r11
-mov r11, QWORD [rbp - 16]
-mov QWORD [rbp - 8], r11
+mov r9d, DWORD [rbp - 28]
+mov r9d, 0
+imul r9d, 4
+lea r8, [rbp - 20] 
+lea r8, [r8 + r9d] 
+mov DWORD [r8] , 2
+mov r8d, DWORD [rbp - 32]
+mov r8d, 0
+imul r8d, 4
+lea rcx, [rbp - 20] 
+lea rcx, [rcx + r8d] 
+mov rcx, DWORD [rcx]
+mov DWORD [rbp - 24], rcx
+mov DWORD [rbp - 32], r8d
+mov DWORD [rbp - 28], r9d
 mov rdi, str1
-mov rsi, QWORD [rbp - 8]
+mov esi, DWORD [rbp - 24]
 call printf
-mov DWORD [rbp - 20], eax
-mov eax, 0
-jmp @E1
+mov DWORD [rbp - 36], eax
 @E1:
 leave
 ret
