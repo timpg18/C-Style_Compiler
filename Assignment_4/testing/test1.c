@@ -1,6 +1,6 @@
 int main(){
     int a = 1;
-    a = 2.0;
+    double b = a;
 
-    return 9.7;
+    return 0;
 }

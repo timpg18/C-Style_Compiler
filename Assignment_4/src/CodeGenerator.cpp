@@ -646,7 +646,19 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             assembly.push_back(assm);
 
         }else if(instr.find("cast") != std::string::npos){
-
+            // tokenizing input
+            std::istringstream iss(instr);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word);
+                std::cout <<word <<"\n";
+            }
+            // statement of form $1 = cast: float -> int $0
+            //                    0 1  2     3    4   5   6
+            if(words[3] == "float"){
+                
+            }
         }else if(found == true){
             if(type == "arithmetic"){
                 std::cout <<instr <<"\n";
