@@ -22,7 +22,7 @@ public:
         // Primitive types
         types = {
             "VOID",
-            "CHAR", "SIGNED CHAR", "UNSIGNED CHAR",
+            "CHAR", "UNSIGNED CHAR",
             "SHORT", "UNSIGNED SHORT",
             "INT", "UNSIGNED INT",
             "LONG", "UNSIGNED LONG",
