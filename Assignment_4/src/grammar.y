@@ -526,6 +526,7 @@ postfix_expression
 		
 	}
 	| postfix_expression '.' IDENTIFIER{
+
 		
 		//STRUCT TYPE CHECKING HANDLED
 		std::string s = std::string($1.name) + "." + std::string($3.type);
@@ -572,26 +573,30 @@ postfix_expression
 		string t0 = irgen.new_temp();
 		string off = std::to_string(offset);
 		string cd12;
-		
-		if(eq($1.name,$1.ir.tmp) ==false)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
+		std::string g = $1.ir.tmp;
+		if(g.find('$') != std::string::npos)cd12 = irgen.add_op(t0, string($1.ir.tmp),"+",off);
 		else cd12 = irgen.add_op(t0, puranaind,"+",off);
-		
-		
+			
+	
+
 		$$.index = offset;
-		string tem = string($1.name);
-		tem += "[";
-		tem += t0;
-		tem += "]";
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),cd12).c_str());
-		
 		if(is_udt(strdup(typ.c_str())) == true){
 			//there is struct inside or any other except class inside
 			$$.ir.tmp = strdup(t0.c_str());
 		}
 		else{
-			
-			$$.ir.tmp = strdup(tem.c_str());
-			
+		string tem = string($1.name);
+		
+		int num;
+		num = st.lookup($1.name)->block_num;
+		
+		tem += "#block";
+		tem += to_string(num);
+		tem += "[";
+		tem += t0;
+		tem += "]";
+		$$.ir.tmp = strdup(tem.c_str());
 		}
 		
 		$$.type = strdup(typ.c_str());
@@ -2492,6 +2497,7 @@ direct_declarator
 		
         $$.ir.tmp = strdup($$.name);
 		$$.ir.code = "";
+
     }
 	| '(' declarator ')' {
 		 $$.index = $2.index;

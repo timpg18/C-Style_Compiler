@@ -54,7 +54,7 @@ void SymbolTable::insert_symbol(const std::string& name, const std::string& type
         return;
     }
 
-    current_scope_->ordered_symbols.emplace_back(name, type, kind, current_scope_->scope_level, type_size, current_offset);
+    current_scope_->ordered_symbols.emplace_back(name, type, kind, current_scope_->scope_level, current_scope_->block_num, type_size, current_offset);
 
     auto it = --current_scope_->ordered_symbols.end();
     current_scope_->symbol_map[name] = it;
@@ -115,8 +115,8 @@ void SymbolTable::transferParametersToFunctionScope(const std::string& function_
         const std::string& name = param_pos->name;
         const std::string& type = param_pos->type;
         const std::string& kind = param_pos->kind;
-        param_pos->scope_level = current_scope_->scope_level;
-        param_pos->block_num = current_scope_->block_num;
+        // param_pos->scope_level = current_scope_->scope_level;
+        // param_pos->block_num = current_scope_->block_num;
        
         int param_size = param_pos->size;
         std::vector<int> dims = param_pos->dimensions; // Copy dimensions vector
@@ -130,7 +130,7 @@ void SymbolTable::transferParametersToFunctionScope(const std::string& function_
             current_scope_->scope_level, param_size, 
             current_scope_->total_size, dims
         });
-        
+        std::cout <<current_scope_->block_num <<"\n\n\n\n\n EHEHEHE";
         // Insert directly into current scope
         current_scope_->ordered_symbols.emplace_back(
             name, type, kind, current_scope_->scope_level,current_scope_->block_num,
@@ -611,6 +611,7 @@ void SymbolTable::implement_inheritance(const std::string& derived_class_name, c
                 base_symbol.type,
                 new_kind,
                 derived_scope->scope_level,
+                derived_scope->block_num,
                 base_symbol.size,
                 derived_scope->total_size
             );
