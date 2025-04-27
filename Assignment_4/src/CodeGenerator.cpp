@@ -864,8 +864,17 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
                     cannot_spill.push_back(reg);
                     //reg contains effective address of opn
-                    assembly.push_back(cd1);
+                    
+                    std::string reg3 = reg;
+                    reg = registerDesc.getAvailableRegister(type);
+                    std::cout <<"CRAZY CLOWNN \n";
+                    if(reg == ""){
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    }
+                    cannot_spill.push_back(reg);
+                    cd1 += "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(str[0])) + " [" + reg3 + "]" + "\n";
                     reg2 = reg;
+                    assembly.push_back(cd1);
                 }
                
                 
