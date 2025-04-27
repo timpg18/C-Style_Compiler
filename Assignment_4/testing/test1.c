@@ -1,6 +1,5 @@
 int main(){
-    char a = 50;
-    int b=0;
-    printf("%c",a);
+    long a = 50;
+    printf("%ld",a);
     return 0;
 }

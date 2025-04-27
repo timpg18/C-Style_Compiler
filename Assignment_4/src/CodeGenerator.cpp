@@ -728,6 +728,16 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     assm += "movsx r11d, r11b\n";
                     assm += "mov DWORD ["+ addressTable.getTemporaryAddress(words[0]) +"]" + ", r11d\n";
                 }
+                else if(type_to_convert_to == "short"){
+                    assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "movsx r11d, r11w\n";
+                    assm += "mov DWORD ["+ addressTable.getTemporaryAddress(words[0]) +"]" + ", r11d\n";
+                }
+                else if(type_to_convert_to == "long"){
+                    assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm = "movsx r11, r11d\n";
+                    assm += "mov " + temporary_operand + ",r11\n";
+                }
             }
 
             assembly.push_back(assm);

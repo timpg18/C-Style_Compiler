@@ -262,7 +262,9 @@ std::string RegisterDescriptor::getRegisterForType(const std::string& regBase, c
         // 16-bit register (ax, cx, etc.)
         for (const auto& reg : relatedRegsIt->second) {
             if (reg.find('x') != std::string::npos && reg.length() <= 2 || 
-                reg.find('w', 1) != std::string::npos) {
+                reg.find('w', 1) != std::string::npos ||
+                reg.find('si') != std::string::npos && reg.length() <= 2 ||
+                reg.find('di') != std::string::npos && reg.length() <= 2 ) {
                 return reg;
             }
         }
