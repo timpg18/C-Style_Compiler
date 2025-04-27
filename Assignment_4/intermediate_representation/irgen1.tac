@@ -1,8 +1,9 @@
 label main:
 	func_begin main
-		$0 = cast: int -> float 1
+		$0 = cast: int -> char 50
 		a#block1 = $0
-		param "%f"
+		b#block1 = 0
+		param "%c"
 		param a#block1
 		$1 = call printf, 2
 		

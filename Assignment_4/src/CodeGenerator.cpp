@@ -723,6 +723,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     assm += "cvtsi2sd xmm7, r11d\n";
                     assm += "movsd " + temporary_operand + ", xmm7\n";
                 }
+                else if(type_to_convert_to == "char"){
+                    assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "movsx r11d, r11b\n";
+                    assm += "mov DWORD ["+ addressTable.getTemporaryAddress(words[0]) +"]" + ", r11d\n";
+                }
             }
 
             assembly.push_back(assm);
@@ -993,6 +998,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     else{
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                             std::string type = addressTable.getType(words[2]);
+                            std::cout<<"type to be used for r11 "<<type<<std::endl;
                             std::string regused = registerDesc.getRegisterForType("r11",type);
                             assm = "mov " + regused + ", " + reg2 +"\n";
                             assm += "mov " + reg1 +", " + regused + "\n";
