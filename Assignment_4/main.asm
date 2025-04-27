@@ -19,18 +19,17 @@ _start:
 main:
 push rbp
 mov rbp, rsp
-sub rsp, 32
-lea r11, [rbp - 4]
-mov QWORD [rbp - 12], r11
-mov rdi, str1
-mov rsi, QWORD [rbp - 12]
-call scanf
-mov DWORD [rbp - 16], eax
+sub rsp, 16
+mov r11d, 1
+cvtsi2ss xmm7, r11d
+movss DWORD [rbp - 8], xmm7
+movss xmm7, DWORD [rbp - 8]
+movss DWORD [rbp - 4], xmm7
 mov rdi, str1
 cvtss2sd xmm0, DWORD [rbp - 4]
 mov eax, 1
 call printf
-mov DWORD [rbp - 20], eax
+mov DWORD [rbp - 12], eax
 mov eax, 0
 jmp @E1
 @E1:

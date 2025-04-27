@@ -541,6 +541,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string type = "";
             std::string assm1 = "";
             bool isfloat = false;
+            bool isdouble = false;
             // for float types and data section members
             auto it = dataSectionMap.find(words[1]);
             if(it != dataSectionMap.end()){
@@ -553,6 +554,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     type = "INT";
                 }
             }
+            if(type == "DOUBLE")isdouble = true;
 
             // parameter no to regsiter for that call
             switch (paramNumber) {
@@ -608,7 +610,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 }
             }
             std::string moveop = "mov ";
-            if(type == "FLOAT") moveop ="cvtss2sd ";
+            if(isdouble == true) moveop ="movsd ";
+            else if(isfloat  == true) moveop ="cvtss2sd ";
             std::string assm2 = moveop + reg + ", " + reg2 +"\n";
             assembly.push_back(assm2);
 
@@ -656,9 +659,73 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             // statement of form $1 = cast: float -> int $0
             //                    0 1  2     3    4   5   6
+            std::string reg_var_const_2 = words[6];
+            std::cout<<"type convserion " << reg_var_const_2<<std::endl;
+            if(isTempOrVar(reg_var_const_2)){
+                if(addressTable.isEmpty(reg_var_const_2)){
+                    if(isVar(reg_var_const_2)){
+                        reg_var_const_2 = getAsmSizeDirective(addressTable.getType(reg_var_const_2)) + " ["+ addressTable.getVariableAddress(reg_var_const_2) +"]";
+                    }
+                    else{
+                        reg_var_const_2 = getAsmSizeDirective(addressTable.getType(reg_var_const_2)) + " ["+ addressTable.getTemporaryAddress(reg_var_const_2) +"]";
+                    }
+                }
+                // if already in the register
+                else{
+                    auto it = addressTable.getRegisterDescriptor(reg_var_const_2);
+                    auto it2 = it.begin();
+                    reg_var_const_2 = it2->first;
+                }
+            }
+            else{
+                auto it = dataSectionMap.find(reg_var_const_2);
+                if(it!= dataSectionMap.end()){
+                    if(it->second.first == "FLOAT"){
+                        reg_var_const_2 = "[" + reg_var_const_2 + "]";
+                    }
+                }
+            }
+            std::cout<<"type convserion " << reg_var_const_2<<std::endl;
+            // the type to convert to
+            std::string type_to_convert_to = words[5];
+            // the assembly that will be generated
+            std::string assm ="";
+            // storing the converted type directly in memory
+            std::string temporary_operand  = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
+            // from float to something
             if(words[3] == "float"){
+                if(type_to_convert_to == "double"){
+                    assm =  "movss xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvtss2sd xmm7, xmm7\n";
+                    assm += "movsd "+ temporary_operand + ", xmm7\n";
+                }
+                // all the int types will be handled here
+                else if(type_to_convert_to == "int"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movss xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttss2si " + normal_reg_used + ", xmm7\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
                 
             }
+            // from int to something
+            else if(words[3] == "int"){
+                if(type_to_convert_to == "float"){
+                    assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "cvtsi2ss xmm7, r11d\n";
+                    assm += "movss " + temporary_operand + ", xmm7\n";
+                }
+                else if(type_to_convert_to == "double"){
+                    assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "cvtsi2sd xmm7, r11d\n";
+                    assm += "movsd " + temporary_operand + ", xmm7\n";
+                }
+            }
+
+            assembly.push_back(assm);
         }else if(found == true){
             if(type == "arithmetic"){
                 std::cout <<instr <<"\n";
@@ -771,7 +838,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             else{
                 //rhs is var too
                 // first lets get the reg or address for the 2nd operand
-                bool float_ = false;
+                bool float_  = false;
+                bool double_ = false;
                 std::vector<std::string> cannot_spill;
                 std::string reg2 = "";
                 if(contains_sq(words[2]) == false){
@@ -815,20 +883,22 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if(isVar(words[2])){
                             reg2 = getAsmSizeDirective(type) + " ["+ addressTable.getVariableAddress(words[2]) +"]";
                             if(type == "FLOAT")float_ = true;
+                            if(type == "DOUBLE")double_ = true;
                         }
                         else{
                             reg2 = getAsmSizeDirective(addressTable.getType(words[2])) + " ["+ addressTable.getTemporaryAddress(words[2]) +"]";
                             if(type == "FLOAT")float_ = true;
+                            if(type == "DOUBLE")double_ = true;
                         }
                     }
                     // if already in the register
                     else{
+                        std::string words2_type = addressTable.getType(words[2]);
                         auto it = addressTable.getRegisterDescriptor(words[2]);
                         auto it2 = it.begin();
                         reg2 = it2->first;
-                        if(reg2.find("xmm") != std::string::npos){
-                            float_ = true;
-                        }
+                        if(words2_type == "FLOAT")double_ = true;
+                        if(words2_type == "DOUBLE")double_ = true;
                     }
                     std::cout <<reg2 <<"\n WUTTHE \n";
                 }
@@ -886,20 +956,23 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if(isVar(words[0])){
                             reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getVariableAddress(words[0]) +"]";
                             if(type == "FLOAT")float_ = true;
+                            if(type == "DOUBLE")double_ = true;
                         }
                         else{
                             reg1 = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
                             if(type == "FLOAT")float_ = true;
+                            if(type == "DOUBLE")double_ = true;
                         }
                     }
                     // if already in the register
                     else{
                         auto it = addressTable.getRegisterDescriptor(words[0]);
+                        std::string words0_type = addressTable.getType(words[0]);
                         auto it2 = it.begin();
                         reg1 = it2->first;
-                        if(reg1.find("xmm") != std::string::npos){
-                            float_ = true;
-                        }
+                        if(words0_type == "FLOAT")float_ =true;
+                        if(words0_type == "DOUBLE")double_ =true;
+
                     }
                     std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
                 
@@ -908,6 +981,13 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                             assm = "movss xmm7, " + reg2 +"\n";
                             assm += "movss " + reg1 +", xmm7 \n";
+                        }
+                    }
+                    else if(double_){
+                        assm = "movsd " + reg1 + ", " + reg2 + "\n";
+                        if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
+                            assm = "movsd xmm7, " + reg2 +"\n";
+                            assm += "movsd " + reg1 +", xmm7 \n";
                         }
                     }
                     else{

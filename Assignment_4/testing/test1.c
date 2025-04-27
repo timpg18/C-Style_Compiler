@@ -1,6 +1,5 @@
 int main(){
-    int a = 1;
-    double b = a;
-
+    float a = 1;
+    printf("%f",a);
     return 0;
 }

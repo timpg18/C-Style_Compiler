@@ -1,8 +1,10 @@
 label main:
 	func_begin main
-		a#block1 = 1
-		$0 = cast: float -> int 2.0
+		$0 = cast: int -> float 1
 		a#block1 = $0
-		$1 = cast: float -> int 9.7
-		return $1
+		param "%f"
+		param a#block1
+		$1 = call printf, 2
+		
+		return 0
 	func_end main
