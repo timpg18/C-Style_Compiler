@@ -16,7 +16,7 @@ _start:
         mov rdi, rax
         call exit
 
-main:
+func:
 push rbp
 mov rbp, rsp
 sub rsp, 16

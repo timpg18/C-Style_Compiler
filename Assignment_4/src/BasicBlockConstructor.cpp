@@ -27,6 +27,7 @@ vector<BasicBlockConstructor::Instruction> BasicBlockConstructor::parseInstructi
         instr.isIfGoto = false;
         instr.isGoto = false;
         instr.isFunctionLabel = false;
+        instr.operation = "";  // Initialize new fields
         
         smatch matches;
         if (regex_match(line, matches, functionLabelRegex)) {
@@ -65,6 +66,9 @@ vector<BasicBlockConstructor::Instruction> BasicBlockConstructor::parseInstructi
         
         instructions.push_back(instr);
     }
+    
+    // Extract dependencies for each instruction
+    extractDependencies(instructions);
     
     return instructions;
 }
@@ -285,6 +289,27 @@ void BasicBlockConstructor::printBasicBlocks(const vector<BasicBlock>& blocks) {
         cout << "Instructions:" << endl;
         for (const auto& instr : block.instructions) {
             cout << "  " << instr.text << endl;
+            
+            // Print dependency information
+            if (!instr.isLabel) {
+                cout << "    Operation: " << instr.operation << endl;
+                
+                if (!instr.lhs.empty()) {
+                    cout << "    LHS: ";
+                    for (const auto& var : instr.lhs) {
+                        cout << var << " ";
+                    }
+                    cout << endl;
+                }
+                
+                if (!instr.rhs.empty()) {
+                    cout << "    RHS: ";
+                    for (const auto& var : instr.rhs) {
+                        cout << var << " ";
+                    }
+                    cout << endl;
+                }
+            }
         }
         cout << endl;
     }
