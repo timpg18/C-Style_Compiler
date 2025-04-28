@@ -26,14 +26,26 @@ void AddressAllocationTable::identifyFunctionParameters() {
             std::string functionName = scope->scope_name;
             std::vector<std::pair<std::string, int>> params;
             
+            // Two separate parameter indices
+            int paramIndexFloatDouble = 1;
+            int paramIndexOthers = 1;
+            
             // Find parameters in this scope's symbols
-            int paramIndex = 1;
             for (const auto& symbolPair : scope->ordered_symbols) {
                 const SymbolTable::Symbol& symbol = symbolPair;
                 if (symbol.kind == "PARAMETER") {
                     // Format parameter as "name#blockX"
                     std::string paramName = symbol.name + "#block" + std::to_string(scope->block_num);
-                    params.emplace_back(paramName, paramIndex++);
+                    
+                    // Use different parameter indexing based on type
+                    if (symbol.type.find("FLOAT") != std::string::npos || 
+                        symbol.type.find("DOUBLE") != std::string::npos) {
+                        // For float/double parameters
+                        params.emplace_back(paramName, paramIndexFloatDouble++);
+                    } else {
+                        // For other parameter types
+                        params.emplace_back(paramName, paramIndexOthers++);
+                    }
                 }
             }
             
@@ -143,12 +155,20 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
     std::sregex_iterator it(line.begin(), line.end(), operandPattern);
     bool isAddress = false;
     bool isPointer = false;
+    std::istringstream iss(contextLine);
+    std::vector<std::string> words;
+    std::string word;
+    while (iss >> word) {
+        words.push_back(word);
+        std::cout <<word <<"\n";
+    }
+
     if(line.find("&") != std::string::npos){
         isAddress = true;
         line = std::regex_replace(line, std::regex("&"), "");
 
     }
-    if(line.find("*") != std::string::npos){
+    if(line.find("*") != std::string::npos && words.size()!=5){
         isPointer = true;
         line = std::regex_replace(line, std::regex("\\*"), "");
     }

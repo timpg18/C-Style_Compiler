@@ -671,7 +671,14 @@ argument_expression_list
 	: assignment_expression{
 		$$.type = $1.type;
 		CONVERT_BOOL_EXPR_TO_VALUE($1);
-		string s = irgen.add_par(string($1.ir.tmp));
+		std::string new_temp_par = string($1.ir.tmp);
+		if(new_temp_par.find("[") != std::string::npos){
+			std::string new_tmp = irgen.new_temp();
+			std::string asm_code = new_tmp + " = " + new_temp_par;
+			new_temp_par = new_tmp;
+			$1.ir.code = strdup(irgen.concatenate(string($1.ir.code), asm_code).c_str());
+		}
+		string s = irgen.add_par(new_temp_par);
 		$$.ir.code = strdup($1.ir.code);
 		$$.ir.par = strdup(s.c_str());
 		$$.index = 1;
@@ -680,8 +687,15 @@ argument_expression_list
 		char* newtype = concat($1.type,$3.type);
 		$$.type = newtype;
 		CONVERT_BOOL_EXPR_TO_VALUE($3);
+		std::string new_temp_par = string($3.ir.tmp);
+		if(new_temp_par.find("[") != std::string::npos){
+			std::string new_tmp = irgen.new_temp();
+			std::string asm_code = new_tmp + " = " + new_temp_par;
+			new_temp_par = new_tmp;
+			$3.ir.code = strdup(irgen.concatenate(string($3.ir.code), asm_code).c_str());
+		}
 		string s = string($3.ir.code);
-		string p = irgen.add_par(string($3.ir.tmp));
+		string p = irgen.add_par(new_temp_par);
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), s).c_str());
 		$$.ir.par = strdup(irgen.concatenate(string($1.ir.par), p).c_str());
 		$$.index = $1.index + 1;
@@ -895,8 +909,24 @@ multiplicative_expression
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("*"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+
+		std::string temp1 = string($1.ir.tmp);
+		std::string temp2 = string($3.ir.tmp);
+		if(temp1.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp1;
+			temp1 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+		if(temp2.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp2;
+			temp2 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+
+		string s = irgen.add_op(string($$.ir.tmp), temp1, string("*"), temp2);
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -909,15 +939,32 @@ multiplicative_expression
 		if(ts.hasPointer(type1) || ts.hasPointer(type2)){
 			yyerror("invalid operator to pointers");
 		}
+		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
 
 		// IR
 		CONVERT_BOOL_EXPR_TO_VALUE($1)
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 
+		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		check_type($1.type, $3.type, "incompatible type expression involved in *: ");
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("/"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+
+		std::string temp1 = string($1.ir.tmp);
+		std::string temp2 = string($3.ir.tmp);
+		if(temp1.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp1;
+			temp1 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+		if(temp2.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp2;
+			temp2 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+
+		string s = irgen.add_op(string($$.ir.tmp), temp1, string("/"), temp2);
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -943,8 +990,24 @@ multiplicative_expression
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("%"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+
+		std::string temp1 = string($1.ir.tmp);
+		std::string temp2 = string($3.ir.tmp);
+		if(temp1.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp1;
+			temp1 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+		if(temp2.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp2;
+			temp2 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+
+		string s = irgen.add_op(string($$.ir.tmp), temp1, string("%"), temp2);
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
 	}
@@ -995,10 +1058,25 @@ additive_expression
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("+"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+		std::string temp1 = string($1.ir.tmp);
+		std::string temp2 = string($3.ir.tmp);
+		if(temp1.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp1;
+			temp1 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+		if(temp2.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp2;
+			temp2 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+
+		string s = irgen.add_op(string($$.ir.tmp), temp1, string("+"), temp2);
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
-$$.backpatcher = new BackPatcher();
+		$$.backpatcher = new BackPatcher();
 	}
 	| additive_expression '-' multiplicative_expression{
 		// Type Checking
@@ -1035,10 +1113,27 @@ $$.backpatcher = new BackPatcher();
 		CONVERT_BOOL_EXPR_TO_VALUE($3)
 		
 		$$.ir.tmp = strdup(irgen.new_temp().c_str());
-		string s = irgen.add_op(string($$.ir.tmp), string($1.ir.tmp), string("-"), string($3.ir.tmp));
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code),string($3.ir.code)).c_str());
+
+		std::string temp1 = string($1.ir.tmp);
+		std::string temp2 = string($3.ir.tmp);
+		if(temp1.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp1;
+			temp1 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+		if(temp2.find("[") != std::string::npos){
+			std::string new_temp1 = irgen.new_temp();
+			std::string assignment_ = new_temp1 + " = " + temp2;
+			temp2 = new_temp1;
+			$$.ir.code = strdup(irgen.concatenate(string($$.ir.code),assignment_).c_str());
+		}
+
+		string s = irgen.add_op(string($$.ir.tmp), temp1, string("-"), temp2);
 		$$.ir.code =  strdup(irgen.concatenate(string($$.ir.code), s).c_str());
 		$$.backpatcher = new BackPatcher();
+
 	}
 	;
 

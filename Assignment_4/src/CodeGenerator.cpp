@@ -110,21 +110,28 @@ std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
         if(params.size() > 0){
             for(auto param : params){
                 std::string reg ="";
+                std::string paramType = addressTable.getType(param.first);
                 switch (param.second) {
-                    case 1: reg = registerDesc.getRegisterForType("rdi",addressTable.getType(param.first));
+                    case 1: reg = registerDesc.getRegisterForType("rdi",paramType);
                             break;
-                    case 2: reg = registerDesc.getRegisterForType("rsi",addressTable.getType(param.first));
+                    case 2: reg = registerDesc.getRegisterForType("rsi",paramType);
                             break;
-                    case 3: reg = registerDesc.getRegisterForType("rdx",addressTable.getType(param.first));
+                    case 3: reg = registerDesc.getRegisterForType("rdx",paramType);
                             break;
-                    case 4: reg = registerDesc.getRegisterForType("rcx",addressTable.getType(param.first));
+                    case 4: reg = registerDesc.getRegisterForType("rcx",paramType);
                             break;
-                    case 5: reg = registerDesc.getRegisterForType("r8",addressTable.getType(param.first));
+                    case 5: reg = registerDesc.getRegisterForType("r8",paramType);
                             break;
-                    case 6: reg = registerDesc.getRegisterForType("r9",addressTable.getType(param.first));
+                    case 6: reg = registerDesc.getRegisterForType("r9",paramType);
                             break;
                 }
-                std::string to_add = "mov " + getAsmSizeDirective(param.first) + " ["+addressTable.getVariableAddress(param.first)+"]," + reg + "\n";
+                std::string to_add = "mov " + getAsmSizeDirective(paramType) + " ["+addressTable.getVariableAddress(param.first)+"], " + reg + "\n";
+                if(paramType == "FLOAT"){
+                    to_add = "movss " + getAsmSizeDirective(paramType) + " ["+addressTable.getVariableAddress(param.first)+"], xmm" +std::to_string(param.second-1) + "\n";
+                }
+                if(paramType == "DOUBLE"){
+                    to_add = "movsd " + getAsmSizeDirective(paramType) + " ["+addressTable.getVariableAddress(param.first)+"], xmm" +std::to_string(param.second-1) + "\n";
+                }
                 assembly << to_add;
             }
            
@@ -584,6 +591,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             bool isfloat = false;
             bool isdouble = false;
             // for float types and data section members
+            
+
             auto it = dataSectionMap.find(words[1]);
             if(it != dataSectionMap.end()){
                 type = it->second.first;
@@ -674,7 +683,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             // for var args we need to specify the no.of float operands
             funcName.pop_back();
-            if((funcName == "printf") && (floatParamCount != -1)){
+            if((funcName == "printf")){
+                if(floatParamCount == -1) floatParamCount =0;
                 assm = "mov eax, " + std::to_string(floatParamCount) + "\n";
             }
             floatParamCount = -1;
@@ -699,7 +709,6 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 std::cout <<word <<"\n";
             }
             // statement of form $1 = cast: float -> int $0
-            //                    0 1  2     3    4   5   6
             std::string typeold = "";
             std::string typenew = "";
             size_t arrowPos = instr.find("->");

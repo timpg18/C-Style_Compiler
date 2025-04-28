@@ -1,8 +1,5 @@
-
-
 int main(){
-    
-    int* a;
-    char* b;
-    a=(int*)b;
+    int ar[10];
+    ar[1]=11;
+    printf("%d",ar[1]);
 }
