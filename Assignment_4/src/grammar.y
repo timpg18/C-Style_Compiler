@@ -307,7 +307,7 @@ postfix_expression
 			if(typ[i] == '*')ptr_cnt++;
 		}
 		//std::cout <<typ <<"\n";
-		printf("%d %d %d \n",dim.size(), stars, ptr_cnt);
+		//printf("%d %d %d \n",dim.size(), stars, ptr_cnt);
 		ptr_cnt -= dim.size();
 		//string s has bache hue type
 		//ie stars
@@ -317,7 +317,7 @@ postfix_expression
 		}
 	
 		
-		printf("%s %s YOO\n",$1.ir.tmp, $1.name);
+		//printf("%s %s YOO\n",$1.ir.tmp, $1.name);
 		//easier check is if tmp does not contain a $, since x#block1 and x are different here
 		std::string g = $1.ir.tmp;
 		
@@ -568,7 +568,7 @@ postfix_expression
 					offset = scope_ptr->symbol_map[string($3.type)]->offset;
 					typ = scope_ptr->symbol_map[string($3.type)]->type;
 					//aagaya offset
-					printf("%d \n",offset);
+					//printf("%d \n",offset);
 					break;
 				}
 			}
@@ -1617,8 +1617,8 @@ assignment_expression
 		//get the index of the next multiplier constant
 		//cout <<s <<"\n";
 		//std::cout <<typ <<"\n";
-		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
-		printf("%d, %d, %d \n",stars,index, ptr_cnt);
+		//printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+		//printf("%d, %d, %d \n",stars,index, ptr_cnt);
 		if(stars > ptr_cnt - index && index > 0){
 			//bt 
 			yyerror("assignment involves array on right or has incorrent dereferencing");
@@ -1970,11 +1970,9 @@ init_declarator
 		
 		
 		//get the index of the next multiplier constant
-		cout <<stars <<"\n" <<ptr_cnt <<"\n" <<index <<"\n";
-		std::cout <<typ <<"\n";
-		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
-		std::cout <<is_arr <<"\n";
-		std::cout <<"\n";
+		
+		//printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
+	
 	
 		if(ptr_cnt - stars < index && index > 0){
 			//bt 
@@ -2131,7 +2129,7 @@ init_declarator
 				}
 				else{
 					std::string tem = irgen.assign(new_name, $3.ir.tmp);
-					std::cout<<tem<<"\n";
+					
 					std::string g = irgen.concatenate(std::string($3.ir.code),type_change_statement);
 					g = irgen.concatenate(g,tem);
 					
@@ -3050,7 +3048,7 @@ compound_statement
 		$$.backpatcher = BackPatcher::copy($2.backpatcher);
 		std::vector<std::string> tmp1 = $2.backpatcher->getNextList();
 		int size = tmp1.size();
-		//std::cout<<size<<std::endl;
+		
     	delete $2.backpatcher;
 	}
 	| '{'   block_item_list error {  
@@ -3073,7 +3071,7 @@ block_item_list
 		std::vector<std::string> tmp2 = $2.backpatcher->getNextList();
 		int size2 = tmp2.size();
 		int size1 = tmp1.size();
-		//std::cout<<size1<<" "<<size2<<" "<<bpneeded<<std::endl;
+		
 
 		// one of the spots for backpatching if the incoming has no label in newlist and no backpatching is needed
 		// Problem - must have a statement following the thing to be backpatched (solved)
@@ -3091,7 +3089,7 @@ block_item_list
 		else if(size1 == 0  && size2 >=1){bpneeded = 1;}
 		else{bpneeded = 1;}
 		$$.backpatcher->assignNextList(tmp2);
-		//std::cout<<size<<std::endl;
+		
 		$$.ir.code = strdup(irgen.concatenate(string($1.ir.code), string($2.ir.code)).c_str());
 		delete $1.backpatcher;
 		

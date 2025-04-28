@@ -200,7 +200,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 // spill in case all registers are in use
                 if(reg == ""){
                     std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
-                    std::cout<<"spilled"<<std::endl;
+                 
                     // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                     reg = spill[0];
                     cannot_spill.push_back(reg);
@@ -226,7 +226,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 mapped.push_back(reg);
                 // update address allocation table for future use
                 addressTable.addRegisterToDescriptor(words[i],reg,"0");
-                std::cout<<words[i]<<" allocated issue\n";
+                
                 std::string assm = "";
                 if(isVar(words[i])){
                     assm = "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(words[i])) + " ["+ addressTable.getVariableAddress(words[i]) +"]\n";
@@ -263,7 +263,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 // removed because this thing is not possible
                 mapped.push_back(it2->first);
                 cannot_spill.push_back(it2->first);
-                std::cout <<it.size() <<"\n";
+               
 
                 // now doing some optimization - if the temporary is used on the right side then it wont be used further so lets delete it form the address table adn register table.
 
@@ -362,7 +362,7 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     std::string word;
     while (iss >> word) {
         words.push_back(word);
-        std::cout <<word <<"\n";
+        
     }
     std::vector<std::string> assembly;
     //of form $x = a op b
@@ -473,7 +473,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
     int floatParamCount = -1 ;
     for (const auto& instruction : block.instructions) {
         std::string instr = instruction.text;
-        std::cout<<instr<<std::endl;
+       
         std::vector<std::string> assembly;
         if(instr.empty() == true)continue;
         std::map<std::string,std::string> keywords;
@@ -488,7 +488,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         std::string word;
         while (iss >> word) {
             precheck.push_back(word);
-            std::cout <<word <<"\n";
+            
         }
 
         bool found = std::any_of(keywords.begin(),keywords.end(),[&](auto &p){
@@ -509,7 +509,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+                //std::cout <<word <<"\n";
             }
             //first write/store all variables to their address
             //from registers
@@ -553,7 +553,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+                //std::cout <<word <<"\n";
             }
             // first only return is written (void)
             if(words.size() == 1){
@@ -603,7 +603,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+               
             }
             std::string reg = "";
             std::string type = "";
@@ -692,7 +692,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+
             }
 
             std::string funcName = words[3];
@@ -726,7 +726,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+                
             }
             // statement of form $1 = cast: float -> int $0
             std::string typeold = "";
@@ -754,7 +754,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::transform(typenew.begin(), typenew.end(), typenew.begin(), ::tolower);
 
             std::string reg_var_const_2 = words[words.size()-1];
-            std::cout<<"type convserion " << reg_var_const_2<<std::endl;
+           
             bool isval = 0;
             if(isTempOrVar(reg_var_const_2)){
                 if(addressTable.isEmpty(reg_var_const_2)){
@@ -781,7 +781,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 }
                 isval = 1;
             }
-            std::cout<<"type convserion " << reg_var_const_2<<std::endl;
+           
             // the type to convert to
             std::string type_to_convert_to = typenew;
             // the assembly that will be generated
@@ -977,13 +977,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             assembly.push_back(assm);
         }else if(found == true){
             if(type == "arithmetic"){
-                std::cout <<instr <<"\n";
-                std::cout <<"the assembly code \n";
+                
+               
                 assembly = generateArithmetic(instr);
             }
             else if(type == "cmp"){
-                std::cout <<instr <<"\n";
-                std::cout <<"cmppp \n";
+                
                 assembly = generateCMP(instr, op);
             }
         }else if(instr.find("=") != std::string::npos){
@@ -994,14 +993,14 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             std::string word;
             while (iss >> word) {
                 words.push_back(word);
-                std::cout <<word <<"\n";
+                
             }
             // assignment for variable with constant value
             // a = b
             
             if(!isTempOrVar(words[2])){
                 //rhs is const
-                std::cout <<"WSSSS" <<"\n";
+               
                 std::cout <<addressTable.isEmpty(words[0])<<" \n" <<words[0] <<"\n" <<"YOO";
                 std::string assm ="";
                 // if its an array type opearnd
@@ -1010,12 +1009,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //x#block1 , second is $0
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
-                    std::cout <<str[0] <<"\n" <<add <<"\n";
+                   
                     std::string type = addressTable.getType(str[0]);
-                    std::cout <<type <<"\n" <<"AMOGUS" <<"\n";
+                    
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
-                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                    
                     std::string reg = registerDesc.getAvailableRegister("LONG");
                     //use 8byte reg for address calc.
                     std::vector<std::string> cannot_spill;
@@ -1023,7 +1022,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     // spill in case all registers are in use
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
-                        std::cout<<"spilled"<<std::endl;
+                        
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1052,7 +1051,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
-                        std::cout<<"spilled"<<std::endl;
+                        
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1161,7 +1160,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         
                     }
                     else if(words[2].find("*") != std::string::npos){
-                        std::cout<<"POINTER \n";
+                       
                         std::string actual_word = words[2].substr(1,words[2].length()-1);
                         std::string type1 = addressTable.getType(actual_word);
                         std::string command_ = "";
@@ -1199,7 +1198,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if(words2_type == "FLOAT")double_ = true;
                         if(words2_type == "DOUBLE")double_ = true;
                     }
-                    std::cout <<reg2 <<"\n WUTTHE \n";
+                  
                 }
                 else{
                     //indexin case
@@ -1207,18 +1206,18 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //x#block1 , second is $0
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
-                    std::cout <<str[0] <<"\n" <<add <<"\n";
+                   
                     fir = str[0];
                     sec=  str[1];
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
-                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
+                  
                     std::string reg = registerDesc.getAvailableRegister("LONG");
                     
                     // spill in case all registers are in use
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
-                        std::cout<<"spilled"<<std::endl;
+                        
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1243,7 +1242,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
-                        std::cout<<"spilled"<<std::endl;
+                        
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1276,10 +1275,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     reg = registerDesc.getAvailableRegister(addressTable.getType(str[0]));
 
                     //assume rhs is 8byte and it'll adapt to any size of LHS.
-                    std::cout <<"CRAZY CLOWNN \n";
+                    
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,addressTable.getType(str[0]));
-                        std::cout<<"spilled"<<std::endl;
+                      
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1338,9 +1337,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     
                     std::string regg = registerDesc.convertRegisterForType(reg2, addressTable.getType(words[0]));
                     std::string assm = "mov " + reg1 + ", " +regg + "\n";
-                    std::cout <<assm <<"WHATUPPRY" << " " <<words[0] << "\n" <<type << "\n";
-                    std::cout <<addressTable.getType(words[0]) <<"\n";
-                    std::cout <<assm <<"\n";
+                    
+                  
                     if(float_){
                         assm = "movss " + reg1 + ", " + reg2 + "\n";
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
@@ -1358,7 +1356,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     else{
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                             std::string type = addressTable.getType(words[2]);
-                            std::cout<<"type to be used for r11 "<<type<<std::endl;
+                           
                             std::string regused  = "r11";
                             regused = registerDesc.convertRegisterForType("r11", addressTable.getType(fir));
                             assm = "mov " + regused + ", " + reg2 +"\n";
@@ -1375,16 +1373,16 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //x#block1 , second is $0
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
-                    std::cout <<str[0] <<"\n" <<add <<"\n";
+                   
                     std::string type = addressTable.getType(str[0]);
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
-                    std::cout <<" \n TEMPPPP " + str[1] +"\n";
+               
                     std::string reg = registerDesc.getAvailableRegister("LONG");
                     // spill in case all registers are in use
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
-                        std::cout<<"spilled"<<std::endl;
+                       
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1409,7 +1407,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
-                        std::cout<<"spilled"<<std::endl;
+                       
                         // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
                         reg = spill[0];
                         cannot_spill.push_back(reg);
@@ -1442,13 +1440,13 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string conv_reg = registerDesc.convertRegisterForType(reg2,addressTable.getType(str[0]));
                     std::string assm = "mov " + reg+", " + conv_reg +"\n";
                     
-                    std::cout <<assm <<"\n";
+                    
                     reg1 = reg;
                     if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                         std::string regused = registerDesc.convertRegisterForType("r11",addressTable.getType(str[0]));
                         assm = "mov " + regused + ", " + reg2 +"\n";
                         assm += "mov " + reg1 +", " + regused + "\n";
-                        std::cout <<assm <<"\n";
+                      
                     }
                     assembly.push_back(assm);
                 }

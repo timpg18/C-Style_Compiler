@@ -16,7 +16,7 @@ void AddressAllocationTable::setSymbolTable(SymbolTable& st) {
 
 void AddressAllocationTable::identifyFunctionParameters() {
     // if (!symbolTable) return;
-    std::cout<<"function parameters\n";
+
     functionParameters.clear();
     
     // Iterate through all scopes
@@ -57,13 +57,13 @@ void AddressAllocationTable::identifyFunctionParameters() {
     }
     
     // Debug: Print the parameter map
-    std::cout << "=== Function Parameters Map ===\n";
-    for (const auto& func : functionParameters) {
-        std::cout << "Function: " << func.first << "\n";
-        for (const auto& param : func.second) {
-            std::cout << "  Parameter " << param.second << ": " << param.first << "\n";
-        }
-    }
+    // std::cout << "=== Function Parameters Map ===\n";
+    // for (const auto& func : functionParameters) {
+    //     std::cout << "Function: " << func.first << "\n";
+    //     for (const auto& param : func.second) {
+    //         std::cout << "  Parameter " << param.second << ": " << param.first << "\n";
+    //     }
+    // }
 }
 
 std::string AddressAllocationTable::getVariableType(const std::string& varName) const {
@@ -82,7 +82,7 @@ std::string AddressAllocationTable::getVariableType(const std::string& varName) 
         if (scope->block_num == blockNum) {
             
             auto it = scope->symbol_map.find(baseName);
-            std::cout<<scope->scope_name<<std::endl;
+            
             if (it != scope->symbol_map.end()) {
                 std::string fullType = it->second->type;
                 // List of type qualifiers to remove
@@ -143,7 +143,7 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
             return "BOOL";
         }
     }
-    std::cout<<line<<std::endl;
+  
     // Check for floating point constants in the context line
     std::regex floatPattern(R"(\b\d+\.\d*|\.\d+\b)");
     if (std::regex_search(line, floatPattern)) {
@@ -160,7 +160,7 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
     std::string word;
     while (iss >> word) {
         words.push_back(word);
-        std::cout <<word <<"\n";
+        
     }
 
     if(line.find("&") != std::string::npos){
@@ -175,10 +175,10 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
     for (; it != std::sregex_iterator(); ++it) {
         std::string operand = it->str();
         operand = std::regex_replace(operand, std::regex("^\\s+"), ""); // Remove leading whitespace
-        std::cout<<"finding temp types"<<operand<<"  "<<tempName<<std::endl;
+       
         
         if (operand == tempName) continue;
-        std::cout<<"finding temp types"<<operand<<"  "<<tempName<<std::endl;
+       
         if (operand[0] == '$') {
             for (const auto& tmp : temporaries) {
                 if (tmp.name == operand) {
@@ -589,7 +589,7 @@ bool AddressAllocationTable::isInRegister(const std::string& varOrTempName,const
 bool AddressAllocationTable::isEmpty(const std::string& varOrTempName) const{
     auto varIt = variables.find({varOrTempName, ""});
     if (varIt != variables.end()) {
-        std::cout <<varOrTempName <<" \n" <<varIt->registerMap.size() <<"\n" <<"upd \n";
+
         return (varIt->registerMap.size())==0;
     }
 

@@ -1,18 +1,42 @@
-int main(){
-    // int a;
-    // int *x;
-    // int *p = x; 
-    // int****aa[40];
-    // int ****pp;
-    // // aa[4] = pp;
-    // *aa = pp;
-  
-//    int a[4][3];
-//    p = a;
-  int ***p[2][3][4];
-  int ****a;
+struct A{
+    int a;
+    char c;
+    int* b;
+};
 
-  *****p = a;
-    // int *p = &a;
-    //in case of pointer and ref, its bt.
+union B{
+    int a;
+    char c;
+};
+
+enum color{
+    red=1, g = 2, bl = 3
+};
+
+
+int main(){
+  
+    int x[5];
+
+    x[0] = 10;
+    char ch[20];
+    ch[5] = 'k';
+    int y = x[0];
+    char g = ch[5];
+    printf("%d %c k", y, g);
+    struct A c;
+    c.a = 1;
+    c.c = 'k';
+    int xx = c.a;
+    char ck = c.c;
+    printf("%d %c \n",xx,ck);
+    union B obj1;
+    obj1.a = 5;
+    obj1.c = 'k';
+    xx = obj1.a;
+    ck = obj1.c;
+    printf("%d %c \n",xx,ck);
+    enum color gg = red;
+    xx = red;
+    printf("%d %c \n",xx,ck);
 }

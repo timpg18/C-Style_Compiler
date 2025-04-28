@@ -288,7 +288,7 @@ std::string RegisterDescriptor::getRegisterForType(const std::string& regBase, c
     // Get the size based on type
     auto sizeIt = typeSizeMap.find(type);
     std::string size = (sizeIt != typeSizeMap.end()) ? sizeIt->second : "64"; // Default to 64-bit
-    std::cout<<"size of the reg "<<size<<std::endl;
+    
     
     // For floating point types, return an XMM register
     if (type == "FLOAT" || type == "DOUBLE") {
