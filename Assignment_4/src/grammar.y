@@ -53,6 +53,9 @@ std::string removeDeclared(const std::string& input) {
     return result;
 }
 
+std::map<std::string,std::string> enum_to_value;
+int curr_enum_value =0;
+
 %}
 
 %code requires {
@@ -123,7 +126,7 @@ std::string removeDeclared(const std::string& input) {
 %type <atr> init_declarator_list
 %type <atr> argument_expression_list  expression string labeled_statement BOOLEAN Global translation_unit external_declaration
 %type <atr> declaration declaration_list function_definition  block_item compound_statement statement expression_statement
-%type <atr> struct_declaration struct_declarator_list struct_declarator 
+%type <atr> struct_declaration struct_declarator_list struct_declarator enumeration_constant
 
 /* currently removed for now 
 ALIGNAS ALIGNOF ATOMIC GENERIC NORETURN STATIC_ASSERT THREAD_LOCAL
@@ -152,6 +155,7 @@ primary_expression
 		
 		tmp += "#block";
 		tmp += to_string(num);
+		if(contains($$.kind,"ENUM_CONST")) tmp = enum_to_value[std::string(name)];
 		$$.ir.tmp = strdup(tmp.c_str());
 		//$$.name=  strdup(tmp.c_str());
 		$$.ir.code = "";
@@ -218,6 +222,7 @@ enumeration_constant		/* before it has been defined as such */
 	: IDENTIFIER {
 		st.insert_symbol($1.type,"INT" , "ENUM_CONST");
 		st.update_symbol_sizes(std::string($1.type),0);
+		$$.name = $1.type;
 	}
 	;
 
@@ -2490,6 +2495,7 @@ enum_specifier
 		  ts.addEnum(std::string($2.type));
 		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
 		  st.update_symbol_sizes(std::string($2.type),0);
+		  curr_enum_value =0;
       }
     | ENUM IDENTIFIER '{' enumerator_list ',' '}' { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
@@ -2497,6 +2503,7 @@ enum_specifier
           $$.type = tmp;
 		  ts.addEnum(std::string($2.type));
 		  st.insert_symbol(std::string($2.type),"ENUM","USER DEFINED");
+		  curr_enum_value =0;
       }
     | ENUM IDENTIFIER { 
           char *tmp = (char*)malloc(strlen("enum") + strlen($2.type) + 2);
@@ -2513,8 +2520,17 @@ enumerator_list
 	;
 
 enumerator	/* identifiers must be flagged as ENUMERATION_CONSTANT */
-	: enumeration_constant '=' constant_expression
-	| enumeration_constant
+	: enumeration_constant '=' constant_expression {
+		std::string enum_const = std::string($1.name);
+		std::string value = std::string($3.name);
+		enum_to_value[enum_const] = value;
+		int num = std::stoi(value);
+		curr_enum_value =num+1;
+	}
+	| enumeration_constant{
+		std::string enum_const = std::string($1.name);
+		enum_to_value[enum_const] = std::to_string(curr_enum_value++);
+	}
 	;
 
 type_qualifier
@@ -3635,7 +3651,7 @@ if (parserresult == 0 && error_count == 0 && parser_error == 0) {
 	// Generate and print assembly code
 	std::string assemblyCode = codeGen.generateCode();
 	std::cout << "Generated Assembly Code:\n" << assemblyCode << std::endl;
-	
+
 	// Print information from all components
 	//codeGen.printComponentInfo();
 
