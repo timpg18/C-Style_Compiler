@@ -1,5 +1,6 @@
 section .data
 float1 dd 9.0
+float2 dd 7.0
 str1 db "%f", 0
 
 section .text
@@ -59,7 +60,7 @@ cvtss2sd xmm7, xmm7
 movsd QWORD [rbp - 104], xmm7
 movsd xmm7, QWORD [rbp - 104]
 movsd QWORD [rbp - 52], xmm7 
-movss xmm7, [float1]
+movss xmm7, [float2]
 cvtss2sd xmm7, xmm7
 movsd QWORD [rbp - 112], xmm7
 movsd xmm7, QWORD [rbp - 112]

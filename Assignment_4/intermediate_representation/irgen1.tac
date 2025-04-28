@@ -12,7 +12,7 @@ label main:
 		f#block1 = $6
 		$9 = cast: float -> double 9.0
 		c#block1 = $9
-		$10 = cast: float -> double 9.0
+		$10 = cast: float -> double 7.0
 		d#block1 = $10
 		$11 = c#block1 + d#block1
 		b#block1 = $11
