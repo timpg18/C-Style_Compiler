@@ -1,6 +1,34 @@
 #include "CodeGenerator.hpp"
 #include <iostream>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+std::string get64BitRegister(const std::string& reg) {
+    static std::unordered_map<std::string, std::vector<std::string>> relatedRegisters = {
+        {"rax", {"rax", "eax", "ax", "ah", "al"}},
+        {"rcx", {"rcx", "ecx", "cx", "ch", "cl"}},
+        {"rdx", {"rdx", "edx", "dx", "dh", "dl"}},
+        {"rsi", {"rsi", "esi", "si", "sil"}},
+        {"rdi", {"rdi", "edi", "di", "dil"}},
+        {"r8",  {"r8", "r8d", "r8w", "r8b"}},
+        {"r9",  {"r9", "r9d", "r9w", "r9b"}},
+        {"r10", {"r10", "r10d", "r10w", "r10b"}},
+        {"r11", {"r11", "r11d", "r11w", "r11b"}}
+    };
+
+    for (const auto& [base64, variants] : relatedRegisters) {
+        for (const auto& variant : variants) {
+            if (reg == variant) {
+                return base64; // Return the 64-bit version
+            }
+        }
+    }
+
+    // If not found, return empty or maybe the input itself?
+    return "";
+}
 
 CodeGenerator::CodeGenerator(const std::string& irCode, SymbolTable& symbolTable) 
     : irCode(irCode) {
@@ -814,8 +842,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //the final temporary will always have a register since it is being written just above.
                     auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
+                    std::string g = it2->first;
+                    std::string rrr = get64BitRegister(g); //ill use the 64bit for LEA
+                    cd1 += "mov r11, " + rrr + "\n";  
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
-                    cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                    cd1 += "lea " + reg + ", [" + reg1 + " + " + "r11" + "] \n";
                     cd1 += "mov " +  getAsmSizeDirective(addressTable.getType(str[0])) + " [" + reg + "] , " + words[2] +"\n";
                     assm = cd1;
 
@@ -961,13 +992,15 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
-                    cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                   //it2->first ko make r11d se r11
+                   std::string rrr = get64BitRegister(it2->first);
+                    cd1 += "lea " + reg + ", [" + reg1 + " + " +rrr+ "] \n";
                     cannot_spill.push_back(reg);
                     //reg contains effective address of opn
                     
                     std::string reg3 = reg;
                     std::string type = addressTable.getType(str[0]);
-                    reg = registerDesc.getAvailableRegister("LONG");
+                    reg = registerDesc.getAvailableRegister(addressTable.getType(str[0]));
 
                     //assume rhs is 8byte and it'll adapt to any size of LHS.
                     std::cout <<"CRAZY CLOWNN \n";
@@ -1063,7 +1096,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //the final temporary will always have a register since it is being written just above.
                     auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
-                    cd1 += "lea " + reg + ", [" + reg1 + " + " + (it2)->first + "] \n";
+                    std::string rrr = get64BitRegister(it2->first);
+                    cd1 += "mov r11, " + rrr +"] \n";
+
+                    cd1 += "lea " + reg + ", [" + reg1 + " + " + "r11" + "] \n";
                     assembly.push_back(cd1);
                     //reg contains effective address of opn
                     reg = getAsmSizeDirective(addressTable.getType(str[0])) + " ["+ reg +"]";

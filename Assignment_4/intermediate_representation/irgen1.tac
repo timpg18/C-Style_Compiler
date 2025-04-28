@@ -22,7 +22,13 @@ label main:
 		arr#block1[$0] = 2
 		$2 = 0 * 4
 		x#block1 = arr#block1[$2]
-		param "%d"
+		$3 = 8 * 1
+		ar#block1[$3] = '3'
+		$5 = 8 * 1
+		c#block1 = ar#block1[$5]
+		$6 = 8 * 1
+		$5 = ar#blk1[$6]
+		param "%d %c 5\n"
 		param x#block1
 		$3 = call printf, 2
 >>>>>>> e0f8ed7c1e45a357bb6b13127ae841a14a86ffbb

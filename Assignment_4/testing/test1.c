@@ -1,17 +1,11 @@
 
 
 int main(){
-    int x =2;
-    switch(x){
-        case 1 :
-            x=2;
-            break;
-        case 2 :
-            x=3;
-            break;
-        default :
-            x=7;
-            break;
-    }
-    return x;
+   int arr[5];
+   arr[0] = 2;
+   int x=  arr[0];
+   char ar[10];
+   ar[8] = '3';
+   char c = ar[8];
+   printf("%d %c 5\n",x,ar[8]);
 }
