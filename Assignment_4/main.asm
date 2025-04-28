@@ -1,6 +1,6 @@
 ; Generated Assembly Code
 section .data
-str1 db "%f", 10, 0
+str1 db "%d", 0
 
 section .text
         global _start
@@ -20,19 +20,46 @@ main:
 push rbp
 mov rbp, rsp
 sub rsp, 16
-
-mov r11d, 'b'
-cvtsi2ss xmm7, r11d
-movss DWORD [rbp - 12], xmm7
-movss xmm7, DWORD [rbp - 12]
-movss DWORD [rbp - 8], xmm7
-mov rdi, str1
-cvtss2sd xmm0, DWORD [rbp - 8]
-mov eax, 1
-call printf
-mov DWORD [rbp - 16], eax
-mov eax, 0
+mov DWORD [rbp - 4], 5
+cmp DWORD[rbp - 4], 1
+je @L0
+cmp DWORD[rbp - 4], 2
+je @L1
+jmp @L2
+@L0:
+mov DWORD [rbp - 4], 2
+jmp @L3
+@L1:
+mov DWORD [rbp - 4], 3
+jmp @L3
+@L2:
+mov DWORD [rbp - 4], 7
+jmp @L3
+@L3:
+mov eax, DWORD [rbp - 4]
 jmp @E1
+=======
+sub rsp, 32
+mov r9d, DWORD [rbp - 28]
+mov r9d, 0
+imul r9d, 4
+lea r8, [rbp - 20] 
+lea r8, [r8 + r9d] 
+mov DWORD [r8] , 2
+mov r8d, DWORD [rbp - 32]
+mov r8d, 0
+imul r8d, 4
+lea rcx, [rbp - 20] 
+lea rcx, [rcx + r8d] 
+mov rcx, DWORD [rcx]
+mov DWORD [rbp - 24], rcx
+mov DWORD [rbp - 32], r8d
+mov DWORD [rbp - 28], r9d
+mov rdi, str1
+mov esi, DWORD [rbp - 24]
+call printf
+mov DWORD [rbp - 36], eax
+>>>>>>> e0f8ed7c1e45a357bb6b13127ae841a14a86ffbb
 @E1:
 leave
 ret
