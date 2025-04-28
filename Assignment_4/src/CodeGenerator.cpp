@@ -409,6 +409,44 @@ std::vector<std::string> CodeGenerator::generateBitwise(const std::string& line)
     
 }
 
+std::vector<std::string> CodeGenerator::generateShifts(const std::string& line){
+    std::string instruction_op;
+    std::vector<std::string> assembly;
+    if (line.find("&") != std::string::npos) {
+        instruction_op = "and";
+    }else if (line.find("|") != std::string::npos) {
+        instruction_op = "or";
+    }else if (line.find("^") != std::string::npos) {
+        instruction_op = "xor";
+    }
+    
+    std::map<int,int> req;
+
+    req[0] = 1;
+    req[2] = 1;
+    req[4] = 1;
+    std::vector<std::string> registers  = getReg(line,assembly, req);
+    //we also push the extra instructions in getReg only
+    
+    std::string code;
+    if(registers.size() == 3){
+        //ie type a = b op c
+        //3 operand instruction 
+        std::string mov_ins = "mov ";
+        std::string reg1 = registers[0];
+        std::string reg2 = registers[1];
+        std::string reg3 = registers[2];      
+
+        code = mov_ins + reg1 + ", " + reg2 +"\n";
+        code += instruction_op + " " + reg1 + ", " + reg3 + "\n";
+        assembly.push_back(code);
+    }
+    
+    
+    return assembly;
+    
+}
+
 void keyword_init( std::map<std::string,std::string> &keywords){
     
     for (const auto& op : {"+", "*", "/", "-"}) {
@@ -1095,7 +1133,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 assembly = generateBitwise(instr);
             }
             else if(type == "shifts" ){
-                
+
+                assembly = generateShifts(instr);
             }
         }else if(instr.find("=") != std::string::npos){
             //assignment

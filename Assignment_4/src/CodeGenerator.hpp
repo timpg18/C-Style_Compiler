@@ -78,6 +78,7 @@ private:
     std::string replaceCharConstants(const std::string& irCode);
     std::string processFloatConstants(const std::string& irCode);
     std::vector<std::string> generateBitwise(const std::string& line);
+    std::vector<std::string> generateShifts(const std::string& line);
     
 
 public:

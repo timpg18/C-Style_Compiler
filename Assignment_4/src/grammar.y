@@ -365,9 +365,9 @@ postfix_expression
 				string newtemp;
 				newtemp += string($1.name);
 					int num;
-		num = st.lookup(string($1.name))->block_num;
-		newtemp += "#block";
-		newtemp += to_string(num);
+			num = st.lookup(string($1.name))->block_num;
+			newtemp += "#block";
+			newtemp += to_string(num);
 				newtemp += "[";
 			newtemp += temp2;
 			newtemp += "]";
@@ -2592,7 +2592,7 @@ direct_declarator
 		$$.kind = "IDENTIFIER";
 		$$.name = $1.type;
 			st.insert_symbol($1.type, currentType ? currentType : "INVALID", "IDENTIFIER");
-			st.lookup($1.type)->block_num = block_num;
+			st.lookup($1.type)->block_num = st.current_scope_->block_num;
 			if(classDef==1){
 				if(isPri==1){
 					priMem += " " + std::string($1.type);
