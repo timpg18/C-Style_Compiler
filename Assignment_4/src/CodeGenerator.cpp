@@ -96,7 +96,7 @@ std::string CodeGenerator::generateFunctionBegin(const std::string& line) {
     std::string word;
     while (iss >> word) {
         words.push_back(word);
-        std::cout <<word <<"\n";
+        
     }
 
     int size = addressTable.getFunctionStackSize(words[1],irCode);
@@ -181,21 +181,20 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
     //i will extract registers for mapped ind
     while (iss >> word) {
         words.push_back(word);
-        std::cout <<word <<"\n";
-        std::cout <<"each" <<"\n";
+     
     }
     for(auto in = ind.rbegin(); in != ind.rend(); ++in){
         int i = in->first;
         if(isTempOrVar(words[i])){
             if(addressTable.isEmpty(words[i])){
                 std::string type = addressTable.getType(words[i]);
-                std::cout<<"HELLO WORLD "<<type<<"\n";
+              
                 std::string reg = registerDesc.getAvailableRegister(type);
                 // spill in case all registers are in use
                 if(reg == ""){
                     std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                 }
-                std::cout<<reg<<std::endl;
+                
                 mapped.push_back(reg);
                 // update address allocation table for future use
                 addressTable.addRegisterToDescriptor(words[i],reg,"0");
@@ -227,7 +226,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
 
             }
             else{
-                std::cout <<"bruh \n";
+              
                 // std::cout <<words[i] <<"\n";
                 // addressTable.printTable();
                 auto it = addressTable.getRegisterDescriptor(words[i]);
@@ -272,7 +271,7 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     req[4] = 1;
     std::vector<std::string> registers  = getReg(line,assembly, req);
     //we also push the extra instructions in getReg only
-    std::cout <<instruction_op <<"\n";
+  
     std::string code;
     if(registers.size() == 3){
         //ie type a = b op c
@@ -1067,11 +1066,14 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 bool double_ = false;
                 std::vector<std::string> cannot_spill;
                 std::string reg2 = "";
+                std::string fir ;
+                std::string sec;
                 if(contains_sq(words[2]) == false){
                     // isme p chudh gaya p#block1
                     // new addition
                     // handling the case for address assignment only in case of variables
                     // first check if assigning an address(assuming that we will not assign the pointer address with array operand for now)
+                    fir = words[2];
                     if(words[2].find("&") != std::string::npos){
                         std::string actual_variable = words[2].substr(1,words[2].length()-1);
                         std::string type1 = addressTable.getType(actual_variable);
@@ -1134,7 +1136,8 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //i need to store at rbp - X + $0
                     std::string add = addressTable.getVariableAddress(str[0]);
                     std::cout <<str[0] <<"\n" <<add <<"\n";
-                    
+                    fir = str[0];
+                    sec=  str[1];
                     ///rhs is const
                     //dont do getreg, it sends const i need address.
                     std::cout <<" \n TEMPPPP " + str[1] +"\n";
@@ -1172,6 +1175,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
                     }
                     cannot_spill.push_back(reg);
+                    //reg3 is 64 bit register.
                     cd1 += "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(str[0])) + " [" + reg3 + "]" + "\n";
                     reg2 = reg;
                     assembly.push_back(cd1);
@@ -1204,8 +1208,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if(words0_type == "DOUBLE")double_ =true;
 
                     }
-                    std::string assm = "mov " + reg1 + ", " +reg2 + "\n";
-                
+                    
+                    std::string regg = registerDesc.convertRegisterForType(reg2, addressTable.getType(words[0]));
+                    std::string assm = "mov " + reg1 + ", " +regg + "\n";
+                    std::cout <<assm <<"WHATUPPRY" << " " <<words[0] << "\n" <<type << "\n";
+                    std::cout <<addressTable.getType(words[0]) <<"\n";
+                    std::cout <<assm <<"\n";
                     if(float_){
                         assm = "movss " + reg1 + ", " + reg2 + "\n";
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
@@ -1224,8 +1232,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
                             std::string type = addressTable.getType(words[2]);
                             std::cout<<"type to be used for r11 "<<type<<std::endl;
-                            std::string regused = registerDesc.getRegisterForType("r11",type);
+                            std::string regused  = "r11";
+                            regused = registerDesc.convertRegisterForType("r11", addressTable.getType(fir));
                             assm = "mov " + regused + ", " + reg2 +"\n";
+                            regused = registerDesc.convertRegisterForType("r11", addressTable.getType(words[0]));
                             assm += "mov " + reg1 +", " + regused + "\n";
                         }
                     }
@@ -1261,18 +1271,22 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     auto it = addressTable.getRegisterDescriptor(str[1]);
                     auto it2 = it.begin();
                     std::string rrr = get64BitRegister(it2->first);
-                    cd1 += "mov r11, " + rrr +"] \n";
+                    cd1 += "mov r11, " + rrr + "\n";
 
                     cd1 += "lea " + reg + ", [" + reg1 + " + " + "r11" + "] \n";
                     assembly.push_back(cd1);
                     //reg contains effective address of opn
                     reg = getAsmSizeDirective(addressTable.getType(str[0])) + " ["+ reg +"]";
-                    std::string assm = "mov " + reg+", " + reg2 +"\n";
+                    std::string conv_reg = registerDesc.convertRegisterForType(reg2,addressTable.getType(str[0]));
+                    std::string assm = "mov " + reg+", " + conv_reg +"\n";
+                    
+                    std::cout <<assm <<"\n";
                     reg1 = reg;
                     if((reg1.find("[") != std::string::npos)  && (reg2.find("[") != std::string::npos)){
-                        std::string regused = registerDesc.getRegisterForType("r11",type);
+                        std::string regused = registerDesc.convertRegisterForType("r11",addressTable.getType(str[0]));
                         assm = "mov " + regused + ", " + reg2 +"\n";
                         assm += "mov " + reg1 +", " + regused + "\n";
+                        std::cout <<assm <<"\n";
                     }
                     assembly.push_back(assm);
                 }
@@ -1284,7 +1298,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             
         }else{
-            std::cout  <<"BRUH WUT" <<"\n";
+        
             // For now, we're ignoring other instructions as requested
             continue;
         }
@@ -1360,7 +1374,7 @@ std::string CodeGenerator::getAsmSizeDirective(const std::string& type) const {
         return it->second;
     }
     // Default to QWORD if unknown type (safer assumption in 64-bit)
-    return "DWORD";  // Most common fallback
+    return "QWORD";  // Most common fallback
 }
 
 std::string CodeGenerator::generateDataSection() {
