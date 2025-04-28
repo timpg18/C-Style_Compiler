@@ -299,16 +299,25 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
     req[4] = 1;
     std::vector<std::string> registers  = getReg(line,assembly, req);
     //we also push the extra instructions in getReg only
-  
+    
     std::string code;
     if(registers.size() == 3){
         //ie type a = b op c
             //3 operand instruction 
+            std::istringstream iss(line);
+            std::vector<std::string> words;
+            std::string word;
+            while (iss >> word) {
+                words.push_back(word); 
+                std::cout<<word<<"\n";
+            }
+            std::string type = "";
+            if(isTempOrVar(words[0]))type = addressTable.getType(words[0]);
             std::string mov_ins = "mov ";
             std::string reg1 = registers[0];
             std::string reg2 = registers[1];
             std::string reg3 = registers[2];
-            if(reg1.find("xmm") != std::string::npos){
+            if(type == "FLOAT"){
                 mov_ins = "movss ";
                 if(instruction_op == "add"){
                     instruction_op = "addss";
@@ -321,6 +330,21 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
                 }
                 else if(instruction_op == "idiv"){
                     instruction_op = "divss";
+                }
+            }
+            if(type == "DOUBLE"){
+                mov_ins = "movsd ";
+                if(instruction_op == "add"){
+                    instruction_op = "addsd ";
+                }
+                else if(instruction_op == "sub"){
+                    instruction_op = "subsd ";
+                }
+                else if( instruction_op == "imul"){
+                    instruction_op = "mulsd ";
+                }
+                else if(instruction_op == "idiv"){
+                    instruction_op = "divsd ";
                 }
             }
             auto it1 = dataSectionMap.find(reg2);
@@ -372,7 +396,27 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     req[4] = 1;
     //handle 0 $x alag se
     std::vector<std::string> reg = getReg(line ,assembly, req);
-    std::string cd = "cmp " + reg[0] + ", " + reg[1] + "\n";
+    bool isfloat = 0;
+    auto it = dataSectionMap.find(reg[0]);
+    std::string may_be_used = "";
+    if(it!=dataSectionMap.end()){
+        if(it->second.first == "FLOAT"){
+            may_be_used = "movss xmm7, [" + reg[0] + "]\n";
+            reg[0] = "xmm7";
+            isfloat =true;
+        }
+    }
+    auto it2 = dataSectionMap.find(reg[1]);
+    if(it!=dataSectionMap.end()){
+        if(it->second.first == "FLOAT"){
+            reg[1] = "[" + reg[1] + "]";
+            isfloat =true;
+        }
+    }
+    std::string cmpop = "cmp ";
+    if(isfloat)cmpop = "ucomiss ";
+    std::string cd = may_be_used;
+    cd += cmpop + reg[0] + ", " + reg[1] + "\n";
     assembly.push_back(cd);
     addressTable.set_relop(words[0],op);
     return assembly;
@@ -403,11 +447,15 @@ std::vector<std::string> CodeGenerator::write_reg(){
             auto varIt = addressTable.variables.find({s, ""});
             if(varIt != addressTable.variables.end()){
                 //just write the reg val onto memory. now it'll be consistent
+                std::string type = varIt->type;
                 std::string cd = "mov ";
-                if((p.first).find("xmm") != std::string::npos){
+                if(type == "FLOAT"){
                     cd = "movss ";
                 }
-                cd += "DWORD ["+ varIt->address + "]";
+                if(type == "DOUBLE"){
+                    cd = "movsd ";
+                }
+                cd += getAsmSizeDirective(type) +" ["+ varIt->address + "]";
                 cd +=", ";
                 cd += p.first + "\n";
                 assembly.push_back(cd);
@@ -416,11 +464,15 @@ std::vector<std::string> CodeGenerator::write_reg(){
             auto varIt1 = addressTable.temporaries.find({s,""});
             if(varIt1 != addressTable.temporaries.end()){
                 //just write the reg val onto memory. now it'll be consistent
+                std::string type = varIt1->type;
                 std::string cd = "mov ";
-                if((p.first).find("xmm") != std::string::npos){
+                if(type == "FLOAT"){
                     cd = "movss ";
                 }
-                cd += "DWORD ["+ varIt1->address + "]";
+                if(type == "DOUBLE"){
+                    cd = "movsd ";
+                }
+                cd += getAsmSizeDirective(type) +" ["+ varIt1->address + "]";
                 cd +=", ";
                 cd += p.first + "\n";
                 assembly.push_back(cd);
