@@ -20,6 +20,7 @@ public:
     // Initialize with all basic C types
     TypeSet() {
         // Primitive types
+        // for now comsidering only signed types only
         types = {
             "VOID",
             "CHAR", "UNSIGNED CHAR",

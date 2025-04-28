@@ -1,7 +1,4 @@
 ; Generated Assembly Code
-section .data
-str1 db "%ld", 0
-
 section .text
         global _start
         extern printf
@@ -19,17 +16,24 @@ _start:
 main:
 push rbp
 mov rbp, rsp
-sub rsp, 32
-mov r11d, 50
-movsx r11, r11d
-mov QWORD [rbp - 16],r11
-mov r11, QWORD [rbp - 16]
-mov QWORD [rbp - 8], r11
-mov rdi, str1
-mov rsi, QWORD [rbp - 8]
-call printf
-mov DWORD [rbp - 20], eax
-mov eax, 0
+sub rsp, 16
+mov DWORD [rbp - 4], 5
+cmp DWORD[rbp - 4], 1
+je @L0
+cmp DWORD[rbp - 4], 2
+je @L1
+jmp @L2
+@L0:
+mov DWORD [rbp - 4], 2
+jmp @L3
+@L1:
+mov DWORD [rbp - 4], 3
+jmp @L3
+@L2:
+mov DWORD [rbp - 4], 7
+jmp @L3
+@L3:
+mov eax, DWORD [rbp - 4]
 jmp @E1
 @E1:
 leave

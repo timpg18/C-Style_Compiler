@@ -460,16 +460,29 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             //from registers
             assembly = write_reg();
             if(instr.find("if") != std::string::npos){
+                // needs handling for switch case as switch case doesnt have a temporary
                 //get the relational op
                 //depending on relational op, jne/jeq etc to label @L1
-                std::string op = addressTable.get_relop(words[1]);
-                std::string jmp;
-                std::map<std::string,std::string> op_to_j;
-                op_to_j = jump_init();
-                jmp = op_to_j[op];
-                jmp += " " + words[3];
-                jmp += "\n";
-                assembly.push_back(jmp);
+
+                // this one is non swtich case
+                if(instr.find("$") != std::string::npos){
+                    std::string op = addressTable.get_relop(words[1]);
+                    std::string jmp;    
+                    std::map<std::string,std::string> op_to_j;
+                    op_to_j = jump_init();
+                    jmp = op_to_j[op];
+                    jmp += " " + words[3];
+                    jmp += "\n";
+                    assembly.push_back(jmp);
+                }
+                // now for switch case
+                else{
+                    std::string assembly_generated = "";
+                    assembly_generated += "cmp " + getAsmSizeDirective(words[1]) + "["+addressTable.getVariableAddress(words[1])+"], " + words[3] + "\n";
+                    assembly_generated += "je " + words[5] + "\n";
+                    assembly.push_back(assembly_generated);
+                }
+                
             }
             else{
                 std::string jmp = "jmp ";
