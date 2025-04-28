@@ -700,7 +700,31 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             // statement of form $1 = cast: float -> int $0
             //                    0 1  2     3    4   5   6
-            std::string reg_var_const_2 = words[6];
+            std::string typeold = "";
+            std::string typenew = "";
+            size_t arrowPos = instr.find("->");
+
+            if (arrowPos != std::string::npos) {
+                // Extract the part before '->' (type before cast)
+                std::string beforeCast = instr.substr(instr.find("cast:") + 6, arrowPos - (instr.find("cast:") + 6));
+
+                // Extract the part after '->' (type after cast)
+                std::string afterCast = instr.substr(arrowPos + 3);
+                
+                // Trim any extra spaces from the extracted strings
+                beforeCast = beforeCast.substr(0, beforeCast.find_last_not_of(" \t") + 1);
+                afterCast = afterCast.substr(0, afterCast.find_first_of(" \t") != std::string::npos ? afterCast.find_first_of(" \t") : afterCast.length());
+
+                // Output the extracted types
+                typeold = beforeCast;
+                typenew = afterCast;
+            } else {
+                std::cout << "No valid cast found in the string." << std::endl;
+            }
+            std::transform(typeold.begin(), typeold.end(), typeold.begin(), ::tolower);
+            std::transform(typenew.begin(), typenew.end(), typenew.begin(), ::tolower);
+
+            std::string reg_var_const_2 = words[words.size()-1];
             std::cout<<"type convserion " << reg_var_const_2<<std::endl;
             bool isval = 0;
             if(isTempOrVar(reg_var_const_2)){
@@ -730,13 +754,13 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             }
             std::cout<<"type convserion " << reg_var_const_2<<std::endl;
             // the type to convert to
-            std::string type_to_convert_to = words[5];
+            std::string type_to_convert_to = typenew;
             // the assembly that will be generated
             std::string assm ="";
             // storing the converted type directly in memory
             std::string temporary_operand  = getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"]";
             // from float to something
-            if(words[3] == "float"){
+            if(typeold == "float"){
                 if(type_to_convert_to == "double"){
                     assm =  "movss xmm7, " + reg_var_const_2 + "\n";
                     assm += "cvtss2sd xmm7, xmm7\n";
@@ -784,7 +808,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 
             }
             // from int to something
-            else if(words[3] == "int"){
+            else if(typeold == "int"){
                 if(type_to_convert_to == "float"){
                     assm = "mov r11d, " + reg_var_const_2 + "\n";
                     assm += "cvtsi2ss xmm7, r11d\n";
@@ -812,7 +836,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 }
             }
             // from double to something
-            else if(words[3] == "double"){
+            else if(typeold == "double"){
                 if(type_to_convert_to == "float"){
                     assm =  "movsd xmm7, " + reg_var_const_2 + "\n";
                     assm += "cvtsd2ss xmm7, xmm7\n";
@@ -859,7 +883,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 }
             }
             // from double to something
-            else if(words[3] == "long"){
+            else if(typeold == "long"){
                 if(type_to_convert_to == "float"){
                     assm = "mov r11, " + reg_var_const_2 + "\n";
                     assm += "cvtss2ss xmm7, r11\n";
@@ -886,7 +910,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     assm += "mov " + temporary_operand + ",r11d\n";
                 }
             }
-            else if(words[3] == "char"){
+            else if(typeold == "char"){
                 if(type_to_convert_to == "float"){
                     assm = "movzx r11d, " + reg_var_const_2 + "\n";
                     if(isval) assm = "mov r11d, " + reg_var_const_2 + "\n";
@@ -914,7 +938,11 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     if(isval) assm = "mov r11, " + reg_var_const_2 + "\n";
                     assm += "mov " + temporary_operand + ", r11\n";
                 }
-
+            }
+            else{
+                // this will be case of pointers
+                assm = "mov r11, " + reg_var_const_2 + "\n";
+                assm += "mov " + temporary_operand + ", r11\n";
             }
 
             assembly.push_back(assm);

@@ -858,7 +858,8 @@ cast_expression
 		//printf("\n\n%s\n\n",$2.type);
 		//NEW_TMP_NAME = CAST: NEW_TYPE OLD_TMP
 		string newtmp = irgen.new_temp();
-		string newcd = irgen.typecast(newtmp, $4.ir.tmp, $2.type);
+		string newcd = irgen.typecast(newtmp, $4.ir.tmp, $4.type,$2.type);
+		$$.name = $4.name;
 		$$.type = $2.type;
 		$$.kind = $4.kind;
 		$$.ir.tmp = strdup(newtmp.c_str());

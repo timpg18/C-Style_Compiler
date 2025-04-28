@@ -76,7 +76,7 @@ class IRGen{
     std::string add_unary(std::string tmp , std::string op, std::string s1);
 
     //TYPECASTING
-    std::string typecast(std::string new_temp, std::string old_temp ,std::string type);
+    std::string typecast(std::string new_temp, std::string old_temp ,std::string typeold ,std::string typenew);
     
 
     //func def
