@@ -1,3 +1,8 @@
+label func:
+	func_begin func
+		$0 = a#block1 + b#block1
+		return $0
+	func_end func
 label main:
 	func_begin main
 		$0 = 1 + 1

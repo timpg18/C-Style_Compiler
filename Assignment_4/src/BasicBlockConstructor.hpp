@@ -21,6 +21,11 @@ public:
         bool isGoto;            
         bool isFunctionLabel;   
         std::string targetLabel; 
+        
+        // New fields for dependency analysis
+        std::string operation;           // The operation being performed (e.g., '+', '-', '*', 'call', etc.)
+        std::vector<std::string> lhs;    // Left-hand side variables (assignment targets)
+        std::vector<std::string> rhs;    // Right-hand side variables (operands, parameters)
     };
 
     struct BasicBlock {
@@ -39,6 +44,12 @@ private:
     void markTargets(std::vector<Instruction>& instructions);
     std::vector<BasicBlock> constructBlocks(std::vector<Instruction>& instructions);
     void buildCFG(std::vector<BasicBlock>& blocks, const std::vector<Instruction>& instructions);
+    
+    // New method to extract dependencies from instructions
+    void extractDependencies(std::vector<Instruction>& instructions);
+    
+    // Helper method to parse a single instruction for dependencies
+    void parseInstructionDependencies(Instruction& instr);
 };
 
 #endif // BASICBLOCKCONSTRUCTOR_HPP
