@@ -1,13 +1,18 @@
-enum color{
-    red=1, g = 2, bl = 3
-};
-
-enum day{
-    monday,tuesday=9,wednesday
-};
-
-
 int main(){
-    enum color gg = red;
-    printf("%d ",gg);
+    // int a;
+    // int *x;
+    // int *p = x; 
+    // int****aa[40];
+    // int ****pp;
+    // // aa[4] = pp;
+    // *aa = pp;
+  
+//    int a[4][3];
+//    p = a;
+  int ***p[2][3][4];
+  int ****a;
+
+  *****p = a;
+    // int *p = &a;
+    //in case of pointer and ref, its bt.
 }

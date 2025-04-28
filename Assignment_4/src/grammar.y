@@ -30,7 +30,7 @@ std::string currFunc = "";
 int bpneeded = 0; 
 std::string final_ir_code = "";
 int counter = 1;
-
+int is_arr = 0;
 std::string formatTypeChange(const std::string& type1, const std::string& type2) {
     std::string lowerType1 = type1;
     std::string lowerType2 = type2;
@@ -151,8 +151,9 @@ primary_expression
 		$$.name = name;
 		int num;
 		num = st.lookup(tmp)->block_num;
-		
-		
+		vector<int> dim = st.lookup(tmp)->dimensions;
+		if(dim.size() > 0)is_arr = 1;
+		else is_arr = 0;
 		tmp += "#block";
 		tmp += to_string(num);
 		if(contains($$.kind,"ENUM_CONST")) tmp = enum_to_value[std::string(name)];
@@ -162,6 +163,7 @@ primary_expression
 		//printf("\n\n%s\n\n%s\n\n%s",$$.type,$$.kind,$$.name);
 		}
 		$$.backpatcher = new BackPatcher();
+
 	}
 	| constant{
 		$$.type = $1.type;
@@ -282,6 +284,7 @@ postfix_expression
 
 		
 		int stars = 0;
+		//cur_type
 		for(int i=s.size()-1 ; i>=0;i--){
 			if(s[i] == '*')stars++;
 		}
@@ -313,7 +316,6 @@ postfix_expression
 			yyerror("cannot index a pointer");
 		}
 	
-		
 		
 		printf("%s %s YOO\n",$1.ir.tmp, $1.name);
 		//easier check is if tmp does not contain a $, since x#block1 and x are different here
@@ -780,6 +782,7 @@ unary_expression
 			std::string s = std::string($2.type);
 			s.push_back('*');
 			$$.type = strdup(s.c_str());
+			is_arr = 0;
 		}
 		else{
 			$$.type = $2.type;
@@ -1616,7 +1619,7 @@ assignment_expression
 		//std::cout <<typ <<"\n";
 		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
 		printf("%d, %d, %d \n",stars,index, ptr_cnt);
-		if(stars > ptr_cnt - index){
+		if(stars > ptr_cnt - index && index > 0){
 			//bt 
 			yyerror("assignment involves array on right or has incorrent dereferencing");
 		}
@@ -1967,11 +1970,13 @@ init_declarator
 		
 		
 		//get the index of the next multiplier constant
-		//cout <<s <<"\n";
-		//std::cout <<typ <<"\n";
+		cout <<stars <<"\n" <<ptr_cnt <<"\n" <<index <<"\n";
+		std::cout <<typ <<"\n";
 		printf("%s %s \n %s %s \n %s %s \n CWAZY",$1.ir.tmp,$3.ir.tmp, $1.name,$3.name, $1.type, $3.type);
-		
-		if(stars > ptr_cnt - index){
+		std::cout <<is_arr <<"\n";
+		std::cout <<"\n";
+	
+		if(ptr_cnt - stars < index && index > 0){
 			//bt 
 			yyerror("assignment involves array on right or has incorrent dereferencing");
 		}
@@ -2541,7 +2546,8 @@ type_qualifier
 
 
 declarator
-	: pointer direct_declarator { // concatenation of * will be spearate everywhere
+	: pointer direct_declarator {
+		// concatenation of * will be spearate everywhere
           int idx = $2.index;  // $2 is the token table index from direct_declarator.
           char* newtype = concat(st.token_table_[idx].token_type.c_str(), $1.type);
 		  st.token_table_[idx].token_type += std::string($1.type);
