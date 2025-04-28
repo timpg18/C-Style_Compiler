@@ -140,6 +140,8 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
     const std::vector<std::string> relops = {"<", ">", "<=", ">=", "==", "!="};
     for (const auto& op : relops) {
         if (line.find(op) != std::string::npos) {
+            if(line.find("<<") != std::string::npos || line.find(">>") != std::string::npos ) return "INT";
+            
             return "BOOL";
         }
     }

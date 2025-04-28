@@ -412,12 +412,10 @@ std::vector<std::string> CodeGenerator::generateBitwise(const std::string& line)
 std::vector<std::string> CodeGenerator::generateShifts(const std::string& line){
     std::string instruction_op;
     std::vector<std::string> assembly;
-    if (line.find("&") != std::string::npos) {
-        instruction_op = "and";
-    }else if (line.find("|") != std::string::npos) {
-        instruction_op = "or";
-    }else if (line.find("^") != std::string::npos) {
-        instruction_op = "xor";
+    if (line.find("<<") != std::string::npos) {
+        instruction_op = "shl";
+    }else if (line.find(">>") != std::string::npos) {
+        instruction_op = "sar";
     }
     
     std::map<int,int> req;
@@ -641,6 +639,12 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 return true;
             }
         });
+        if(instr.find("<<") != std::string::npos){
+            type = "shifts";
+        }
+        if(instr.find(">>") != std::string::npos){
+            type = "shifts";
+        }
         if(precheck.size() == 3)found = false;
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
