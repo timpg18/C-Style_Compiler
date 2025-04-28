@@ -69,7 +69,37 @@ RegisterDescriptor::RegisterDescriptor() {
     typeSizeMap["LONG"] = "64";    // Using 64-bit for longs
     typeSizeMap["CHAR*"] = "64";   // Using 64-bit for string pointers
 }
+std::string RegisterDescriptor::get_type(const std::string &reg_name){
+     // Step 1: Find the full register group (e.g., rax, rcx, xmm0, etc.)
+     for (const auto &entry : relatedRegisters) {
+        for(const std::string &variant: entry.second){
+             // Step 2: Determine size based on variant
+             size_t len = variant.length();
+                
+             if (variant[0] == 'x') {
+                 // xmm register → 128 bits
+                 return "FLOAT";  // or DOUBLE, you can default to FLOAT
+             } else if (len >= 2 && variant.substr(len - 2) == "64") {
+                 return "LONG";
+             } else if (variant.back() == 'd') {
+                 // ends with 'd' → 32 bits
+                 return "INT";
+             } else if (variant.back() == 'w') {
+                 // ends with 'w' → 16 bits
+                 return "SHORT";
+             } else if (variant.back() == 'b' || variant == "ah" || variant == "al" || variant == "ch" || variant == "cl" || variant == "dh" || variant == "dl" || variant == "sil" || variant == "dil") {
+                 // 8-bit special registers
+                 return "CHAR";
+             } else {
+                 // Default case for full 64-bit registers like rax, rcx, etc.
+                 return "LONG";
+             }
+         }
+        }
 
+    // If not found, unknown register
+    return "UNKNOWN";
+}
 std::string RegisterDescriptor::convertRegisterForType(const std::string& registerName, const std::string& type) {
     // First, find the base register for the given register name
     std::string baseRegister = "";

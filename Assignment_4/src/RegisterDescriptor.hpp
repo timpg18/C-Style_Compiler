@@ -20,6 +20,7 @@ private:
     std::map<std::string, std::string> typeSizeMap;
 
 public:
+std::string get_type(const std::string &reg_name);
     std::string convertRegisterForType(const std::string& registerName, const std::string& type);
     // Maps register name to variables/temporaries it holds (allows multiples)
     std::map<std::string, std::vector<std::string>> registerContent;

@@ -338,6 +338,8 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
             
 
             code = mov_ins + reg1 + ", " + reg2 +"\n";
+            std::string typ = registerDesc.get_type(reg1);
+            
             code += instruction_op + " " + reg1 + ", " + reg3 + "\n";
     }
     assembly.push_back(code);
@@ -367,11 +369,13 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     std::vector<std::string> assembly;
     //of form $x = a op b
     //op is !=, == etc
+    op = words[3];
     std::map<int,int> req;
     req[2] = 1;
     req[4] = 1;
     //handle 0 $x alag se
     std::vector<std::string> reg = getReg(line ,assembly, req);
+    
     std::string cd = "cmp " + reg[0] + ", " + reg[1] + "\n";
     assembly.push_back(cd);
     addressTable.set_relop(words[0],op);
@@ -409,9 +413,10 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 }
                 cd += "DWORD ["+ varIt->address + "]";
                 cd +=", ";
-                cd += p.first + "\n";
+                std::string conv = registerDesc.convertRegisterForType(p.first, "INT");
+                cd +=  conv + "\n";
                 assembly.push_back(cd);
-                rem.push_back({p.first, s});
+                rem.push_back({conv, s});
             }
             auto varIt1 = addressTable.temporaries.find({s,""});
             if(varIt1 != addressTable.temporaries.end()){
@@ -420,11 +425,13 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 if((p.first).find("xmm") != std::string::npos){
                     cd = "movss ";
                 }
+                
                 cd += "DWORD ["+ varIt1->address + "]";
                 cd +=", ";
-                cd += p.first + "\n";
+                std::string conv = registerDesc.convertRegisterForType(p.first, "INT");
+                cd += conv + "\n";
                 assembly.push_back(cd);
-                rem.push_back({p.first, s});
+                rem.push_back({conv, s});
             }
         }
     }
@@ -522,9 +529,10 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 // this one is non swtich case
                 if(instr.find("$") != std::string::npos){
                     std::string op = addressTable.get_relop(words[1]);
-                    std::string jmp;    
+                    std::string jmp;
                     std::map<std::string,std::string> op_to_j;
                     op_to_j = jump_init();
+                   
                     jmp = op_to_j[op];
                     jmp += " " + words[3];
                     jmp += "\n";
