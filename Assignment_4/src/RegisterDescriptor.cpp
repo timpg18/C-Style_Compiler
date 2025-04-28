@@ -70,6 +70,36 @@ RegisterDescriptor::RegisterDescriptor() {
     typeSizeMap["CHAR*"] = "64";   // Using 64-bit for string pointers
 }
 
+std::string RegisterDescriptor::convertRegisterForType(const std::string& registerName, const std::string& type) {
+    // First, find the base register for the given register name
+    std::string baseRegister = "";
+    
+    // Search through related registers to find the base register
+    for (const auto& relGroup : relatedRegisters) {
+        if (relGroup.second.find(registerName) != relGroup.second.end()) {
+            baseRegister = relGroup.first;
+            break;
+        }
+    }
+    
+    // If we couldn't find a base register, return the original name
+    if (baseRegister.empty()) {
+        return registerName;
+    }
+    
+    // For floating point registers, there are no size variants
+    if (isFloatRegister(registerName)) {
+        return registerName;
+    }
+    
+    // Get the size based on type
+    auto sizeIt = typeSizeMap.find(type);
+    std::string size = (sizeIt != typeSizeMap.end()) ? sizeIt->second : "64"; // Default to 64-bit
+    
+    // Get the appropriate register for this type from the base register
+    return getRegisterForType(baseRegister, type);
+}
+
 bool RegisterDescriptor::isreg(const std::string& arg){
     for(auto &it: relatedRegisters){
         for(auto &it2: it.second){
