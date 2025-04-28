@@ -674,6 +674,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             //                    0 1  2     3    4   5   6
             std::string reg_var_const_2 = words[6];
             std::cout<<"type convserion " << reg_var_const_2<<std::endl;
+            bool isval = 0;
             if(isTempOrVar(reg_var_const_2)){
                 if(addressTable.isEmpty(reg_var_const_2)){
                     if(isVar(reg_var_const_2)){
@@ -697,6 +698,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                         reg_var_const_2 = "[" + reg_var_const_2 + "]";
                     }
                 }
+                isval = 1;
             }
             std::cout<<"type convserion " << reg_var_const_2<<std::endl;
             // the type to convert to
@@ -720,6 +722,35 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
                     assm = "movss xmm7, " + reg_var_const_2 + "\n";
                     assm += "cvttss2si " + normal_reg_used + ", xmm7\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "long"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movss xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttss2si " + normal_reg_used + ", xmm7\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "short"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movss xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttss2si r11d, xmm7\n";
+                    assm += "mov " + normal_reg_used +", " + normal_reg_used+"\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "char"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movss xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttss2si r11d, xmm7\n";
+                    assm += "mov " + normal_reg_used +", " + normal_reg_used+"\n";
                     assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
                 }
                 
@@ -751,6 +782,111 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     assm = "movsx r11, r11d\n";
                     assm += "mov " + temporary_operand + ",r11\n";
                 }
+            }
+            // from double to something
+            else if(words[3] == "double"){
+                if(type_to_convert_to == "float"){
+                    assm =  "movsd xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvtsd2ss xmm7, xmm7\n";
+                    assm += "movss "+ temporary_operand + ", xmm7\n";
+                }
+                // all the int types will be handled here
+                else if(type_to_convert_to == "int"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movsd xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttsd2si " + normal_reg_used + ", xmm7\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "long"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movsd xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttsd2si " + normal_reg_used + ", xmm7\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "short"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movsd xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttsd2si r11d, xmm7\n";
+                    assm += "mov " + normal_reg_used +", " + normal_reg_used+"\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+                else if(type_to_convert_to == "char"){
+                    std::string result = type_to_convert_to;
+                    std::transform(result.begin(), result.end(), result.begin(),    
+                                [](unsigned char c) { return std::toupper(c); });
+                    std::string normal_reg_used = registerDesc.getRegisterForType("r11",result);
+                    assm = "movsd xmm7, " + reg_var_const_2 + "\n";
+                    assm += "cvttsd2si r11d, xmm7\n";
+                    assm += "mov " + normal_reg_used +", " + normal_reg_used+"\n";
+                    assm += "mov " + temporary_operand + ", " + normal_reg_used + "\n";
+                }
+            }
+            // from double to something
+            else if(words[3] == "long"){
+                if(type_to_convert_to == "float"){
+                    assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm += "cvtss2ss xmm7, r11\n";
+                    assm += "movss " + temporary_operand + ", xmm7\n";
+                }
+                else if(type_to_convert_to == "double"){
+                    assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm += "cvtsd2ss xmm7, r11\n";
+                    assm += "movsd " + temporary_operand + ", xmm7\n";
+                }
+                else if(type_to_convert_to == "char"){
+                    assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm += "movsx r11, r11b\n";
+                    assm += "mov QWORD ["+ addressTable.getTemporaryAddress(words[0]) +"]" + ", r11\n";
+                }
+                else if(type_to_convert_to == "short"){
+                    assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm += "movsx r11, r11w\n";
+                    assm += "mov QWORD ["+ addressTable.getTemporaryAddress(words[0]) +"]" + ", r11\n";
+                }
+                else if(type_to_convert_to == "int"){
+                    assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm = "mov r11d, r11\n";
+                    assm += "mov " + temporary_operand + ",r11d\n";
+                }
+            }
+            else if(words[3] == "char"){
+                if(type_to_convert_to == "float"){
+                    assm = "movzx r11d, " + reg_var_const_2 + "\n";
+                    if(isval) assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "cvtsi2ss xmm7, r11d\n";
+                    assm += "movss " + temporary_operand + ", xmm7\n";
+                }
+                else if(type_to_convert_to == "double"){
+                    assm = "movzx r11d, " + reg_var_const_2 + "\n";
+                    if(isval) assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "cvtsi2sd xmm7, r11d\n";
+                    assm += "movsd " + temporary_operand + ", xmm7\n";
+                }
+                else if(type_to_convert_to == "int"){
+                    assm = "movsx r11d, " + reg_var_const_2 + "\n";
+                    if(isval) assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "mov " + temporary_operand + ", r11d\n";
+                }
+                else if(type_to_convert_to == "short"){
+                    assm = "movsx r11d, " + reg_var_const_2 + "\n";
+                    if(isval) assm = "mov r11d, " + reg_var_const_2 + "\n";
+                    assm += "mov " + temporary_operand + ", r11w\n";
+                }
+                else if(type_to_convert_to == "long"){
+                    assm = "movsx r11, " + reg_var_const_2 + "\n";
+                    if(isval) assm = "mov r11, " + reg_var_const_2 + "\n";
+                    assm += "mov " + temporary_operand + ", r11\n";
+                }
+
             }
 
             assembly.push_back(assm);
