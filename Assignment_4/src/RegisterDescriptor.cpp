@@ -126,55 +126,82 @@ void RegisterDescriptor::freeRegister(const std::string& regName) {
     }
 }
 
-std::vector<std::string> RegisterDescriptor::spillRegister(const std::vector<std::string>& protectedRegisters) {
-    // First try to spill a general purpose register
-    for (const auto& reg : availableRegisters) {
-        // Skip if this register is protected
-        if (std::find(protectedRegisters.begin(), protectedRegisters.end(), reg) != protectedRegisters.end()) {
-            continue;
+std::vector<std::string> RegisterDescriptor::spillRegister(
+    const std::vector<std::string>& protectedRegisters,
+    const std::string& type) {
+    
+    // Convert protected registers to their base forms
+    std::set<std::string> baseProtectedRegs;
+    for (const auto& reg : protectedRegisters) {
+        // Find which base register this belongs to
+        for (const auto& relGroup : relatedRegisters) {
+            if (relGroup.second.find(reg) != relGroup.second.end()) {
+                baseProtectedRegs.insert(relGroup.first);
+                break;
+            }
         }
-        
-        // Skip if this register is empty
-        auto it = registerContent.find(reg);
-        if (it == registerContent.end() || it->second.empty()) {
-            continue;
-        }
-        
-        // This register can be spilled
-        std::vector<std::string> result;
-        result.push_back(reg);  // First element is the register name
-        
-        // Add all variables/temporaries in the register
-        result.insert(result.end(), it->second.begin(), it->second.end());
-        
-        // Clear the register after spilling
-        it->second.clear();
-        
-        return result;
     }
-
-    // If no general purpose register could be spilled, try floating point registers
-    for (const auto& reg : availableFloatRegisters) {
-        // Skip if this register is protected
-        if (std::find(protectedRegisters.begin(), protectedRegisters.end(), reg) != protectedRegisters.end()) {
+    
+    // Determine if we need a floating point register
+    bool needFloatReg = (type == "FLOAT" || type == "DOUBLE");
+    
+    // Try appropriate register type first
+    const std::vector<std::string>& priorityRegs = 
+        needFloatReg ? availableFloatRegisters : availableRegisters;
+    
+    for (const auto& baseReg : priorityRegs) {
+        // Skip if this base register is protected
+        if (baseProtectedRegs.find(baseReg) != baseProtectedRegs.end()) {
             continue;
         }
         
-        // Skip if this register is empty
-        auto it = registerContent.find(reg);
-        if (it == registerContent.end() || it->second.empty()) {
+        // Get all related registers for this base register
+        auto relatedRegsIt = relatedRegisters.find(baseReg);
+        if (relatedRegsIt == relatedRegisters.end()) {
+            continue;  // No related registers found
+        }
+        
+        // Check if any related register has content
+        std::string regWithContent;
+        std::vector<std::string> contentToSpill;
+        
+        for (const auto& relReg : relatedRegsIt->second) {
+            auto contentIt = registerContent.find(relReg);
+            if (contentIt != registerContent.end() && !contentIt->second.empty()) {
+                regWithContent = relReg;
+                contentToSpill = contentIt->second;
+                break;
+            }
+        }
+        
+        // Skip if no related register has content
+        if (regWithContent.empty()) {
             continue;
         }
         
         // This register can be spilled
         std::vector<std::string> result;
-        result.push_back(reg);  // First element is the register name
         
-        // Add all variables/temporaries in the register
-        result.insert(result.end(), it->second.begin(), it->second.end());
+        // First element: the register of appropriate size for requested type
+        if (needFloatReg) {
+            result.push_back(regWithContent);  // For XMM registers
+        } else {
+            result.push_back(getRegisterForType(baseReg, type));
+        }
         
-        // Clear the register after spilling
-        it->second.clear();
+        // Second element: the actual register containing the data
+        result.push_back(regWithContent);
+        
+        // Add all variables/temporaries that were in the register
+        result.insert(result.end(), contentToSpill.begin(), contentToSpill.end());
+        
+        // Clear all related registers
+        for (const auto& relReg : relatedRegsIt->second) {
+            auto contentIt = registerContent.find(relReg);
+            if (contentIt != registerContent.end()) {
+                contentIt->second.clear();
+            }
+        }
         
         return result;
     }

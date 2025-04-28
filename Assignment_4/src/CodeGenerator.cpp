@@ -200,7 +200,28 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 std::string reg = registerDesc.getAvailableRegister(type);
                 // spill in case all registers are in use
                 if(reg == ""){
-                    std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                    std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
+                    std::cout<<"spilled"<<std::endl;
+                    // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                    reg = spill[0];
+                    cannot_spill.push_back(reg);
+                    std::string var_temp = spill[2];
+                    std::string reg_spilled = spill[1];
+                    std::string spill_assm = "";
+                    if(isVar(var_temp)){
+                        std::string mov_op = "mov ";
+                        if(type == "FLOAT") mov_op = "movss ";
+                        if(type == "DOUBLE") mov_op = "movsd ";
+                        spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                    }
+                    else{
+                        std::string mov_op = "mov ";
+                        if(type == "FLOAT") mov_op = "movss ";
+                        if(type == "DOUBLE") mov_op = "movsd ";
+                        spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                    }
+                    assembly.push_back(spill_assm);
+                    addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                 }
                 std::cout<<reg<<std::endl;
                 mapped.push_back(reg);
@@ -1002,7 +1023,28 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     
                     // spill in case all registers are in use
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            if(type == "FLOAT") mov_op = "movss ";
+                            if(type == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            if(type == "FLOAT") mov_op = "movss ";
+                            if(type == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
@@ -1010,7 +1052,28 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string reg1 = reg;
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,type);
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            if(type == "FLOAT") mov_op = "movss ";
+                            if(type == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            if(type == "FLOAT") mov_op = "movss ";
+                            if(type == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(type) + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     //the final temporary will always have a register since it is being written just above.
                     auto it = addressTable.getRegisterDescriptor(str[1]);
@@ -1151,7 +1214,24 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     
                     // spill in case all registers are in use
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
@@ -1159,7 +1239,24 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string reg1 = reg;
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     //the final temporary will always have a register since it is being written just above.
                     auto it = addressTable.getRegisterDescriptor(str[1]);
@@ -1178,7 +1275,28 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     //assume rhs is 8byte and it'll adapt to any size of LHS.
                     std::cout <<"CRAZY CLOWNN \n";
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,addressTable.getType(str[0]));
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            if(addressTable.getType(str[0]) == "FLOAT") mov_op = "movss ";
+                            if(addressTable.getType(str[0]) == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(addressTable.getType(str[0])) + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            if(addressTable.getType(str[0]) == "FLOAT") mov_op = "movss ";
+                            if(addressTable.getType(str[0]) == "DOUBLE") mov_op = "movsd ";
+                            spill_assm = mov_op + getAsmSizeDirective(addressTable.getType(str[0])) + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     cannot_spill.push_back(reg);
                     cd1 += "mov " + reg + ", " + getAsmSizeDirective(addressTable.getType(str[0])) + " [" + reg3 + "]" + "\n";
@@ -1255,7 +1373,24 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string reg = registerDesc.getAvailableRegister("LONG");
                     // spill in case all registers are in use
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
                     }
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
                     std::string cd1 = "lea " + reg + ", [" + addressTable.getVariableAddress(str[0]) + "] \n";
@@ -1263,7 +1398,25 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                     std::string reg1 = reg;
                     reg = registerDesc.getAvailableRegister("LONG");
                     if(reg == ""){
-                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill);
+                        std::vector<std::string> spill = registerDesc.spillRegister(cannot_spill,"LONG");
+                        std::cout<<"spilled"<<std::endl;
+                        // first is the free reg, second is the spilled reg, third is the variable or temporary it was holding
+                        reg = spill[0];
+                        cannot_spill.push_back(reg);
+                        std::string var_temp = spill[2];
+                        std::string reg_spilled = spill[1];
+                        std::string spill_assm = "";
+                        if(isVar(var_temp)){
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getVariableAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        else{
+                            std::string mov_op = "mov ";
+                            spill_assm = mov_op + getAsmSizeDirective("LONG") + " [" + addressTable.getTemporaryAddress(var_temp) + "], " + reg_spilled + "\n";
+                        }
+                        assembly.push_back(spill_assm);
+                        addressTable.removeRegisterFromDescriptor(var_temp,reg_spilled);
+                        
                     }
                     addressTable.addRegisterToDescriptor(str[0],reg,"0");
                     //the final temporary will always have a register since it is being written just above.

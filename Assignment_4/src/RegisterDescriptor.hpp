@@ -38,7 +38,7 @@ public:
     void freeRegister(const std::string& regName);
 
     // Spill a register and return its contents
-    std::vector<std::string> spillRegister(const std::vector<std::string>& protectedRegisters);
+    std::vector<std::string> spillRegister(const std::vector<std::string>& protectedRegisters,const std::string& type);
    
     // Get an available register for a type
     std::string getAvailableRegister(const std::string& type);
