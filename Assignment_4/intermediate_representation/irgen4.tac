@@ -1,15 +1,5 @@
 label main:
 	func_begin main
-<<<<<<< HEAD
-		param 4
-		$0 = call malloc, 1
-		$1 = cast: VOID* -> INT* $0
-		p#block1 = $1
-		$2 = *p#block1
-		$2 = 7
-		
-		return 0
-=======
 		ww#block1 = 100
 		x#block1 = 1
 		l#block1 = 0
@@ -58,5 +48,4 @@ label main:
 		param "%d \n"
 		param t#block1
 		$10 = call printf, 2
->>>>>>> origin/codegen
 	func_end main

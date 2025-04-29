@@ -249,7 +249,8 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 
                 assembly.push_back(assm);
                 // update the register descriptor as well
-                std::cout<<"reg allocated "<<registerDesc.allocateRegister(reg,words[i])<<"\n";
+                bool g = registerDesc.allocateRegister(reg,words[i])
+                
 
 
             }
@@ -309,7 +310,7 @@ std::vector<std::string> CodeGenerator::generateArithmetic(const std::string& li
             std::string word;
             while (iss >> word) {
                 words.push_back(word); 
-                std::cout<<word<<"\n";
+                
             }
             std::string type = "";
             if(isTempOrVar(words[0]))type = addressTable.getType(words[0]);
@@ -470,10 +471,10 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     std::istringstream iss(line);
     std::vector<std::string> words;
     std::string word; 
-     std::cout <<"we do cmpp\n";
+    
     while (iss >> word) {
         words.push_back(word);
-        std::cout <<word <<" ";
+        
     }
     std::vector<std::string> assembly;
     //of form $x = a op b
@@ -1161,7 +1162,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             if(!isTempOrVar(words[2])){
                 //rhs is const
                
-                std::cout <<addressTable.isEmpty(words[0])<<" \n" <<words[0] <<"\n" <<"YOO";
+                
                 std::string assm ="";
                 // if its an array type opearnd
                 if(contains_sq(words[0])){

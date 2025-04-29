@@ -39,9 +39,7 @@ int main(){
     x[2]  = 2;
     char g = ch[5];
     printf("%d %c k \n", y, g);
-    int f = x[1] + x[2];
-    double d = 7.0;
-    printf("%d %f \n", f, d);
+    
     struct A c;
     c.a = 1;
     c.c = 'k';
@@ -65,16 +63,16 @@ int main(){
     int ww = ob.ss.d;
     char cp = 'b';
     printf("%d %c \n",ww,cp);
-    int b = f(1,2,4,9.0,9.8,4);
     int a[10];
     a[0]=9;
     a[2]=10;
-    int f = a[1] + a[2];
-    double c = 9.0;
+    int ff = a[1] + a[2];
+    double cc = 9.0;
     double d = 7.0;
-    double b = c+d;
-    printf("%f",b);
-    return b;
+    double b = cc+d;
+    printf("%f %f",cc,d);
+    printf("%d %f\n",ff,b);
+    
 }
 
 

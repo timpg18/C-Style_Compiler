@@ -1,4 +1,3 @@
-
 typedef int myint;
 
 int main(){

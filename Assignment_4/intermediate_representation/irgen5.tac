@@ -18,7 +18,6 @@ label main:
 	label @L0:
 		$9 = x#block3
 		x#block3 = x#block3 + 1
-		goto @L2
 	label @L1:
 		$10 = x#block3 > 10
 		if $10 goto @L2

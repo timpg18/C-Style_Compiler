@@ -5,87 +5,88 @@ label f:
 	func_end f
 label main:
 	func_begin main
-<<<<<<< HEAD
-		param 1
-		param 2
-		param 4
-		param 9.0
-		param 9.8
-		param 4
-		$0 = call f, 6
-		b#block2 = $0
-=======
 		$0 = 0 * 4
-		x#block5[$0] = 10
+		x#block6[$0] = 10
 		$2 = 5 * 1
-		ch#block5[$2] = 'k'
+		ch#block6[$2] = 'k'
 		$4 = 0 * 4
-		y#block5 = x#block5[$4]
+		y#block6 = x#block6[$4]
 		$5 = 1 * 4
-		x#block5[$5] = 1
+		x#block6[$5] = 1
 		$7 = 2 * 4
-		x#block5[$7] = 2
+		x#block6[$7] = 2
 		$9 = 5 * 1
-		g#block5 = ch#block5[$9]
+		g#block6 = ch#block6[$9]
 		param "%d %c k \n"
-		param y#block5
-		param g#block5
+		param y#block6
+		param g#block6
 		$10 = call printf, 3
-		$11 = 1 * 4
-		$12 = 2 * 4
-		$14 = x#block5[$11]
-		$15 = x#block5[$12]
-		$13 = $14 + $15
-		f#block5 = $13
-		$16 = cast: float -> double 7.0
-		d#block5 = $16
-		param "%d %f \n"
-		param f#block5
-		param d#block5
+		$11 = 0 + 0
+		c#block6[$11] = 1
+		$13 = 0 + 4
+		c#block6[$13] = 'k'
+		$15 = 0 + 0
+		xx#block6 = c#block6[$15]
+		$16 = 0 + 4
+		ck#block6 = c#block6[$16]
+		param "%d %c \n"
+		param xx#block6
+		param ck#block6
 		$17 = call printf, 3
 		$18 = 0 + 0
-		c#block5[$18] = 1
-		$20 = 0 + 4
-		c#block5[$20] = 'k'
+		obj1#block6[$18] = 5
+		$20 = 0 + 0
+		obj1#block6[$20] = 'k'
 		$22 = 0 + 0
-		xx#block5 = c#block5[$22]
-		$23 = 0 + 4
-		ck#block5 = c#block5[$23]
+		xx#block6 = obj1#block6[$22]
+		$24 = 0 + 0
+		ck#block6 = obj1#block6[$24]
 		param "%d %c \n"
-		param xx#block5
-		param ck#block5
-		$24 = call printf, 3
-		$25 = 0 + 0
-		obj1#block5[$25] = 5
-		$27 = 0 + 0
-		obj1#block5[$27] = 'k'
-		$29 = 0 + 0
-		xx#block5 = obj1#block5[$29]
-		$31 = 0 + 0
-		ck#block5 = obj1#block5[$31]
+		param xx#block6
+		param ck#block6
+		$26 = call printf, 3
+		gg#block6 = 1
+		xx#block6 = 1
 		param "%d %c \n"
-		param xx#block5
-		param ck#block5
-		$33 = call printf, 3
-		gg#block5 = 1
-		xx#block5 = 1
+		param xx#block6
+		param ck#block6
+		$28 = call printf, 3
+		$29 = 0 + 8
+		$30 = $29 + 1
+		ob#block6[$30] = 5
+		$32 = 0 + 8
+		$33 = $32 + 0
+		ob#block6[$33] = 'b'
+		$35 = 0 + 8
+		$36 = $35 + 1
+		ww#block6 = ob#block6[$36]
+		cp#block6 = 'b'
 		param "%d %c \n"
-		param xx#block5
-		param ck#block5
-		$35 = call printf, 3
-		$36 = 0 + 8
-		$37 = $36 + 1
-		ob#block5[$37] = 5
-		$39 = 0 + 8
-		$40 = $39 + 0
-		ob#block5[$40] = 'b'
-		$42 = 0 + 8
-		$43 = $42 + 1
-		ww#block5 = ob#block5[$43]
-		cp#block5 = 'b'
-		param "%d %c \n"
-		param ww#block5
-		param cp#block5
-		$44 = call printf, 3
->>>>>>> origin/codegen
+		param ww#block6
+		param cp#block6
+		$37 = call printf, 3
+		$38 = 0 * 4
+		a#block6[$38] = 9
+		$40 = 2 * 4
+		a#block6[$40] = 10
+		$42 = 1 * 4
+		$43 = 2 * 4
+		$45 = a#block6[$42]
+		$46 = a#block6[$43]
+		$44 = $45 + $46
+		ff#block6 = $44
+		$47 = cast: float -> double 9.0
+		cc#block6 = $47
+		$48 = cast: float -> double 7.0
+		d#block6 = $48
+		$49 = cc#block6 + d#block6
+		b#block6 = $49
+		param "%f %f"
+		param cc#block6
+		param d#block6
+		$50 = call printf, 3
+		param "%d %f\n"
+		param ff#block6
+		param b#block6
+		$51 = call printf, 3
 	func_end main

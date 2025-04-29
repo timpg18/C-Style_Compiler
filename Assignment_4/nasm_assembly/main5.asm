@@ -70,10 +70,7 @@ mov DWORD [rbp - 116], r11d
 mov r9d, DWORD [rbp - 56]
 mov r9d, r9d
 add r9d, 1
-mov DWORD [rbp - 56], r9d
-jmp @L2
 @L1:
-mov r9d, DWORD [rbp - 56]
 cmp r9d, 10
 mov DWORD [rbp - 56], r9d
 jg @L2
