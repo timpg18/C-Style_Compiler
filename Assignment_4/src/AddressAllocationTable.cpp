@@ -34,6 +34,7 @@ void AddressAllocationTable::identifyFunctionParameters() {
             for (const auto& symbolPair : scope->ordered_symbols) {
                 const SymbolTable::Symbol& symbol = symbolPair;
                 if (symbol.kind == "PARAMETER") {
+                    if(symbol.name == "...")continue;
                     // Format parameter as "name#blockX"
                     std::string paramName = symbol.name + "#block" + std::to_string(scope->block_num);
                     
@@ -135,13 +136,24 @@ std::string AddressAllocationTable::getTempType(const std::string& tempName, con
         }
     }
     
-    
+    if (line.find("call") != std::string::npos) {
+        std::istringstream iss(contextLine);
+        std::vector<std::string> words;
+        std::string word;
+        while (iss >> word) {
+            words.push_back(word);
+        }
+        std::string funcName = words[3];
+        funcName.pop_back();
+        return getSymbolType(funcName);
+    }
+
     // Check for relational operators which result in boolean
     const std::vector<std::string> relops = {"<", ">", "<=", ">=", "==", "!="};
     for (const auto& op : relops) {
         if (line.find(op) != std::string::npos) {
             if(line.find("<<") != std::string::npos || line.find(">>") != std::string::npos ) return "INT";
-            
+
             return "BOOL";
         }
     }

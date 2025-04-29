@@ -83,7 +83,7 @@ public:
         scopes_.emplace_back(global_scope_);
         insert_symbol("printf","INT","PROCEDURE ( CHAR* ... )");
         insert_symbol("scanf","INT","PROCEDURE ( CHAR* ... )");
-        insert_symbol("malloc","INT*","PROCEDURE ( INT )");
+        insert_symbol("malloc","VOID*","PROCEDURE ( INT )");
         insert_symbol("free","VOID","PROCEDURE ( VOID* )");
         updateProcedureSize("printf");
         updateProcedureSize("scanf");

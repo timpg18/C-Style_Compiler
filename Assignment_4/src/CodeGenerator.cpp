@@ -859,7 +859,9 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
             assm += "call " + funcName + "\n";
             // return value to temporary assignment
             // first is always temporary and second is always related to eax (for INT)
+            
             std::string returnType = addressTable.getSymbolType(funcName);
+            std::cout<<"function return type "<<returnType<<std::endl;
             if(returnType != "VOID"){
                 std::string returnReg = registerDesc.getRegisterForType("rax",returnType);
                 assm += "mov " + getAsmSizeDirective(addressTable.getType(words[0])) + " ["+ addressTable.getTemporaryAddress(words[0]) +"], " + returnReg + "\n"; 
@@ -1329,7 +1331,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
 
                         type1.pop_back();
                         std::string asmType = getAsmSizeDirective((type1));
-                        reg2 = asmType+" [r11]";
+                        reg2 = "QWORD [r11]";
                     }
                     else if(addressTable.isEmpty(words[2])){
                         std::string type = addressTable.getType(words[2]);
