@@ -469,10 +469,11 @@ void keyword_init( std::map<std::string,std::string> &keywords){
 std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std::string op){
     std::istringstream iss(line);
     std::vector<std::string> words;
-    std::string word;
+    std::string word; 
+     std::cout <<"we do cmpp\n";
     while (iss >> word) {
         words.push_back(word);
-        
+        std::cout <<word <<" ";
     }
     std::vector<std::string> assembly;
     //of form $x = a op b
@@ -504,6 +505,8 @@ std::vector<std::string> CodeGenerator::generateCMP(const std::string& line, std
     if(isfloat)cmpop = "ucomiss ";
     std::string cd = may_be_used;
     cd += cmpop + reg[0] + ", " + reg[1] + "\n";
+    // std::cout <<"rly?" <<"\n";
+    // std::cout <<cd <<"\n" <<"broski \n";
     assembly.push_back(cd);
     addressTable.set_relop(words[0],op);
     return assembly;
@@ -544,7 +547,7 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 }
                 cd += getAsmSizeDirective(type) +" ["+ varIt->address + "]";
                 cd +=", ";
-                std::string conv = registerDesc.convertRegisterForType(p.first, "INT");
+                std::string conv = registerDesc.convertRegisterForType(p.first, varIt->type);
                 cd +=  conv + "\n";
                 assembly.push_back(cd);
                 rem.push_back({conv, s});
@@ -562,7 +565,7 @@ std::vector<std::string> CodeGenerator::write_reg(){
                 }
                 cd += getAsmSizeDirective(type) +" ["+ varIt1->address + "]";
                 cd +=", ";
-                std::string conv = registerDesc.convertRegisterForType(p.first, "INT");
+                std::string conv = registerDesc.convertRegisterForType(p.first, varIt1->type);
                 cd += conv + "\n";
                 assembly.push_back(cd);
                 rem.push_back({conv, s});
@@ -620,7 +623,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         std::map<std::string,std::string> keywords;
         keyword_init(keywords);
         std::string type;
-        std::string op;
+        std::string op = "";
 
         // doing this since * is used for both multiplication and dereferencing so if size if 5 then it is multiplication
         // and if size is 3 then it is dereferencing
@@ -629,22 +632,21 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
         std::string word;
         while (iss >> word) {
             precheck.push_back(word);
-            
+           //std::cout <<word <<" ";
         }
-
+        
         bool found = std::any_of(keywords.begin(),keywords.end(),[&](auto &p){
             if(instr.find(p.first) != std::string::npos){
-                type = p.second;
-                op = p.first;
-                return true;
+                if(p.first.length() > op.length()){
+                    op = p.first;
+                    type = p.second;
+                }
+                return false;
             }
         });
-        if(instr.find("<<") != std::string::npos){
-            type = "shifts";
-        }
-        if(instr.find(">>") != std::string::npos){
-            type = "shifts";
-        }
+        if(op != "") found = true;
+        //std::cout <<op <<" " <<type <<"\n";
+
         if(precheck.size() == 3)found = false;
         // Apply mapping for the specific IR instructions
         if (instr.find("label") == 0 && instr.find(":") != std::string::npos) {
@@ -688,6 +690,7 @@ void CodeGenerator::processBasicBlock(const BasicBlockConstructor::BasicBlock& b
                 
             }
             else{
+
                 std::string jmp = "jmp ";
                 jmp += words[1];
                 jmp += "\n";
