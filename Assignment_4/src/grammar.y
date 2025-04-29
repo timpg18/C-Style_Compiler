@@ -3243,8 +3243,8 @@ iteration_statement
 		$3.ir.code = strdup($3.backpatcher->backPatchFalseList(std::string($3.ir.code),label3).c_str());
 
 		// For break and continue
-		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($5.ir.code),Loop_end).c_str());
-		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.continue_,std::string($5.ir.code),S_begin).c_str());
+		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.break_,std::string($5.ir.code),label3).c_str());
+		$5.ir.code = strdup($5.backpatcher->staticBackPatch(irgen.continue_,std::string($5.ir.code),label1).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($3.ir.code)).c_str());
@@ -3275,8 +3275,8 @@ iteration_statement
 		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
 
 		// For break and continue
-		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),Loop_end).c_str());
-		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),S_begin).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),label3).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),label1).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
@@ -3301,12 +3301,12 @@ iteration_statement
 		std::string Loop_end = irgen.add_label(label3);
 
 		// Backpatching
-		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label1).c_str());
-		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label3).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchTrueList(std::string($5.ir.code),label3).c_str());
+		$5.ir.code = strdup($5.backpatcher->backPatchFalseList(std::string($5.ir.code),label1).c_str());
 
 		// For break and continue
-		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),Loop_end).c_str());
-		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),S_begin).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.break_,std::string($2.ir.code),label3).c_str());
+		$2.ir.code = strdup($2.backpatcher->staticBackPatch(irgen.continue_,std::string($2.ir.code),label1).c_str());
 
 		// IR GEN
 		$$.ir.code = strdup(irgen.concatenate(S_begin,string($2.ir.code)).c_str());
