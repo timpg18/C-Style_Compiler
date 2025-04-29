@@ -68,7 +68,7 @@ vector<BasicBlockConstructor::Instruction> BasicBlockConstructor::parseInstructi
     }
     
     // Extract dependencies for each instruction
-    extractDependencies(instructions);
+    
     
     return instructions;
 }

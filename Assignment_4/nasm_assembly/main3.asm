@@ -12,6 +12,8 @@ section .text
 	extern exit
 
 _start:
+	pop rdi 
+	lea rsi, [rsp] 
 	and rsp, 0xfffffffffffffff0
 	call main
 	mov rdi, rax

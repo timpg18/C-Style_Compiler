@@ -1653,6 +1653,8 @@ std::string CodeGenerator::combineBlockCode() {
     finalCode << "\textern malloc\n";  // Add external declaration for malloc
     finalCode << "\textern exit\n\n";  // Add external declaration for exit
     finalCode << "_start:\n";
+    finalCode <<"\tpop rdi \n";
+    finalCode <<"\tlea rsi, [rsp] \n";
     finalCode << "\tand rsp, 0xfffffffffffffff0\n";
     finalCode << "\tcall main\n";
     finalCode << "\tmov rdi, rax\n";
