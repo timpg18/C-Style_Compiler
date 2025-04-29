@@ -249,7 +249,7 @@ std::vector<std::string> CodeGenerator::getReg(const std::string& line, std::vec
                 
                 assembly.push_back(assm);
                 // update the register descriptor as well
-                bool g = registerDesc.allocateRegister(reg,words[i])
+                bool g = registerDesc.allocateRegister(reg,words[i]);
                 
 
 
