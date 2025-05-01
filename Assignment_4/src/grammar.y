@@ -213,7 +213,7 @@ constant
 		$$.ir.tmp = strdup((std::string(yytext)).c_str());
 	}	/* after it has been defined as such */
 	| BOOLEAN{
-		$$.type = "INT";
+		$$.type = "BOOL";
 		$$.kind = "CONST";
 		$$.name = $1.name;
 		$$.ir.tmp = strdup($1.ir.tmp);
@@ -230,11 +230,11 @@ enumeration_constant		/* before it has been defined as such */
 
 BOOLEAN
 	: TRUE {
-		$$.ir.tmp  = "true";
+		$$.ir.tmp  = "1";
 		$$.name = "TRUE";
 	}
 	| FALSE{
-		$$.ir.tmp = "false";
+		$$.ir.tmp = "0";
 		$$.name = "FALSE";
 	}
 
