@@ -1805,7 +1805,7 @@ declaration
 		else{
 			// adding typedef to the TypeSet ts
 			if(contains($1.type,"typedef")){
-				ts.addTypedef(std::string($2.name),std::string($1.type));
+				ts.addTypedef(std::string($2.name),std::string($2.type));
 				st.update_symbol_sizes(std::string($2.name),0);
 			}
 			// for non typedef that means declarations
