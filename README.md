@@ -32,4 +32,6 @@ Intermediate Representation (IR) is generated as **Three Address Code (3AC)**.
 - **Pointer operations**
 - **Input/Output**: `printf`, `scanf`
 - **Jump controls**: `goto`, `break`, `continue`
+- **structs, enums, union**
+- **printf, dynamic memory allocation**
 
