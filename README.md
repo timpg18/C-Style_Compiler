@@ -2,7 +2,9 @@
 
 A **C-style language compiler** written in **C++**, using **Lex/Flex** for lexical analysis and **YACC/Bison** for parsing. The compiler generates **x86-64 Intel syntax assembly**, assembled with **NASM** and linked with **LD**.
 
-## Dependencies
+---
+
+## 📦 Dependencies
 
 * `g++` (C++ compiler)
 * `flex` (lexer generator)
@@ -10,9 +12,34 @@ A **C-style language compiler** written in **C++**, using **Lex/Flex** for lexic
 * `nasm` (assembler)
 * `ld` (linker)
 
-## Features (Implemented till IR Generation)
+---
 
-### Class Syntax Example
+## 🏗️ Project Structure
+
+This compiler was developed as part of the **Compiler Design** course. It is divided into four assignments:
+
+* **Assignment 1**: Lexical Analysis Phase
+* **Assignment 2**: Parsing Phase
+* **Assignment 3**: Semantic Analysis and Three Address Code (3AC) Generation
+* **Assignment 4**: Assembly Code Generation
+
+---
+
+## 🚀 Running the Project
+
+To run the project:
+
+1. Add the test case in the `testing` folder inside **Assignment 4**.
+2. Use `./run.sh` to generate the assembly.
+3. Use `./run1.sh` to run the generated assembly.
+
+---
+
+## ✨ Features
+
+### ✅ IR-Level Features (Three Address Code - 3AC)
+
+#### Class Syntax Example
 
 ```cpp
 class ClassName {
@@ -38,9 +65,7 @@ private: {
 * **Arithmetic and logical operators**
 * **Recursive function calls**
 
-Intermediate Representation (IR) is generated as **Three Address Code (3AC)**.
-
-## Features (Implemented till Assembly Generation)
+### ✅ Assembly-Level Features
 
 * **Function calling**
 * **Loops**: `for`, `while`, `do-while`, `until`
@@ -50,15 +75,9 @@ Intermediate Representation (IR) is generated as **Three Address Code (3AC)**.
 * **Input/Output**: `printf`, `scanf`
 * **Jump controls**: `goto`, `break`, `continue`
 
-## Running the Project
+---
 
-To run the project:
-
-1. Add the test case in the `testing` folder inside **Assignment 4**.
-2. Use `./run.sh` to generate the assembly.
-3. Use `./run1.sh` to run the generated assembly.
-
-## Future Work / Known Issues
+## 🧠 Future Work / Known Issues
 
 * Support for **division operations** in assembly
 * Handling **global variables** and `static` variables with proper `.data` and `.bss` sections
@@ -68,3 +87,12 @@ To run the project:
 * Support for **passing arrays and structs as arguments**
 * Support for **returning values beyond integers** (e.g., structs, floats, etc.)
 * Support for **implicit type conversions**
+
+---
+
+## 👥 Contributors
+
+* PARIT
+* PRATYAKSH
+* RONIT
+* AVIRAL
