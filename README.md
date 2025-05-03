@@ -37,6 +37,20 @@ To run the project:
 
 ## ✨ Features
 
+### Supported Data Types
+
+* `int`
+* `long`
+* `double`
+* `float`
+* `short`
+* `char`
+
+### Type Casting
+
+* **Explicit type casting**: Uses the syntax `(type) expression`
+* **Implicit type casting**: Performed during assignments and when returning values from functions
+
 ### ✅ IR-Level Features (Three Address Code - 3AC)
 
 #### Class Syntax Example
